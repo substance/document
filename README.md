@@ -133,7 +133,9 @@ Here's how the schema for such a document could look like:
 }
 ```
 
-Your picturegallery editor could look like this.
+Your picturegallery editor could look like this. If you're using the Substance Composer as a building block, picturegalleries can be composed collaboratively in realtime. No joke!
+
+![Picturegallery Editor](http://f.cl.ly/items/3W3a2g38212C1M1m1z0z/Screen%20Shot%202012-05-25%20at%205.34.42%20PM.png)
 
 Instead of creating a propriatory data representation format and database model (there might be millions of picturegallery variations around) you just transform the Picturegallery document using commands.
 
