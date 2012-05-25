@@ -1,7 +1,7 @@
 Substance Document Format
 ========
 
-The *Substance Document Format* (a work in progress) aims to be a quasistandard for representing arbitrary digital documents. It doesn't make any assumptions on a concrete type or structure. Instead it is supposed to be a foundation to create your own document model on top of it, tailored to your particular use-case. A Substance document model can range from loosly structured documents involving sections and text, such as reports or articles to things that you wouldn't consider a document anymore but in fact are. Let's take the mess of filling out forms as an example. The reason why we are still filling them out by hand and manually transfer them into a database system is simply the lack of suitable generic document representations and form composition tools. In many we are dealing with a mixture of structured and unstructured parts. There might be a disclaimer with is not editable in conjunction with a person's contact info. That's the challenge. However, most of today's web-based forms are created on a tight budget. As a result they not only look ugly, they are also incredibly error-prone. After carefully filling out that one important form for half an hour and submitting it, you're usually rewarded with a message that says something like this:
+The *Substance Document Format* (a work in progress) aims to be a quasi-standard for representing arbitrary digital documents. It doesn't make any assumptions on a concrete type or structure. Instead it is supposed to be a foundation to create your own document model on top of it, tailored to your particular use-case. A Substance document model can range from loosly structured documents involving sections and text, such as reports or articles to things that you wouldn't consider a document anymore but in fact are. Let's take the mess of filling out forms as an example. The reason why we are still filling them out by hand and manually transfer them into a database system is simply the lack of suitable generic document representations and form composition tools. In many we are dealing with a mixture of structured and unstructured parts. There might be a disclaimer with is not editable in conjunction with a person's contact info. That's the challenge. However, most of today's web-based forms are created on a tight budget. As a result they not only look ugly, they are also incredibly error-prone. After carefully filling out that one important form for half an hour and submitting it, you're usually rewarded with a message that says something like this:
 
 > Sorry your session has been expired. Or in other words, you were to slow. But no worries, if you click here you can safely fill it out again. From scratch of course.
 
@@ -155,12 +155,26 @@ For inserting a new picture a command would look like so:
 }
 ```
 
-If you were to change to title of the gallery, an update command does it.
+If you were to change to title of the gallery, an update command should do it.
 
-All this can take place in the browser. At the end of the day you have a document that just contains the information you need. Store it whereever you want. Load it whenever you need it. And do further transformations. In fact this is not so much different from what you're used to do, except it unifies the process and separates tasks such as modelling the data and manipulating data (using commands).
+```js
+{
+  "command": "node:update", 
+  "params": {
+    "user": "michael",
+    "rev": 4,
+    "node": "/text/2",
+    "attributes": {
+      "title": "A new title"
+    }
+  }
+}
+```
+
+All of this can take place in the browser. At the end of the day you have a document that just contains the information you need. Store it whereever you want. Load it whenever you need it. And do further transformations. In fact this is not so much different from what you're used to do, except it unifies the process and separates tasks such as modelling the data and manipulating it (using commands).
 
 
 Micropage
 --------
 
-Say you want to offer your customer an easy way to build micropages, based on a template. He just needs to fill out some bits that vary from page to page and based on that information it can be transformed into a static webpage using that pre-defined template.
+Say you want to offer your customer an easy way for building micropages, based on a template. He just needs to fill out some bits that vary from page to page and based on that information it can be transformed into a static webpage using that pre-defined template. No programming involved. A fully UI-driven workflow. So here's how this can be done using the Substance Document Model, and nothing else.
