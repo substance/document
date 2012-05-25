@@ -40,13 +40,12 @@ A concrete instance of a Substance document could look like so:
 }
 ```
 
-However keep in mind, that there are no assumptions on your node types. They are defined by a schema you can define. 
+However keep in mind, that there are no assumptions on your node types. They are defined by a document schema you can define. 
 
-Schema
+Document Schema
 ========
 
 For the document shown above the schema looks like this.
-Here's an example 
 
 ```js
 {
@@ -122,6 +121,9 @@ Here's how the schema for such a document could look like:
       "image_url": {
         "type": "string"
       },
+      "filter_effect": {
+        "type": "string"
+      },
       "thumb_url": {
         "type": "string"
       },
@@ -180,3 +182,61 @@ Micropage
 --------
 
 Say you want to offer your customer an easy way for building micropages, based on a template. He just needs to fill out some bits that vary from page to page and based on that information it can be transformed into a static webpage using that pre-defined template. No programming involved. A fully UI-driven workflow. So here's how this can be done using the Substance Document Model, and nothing else.
+
+At Mapbox we're working on a template-driven approach for building map microsites. The result looks like this. Pretty, isn't it?
+
+Okay here's a proposal how this could be solved using the Substance Document Model:
+
+First off, what dynamic information does our micropage contain?
+
+- Title
+- Sheets (every Sheet shows a different aspect and can be reached through the site navigation)
+  - Name
+  - Baselayer
+  - Zoomlevel
+  - Latitude
+  - Longitude
+  - Annotations (Markers)
+
+Okay, let's see how this could be modelled as Substance Document.
+
+```js
+{
+  "id": "/document/amazonas_rainforest",
+  "created_at": "2012-04-10T15:17:28.946Z",
+  "updated_at": "2012-04-10T15:17:28.946Z",
+  "head": "/cover/1",
+  "tail": "/sheet/3",
+  "rev": 43,
+  "nodes": {
+    "/cover/1": {
+      "type": "/type/cover",
+      "title": "Hello World",
+      "abstract": "",
+      "next": "/sheet/2",
+      "prev": null
+    },
+    "/sheet/2": {
+      "type": "/type/sheet",
+      "name": "Rainforest in 2000",
+      "map": "http://a.tiles.mapbox.com/v3/mapbox.mapbox-light,mapbox.rainforest-2000.jsonp",
+      "center": {"lat": 32, "lng": 11, "zoom": 13 },
+      "annotations": [],
+      "prev": "/cover/1",
+      "next": "/sheet/3"
+    },
+    "/sheet/3": {
+      "type": "/type/sheet",
+      "name": "Rainforest now in 2012",
+      "map": "http://a.tiles.mapbox.com/v3/mapbox.mapbox-light,mapbox.rainforest-2012.jsonp",
+      "center": {"lat": 32, "lng": 11, "zoom": 13 },
+      "annotations": [
+        { "lat": 53.13, "lng": 41.87, "Secured area." },
+        { "lat": 55.23, "lng": 43.45, "Major Damage goign on here." }
+      ],
+      "prev": "/sheet/2",
+      "next": "/sheet/3"
+    }
+  }
+}
+```
