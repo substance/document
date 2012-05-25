@@ -1,7 +1,7 @@
-Substance Document Format
+Substance Document Model
 ========
 
-The *Substance Document Format* (a work in progress) aims to be a quasi-standard for representing arbitrary digital documents. It doesn't make any assumptions on a concrete type or structure. Instead it is supposed to be a foundation to create your own document model on top of it, tailored to your particular use-case. A Substance document model can range from loosly structured documents involving sections and text, such as reports or articles to things that you wouldn't consider a document anymore but in fact are. Let's take the mess of filling out forms as an example. The reason why we are still filling them out by hand and manually transfer them into a database system is simply the lack of suitable generic document representations and form composition tools. In many we are dealing with a mixture of structured and unstructured parts. There might be a disclaimer with is not editable in conjunction with a person's contact info. That's the challenge. However, most of today's web-based forms are created on a tight budget. As a result they not only look ugly, they are also incredibly error-prone. After carefully filling out that one important form for half an hour and submitting it, you're usually rewarded with a message that says something like this:
+The *Substance Document Model* (a work in progress) aims to be a quasi-standard for representing arbitrary digital documents. It doesn't make any assumptions on a concrete type or structure. Instead it is supposed to be a foundation to create your own document model on top of it, tailored to your particular use-case. A Substance document model can range from loosly structured documents involving sections and text, such as reports or articles to things that you wouldn't consider a document anymore but in fact are. Let's take the mess of filling out forms as an example. The reason why we are still filling them out by hand and manually transfer them into a database system is simply the lack of suitable generic document representations and form composition tools. In many we are dealing with a mixture of structured and unstructured parts. There might be a disclaimer with is not editable in conjunction with a person's contact info. That's the challenge. However, most of today's web-based forms are created on a tight budget. As a result they not only look ugly, they are also incredibly error-prone. After carefully filling out that one important form for half an hour and submitting it, you're usually rewarded with a message that says something like this:
 
 > Sorry your session has been expired. Or in other words, you were to slow. But no worries, if you click here you can safely fill it out again. From scratch of course.
 
@@ -183,13 +183,16 @@ Micropage
 
 Say you want to offer your customer an easy way for building micropages, based on a template. He just needs to fill out some bits that vary from page to page and based on that information it can be transformed into a static webpage using that pre-defined template. No programming involved. A fully UI-driven workflow. So here's how this can be done using the Substance Document Model, and nothing else.
 
-At Mapbox we're working on a template-driven approach for building map microsites. The result looks like this. Pretty, isn't it?
+At Mapbox we're working on a template-driven approach for building map microsites. The pretty result (isn't it?) looks like this.
 
-Okay here's a proposal how this could be solved using the Substance Document Model:
+![Microsite](http://f.cl.ly/items/3a0S1N2t0J0h3Z453s0z/Screen%20Shot%202012-05-25%20at%206.12.01%20PM.png)
+
+Okay here's a proposal on how this could be solved using the Substance Document Model:
 
 First off, what dynamic information does our micropage contain?
 
 - Title
+- About
 - Sheets (every Sheet shows a different aspect and can be reached through the site navigation)
   - Name
   - Baselayer
@@ -202,7 +205,7 @@ Okay, let's see how this could be modelled as Substance Document.
 
 ```js
 {
-  "id": "/document/amazonas_rainforest",
+  "id": "/document/rainforest",
   "created_at": "2012-04-10T15:17:28.946Z",
   "updated_at": "2012-04-10T15:17:28.946Z",
   "head": "/cover/1",
@@ -211,8 +214,8 @@ Okay, let's see how this could be modelled as Substance Document.
   "nodes": {
     "/cover/1": {
       "type": "/type/cover",
-      "title": "Hello World",
-      "abstract": "",
+      "title": "Rainforest Damage",
+      "about": "About text goes here",
       "next": "/sheet/2",
       "prev": null
     },
@@ -240,3 +243,10 @@ Okay, let's see how this could be modelled as Substance Document.
   }
 }
 ```
+
+The editor (based on the Substance Composer) could have a WYSIWYG interface, providing a dropdown for switching the baselayer and handles for inline text editing (for the site's title as well as for the about text). 
+Instead of manually updating the center coordinates + zoom level, why not just remembering the zoom position of the editor. By doing so the page can easily be tweaked, without copy and pasting numbers around.
+
+![Microsite WYSIWYG Editor](http://f.cl.ly/items/1l0P36230Y3b0n0v1042/micropage-wysiwyg-editor.png)
+
+However, these are just rough sketches for the purpose of illustrating what can be done with the Substance Document Model.
