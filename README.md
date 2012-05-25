@@ -196,16 +196,14 @@ First off, what dynamic information does our micropage contain?
 - Sheets (every Sheet shows a different aspect and can be reached through the site navigation)
   - Name
   - Baselayer
-  - Zoomlevel
-  - Latitude
-  - Longitude
+  - Center (lat, long, zoom)
   - Annotations (Markers)
 
 Okay, let's see how this could be modelled as Substance Document.
 
 ```js
 {
-  "id": "/document/rainforest",
+  "id": "/document/a_wider_circle_donations",
   "created_at": "2012-04-10T15:17:28.946Z",
   "updated_at": "2012-04-10T15:17:28.946Z",
   "head": "/cover/1",
@@ -214,15 +212,15 @@ Okay, let's see how this could be modelled as Substance Document.
   "nodes": {
     "/cover/1": {
       "type": "/type/cover",
-      "title": "Rainforest Damage",
-      "about": "About text goes here",
+      "title": "A wider circle donations",
+      "about": "About text goes here.",
       "next": "/sheet/2",
       "prev": null
     },
     "/sheet/2": {
       "type": "/type/sheet",
-      "name": "Rainforest in 2000",
-      "map": "http://a.tiles.mapbox.com/v3/mapbox.mapbox-light,mapbox.rainforest-2000.jsonp",
+      "name": "A wider circle donations in 2000",
+      "map": "http://a.tiles.mapbox.com/v3/mapbox.mapbox-light,mapbox.a-wider-circle-2000.jsonp",
       "center": {"lat": 32, "lng": 11, "zoom": 13 },
       "annotations": [],
       "prev": "/cover/1",
@@ -230,12 +228,12 @@ Okay, let's see how this could be modelled as Substance Document.
     },
     "/sheet/3": {
       "type": "/type/sheet",
-      "name": "Rainforest now in 2012",
-      "map": "http://a.tiles.mapbox.com/v3/mapbox.mapbox-light,mapbox.rainforest-2012.jsonp",
+      "name": "A wider circle donations now in 2012",
+      "map": "http://a.tiles.mapbox.com/v3/mapbox.mapbox-light,mapbox.a-wider-circle-2012.jsonp",
       "center": {"lat": 32, "lng": 11, "zoom": 13 },
       "annotations": [
-        { "lat": 53.13, "lng": 41.87, "Secured area." },
-        { "lat": 55.23, "lng": 43.45, "Major Damage goign on here." }
+        { "lat": 53.13, "lng": 41.87, "Why no dots?." },
+        { "lat": 55.23, "lng": 43.45, "Lots of stuff going on here." }
       ],
       "prev": "/sheet/2",
       "next": "/sheet/3"
@@ -244,8 +242,8 @@ Okay, let's see how this could be modelled as Substance Document.
 }
 ```
 
-The editor (based on the Substance Composer) could have a WYSIWYG interface, providing a dropdown for switching the baselayer and handles for inline text editing (for the site's title as well as for the about text). 
-Instead of manually updating the center coordinates + zoom level, why not just remembering the zoom position of the editor. By doing so the page can easily be tweaked, without copy and pasting numbers around.
+The Microsite Editor (based on the Substance Composer) could have a WYSIWYG interface, providing a dropdown for switching the baselayer and handles for inline text editing (for the site's title as well as for the about text). 
+Instead of manually updating the center coordinates + zoom level, why not just remembering the zoom position of the editor? By doing so the page can easily be fine-tuned, without copy and pasting numbers around.
 
 ![Microsite WYSIWYG Editor](http://f.cl.ly/items/1l0P36230Y3b0n0v1042/micropage-wysiwyg-editor.png)
 
