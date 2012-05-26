@@ -5,7 +5,7 @@ The *Substance Document Model* (a work in progress) aims to be a quasi-standard 
 
 > Sorry your session has been expired. Or in other words, you were to slow. But no worries, if you click here you can safely fill it out again. From scratch of course.
 
-Or does that just happen to me? :) Okay, it's not always that bad. But the only systems that are fun to use, are at the same time the most simple ones. I'd consider Twitter as such an example. Too bad the world's knowledge can't be represented in a 255 characters plain-text field. So we need to deal with a (manageable) amount of complexity. The Substance Stack helps you with that. And much more. And we take this mission very seriously.
+Or does that just happen to me? :) Okay, it's not always that bad. But the only systems that are fun to use, are at the same time the most simple ones. I'd consider Twitter as such an example. Too bad the world's knowledge can't be represented within 140 characters plain-text. So we need to deal with a (manageable) amount of complexity. The Substance Stack helps you with that. And much more. And we take this mission very seriously.
 
 We're not giving you a solution for your particular problem. But we provide you a simple framework you can use to define a document model, plus a [building block](http://github.com/substance/composer) to create your own editor for manipulating those documents.
 
