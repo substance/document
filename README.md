@@ -236,7 +236,7 @@ Okay, let's see how this could be modelled as Substance Document.
         { "lat": 55.23, "lng": 43.45, "Lots of stuff going on here." }
       ],
       "prev": "/sheet/2",
-      "next": "/sheet/3"
+      "next": null
     }
   }
 }
