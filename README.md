@@ -199,7 +199,7 @@ First off, what dynamic information does our micropage contain?
   - Center (lat, long, zoom)
   - Annotations (Markers)
 
-Okay, let's see how this could be modelled as Substance Document.
+Okay, let's see how this could be modelled as a Substance Document.
 
 ```js
 {
