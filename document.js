@@ -1,5 +1,5 @@
 if (typeof exports !== 'undefined') {
-  var Data = require ('../../../lib/data'),
+  var Data = require ('./lib/data'),
       _    = require('underscore');
 }
 
