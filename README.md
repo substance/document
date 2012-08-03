@@ -16,17 +16,15 @@ This creates a new document at revision 0. It's empty. It doesn't contain anythi
 Let's start with adding a new section:
 
 ```js
-
-var newSectionCmd = {
+var newSectionOp = {
   "rev": 0,
   "user": "michael"
   "steps": [
-    ["node:insert", {"type": "section", "properties": {"name": "Open Collaboration"}}]
+    ["node:insert", {type": "section", "properties": {"id": "open-collab", name": "Open Collaboration"}}]
   ]
 };
 
-// if you don't pass a custom schema the official Substance Document Schema is used
-document.apply(newSectionCmd);
+document.apply(newSectionOp);
 ```
 
 After the command has been applied successfully the document is at revision one.
@@ -36,12 +34,43 @@ After the command has been applied successfully the document is at revision one.
 Now say John comes along, he doesn't have access to change the document directly. Instead he's suggesting a patch based on that revision 1.
 
 ```js
-var patch = {
+var addPatchOp = {
   "rev": 1,
   "user": "michael",
   "steps": [
-  	["node:insert", {"type": "text", "properties": {"content": "Hello World"}}],
-    ["node:update", {"id": "section", "properties": {"name": "Open Kollaboratiaun"}}]
+  	["node:insert", {"type": "text", "properties": {"content": "Ein erster Paragraph."}}],
+    ["node:update", {"node": "open-collab", "properties": {"name": "Offene Kollaboration"}}]
   ]
 };
+
+// This should use the apply interface
+document.addPatch(addPathOp);
+```
+
+This patch is just stored separately, but not applied to the document yet, as it needs to be reviewed and confirmed. So let's assume in the meanwhile we have some more document updates.
+
+Our document still doesn't have a title. So let's change that.
+
+```js
+var setTitleOp = {
+  "rev": 1,
+  "user": "michael",
+  "steps": [
+    ["document:update", {"properties": {"content": "Hallo Welt"}}]
+  ]
+};
+document.apply(setTitleOp);
+```
+
+Also let's add a disclaimer, at the bottom of the document.
+
+```js
+var addTextOp = {
+  "rev": 2,
+  "user": "michael",
+  "steps": [
+    ["document:update", {"properties": {"content": "Hallo Welt"}}]
+  ]
+};
+document.apply(setTitleOp);
 ```

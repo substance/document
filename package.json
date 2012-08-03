@@ -1,0 +1,12 @@
+{
+  "name"          : "document",
+  "description"   : "A document representation and transformation toolkit.",
+  "url"           : "http://github.com/substance/document/",
+  "keywords"      : ["util", "substance", "server", "client", "browser", "realtime"],
+  "author"        : "Michael Aufreiter",
+  "contributors"  : ["Oliver Buchtala"],
+  "dependencies"  : [],
+  "lib"           : ".",
+  "main"          : "index",
+  "version"       : "0.6.1"
+}

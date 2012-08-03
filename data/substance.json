@@ -1,0 +1,36 @@
+{
+  "version": "0.0.1",
+  "name": "Substance Document",
+  "properties": {
+    "title": {
+      "name": "Document Title",
+      "type": "string"
+    },
+    "abstract": {
+      "name": "Abstract",
+      "type": "string"
+    }
+  },
+
+  "nodes": {
+    "section": {
+      "name": "Section",
+      "properties": {
+        "name": {
+          "name": "Name",
+          "type": "string"
+        }
+      }
+    },
+
+    "text": {
+      "name": "Text",
+      "properties": {
+        "name": {
+          "content": "Name",
+          "type": "string"
+        }
+      }
+    }
+  }
+}
