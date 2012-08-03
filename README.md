@@ -1,6 +1,6 @@
 # Substance Document Model
 
-Read the official documentation [here](http://interior.substance.io/modules/document.html).
+Read the official documentation [here](http://interior.substance.io/modules/document.html), which gets updated on every major release.
 
 ## Document Manipulation API
 
@@ -25,7 +25,6 @@ var newSectionOp = {
 };
 
 var op = new Operation(newSectionOp).apply(document);
-
 ```
 
 After the command has been applied successfully the document is at revision one.
@@ -94,3 +93,23 @@ Behind the scenes the following happens:
 
 Depending on the actual situation this patch operation might fail, and require manual conflict resolution. We'll implement conflict resolution in a later version of the library.
 
+
+### Annotations
+
+Let's add a annotation comment at this point.
+
+```js
+var commentOnSection = {
+  "rev": 1,
+  "user": "michael",
+  "id": "open-collab",
+  "content": "This is a hello world document. Nothing too fancy."
+};
+
+// Annotations are maintained externally.
+var annotations = new Annotations(document);
+
+annotations.add(commentOnSection);
+```
+
+Side note: Once you initialize an annotation object on a document it listens for document updates and updates annotations accordingly. E.g. if a node is deleted etc. The crucial point here is that the document doesn't know anything about its annotations, they're kept fully external.
