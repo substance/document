@@ -143,7 +143,6 @@ Document.build = function(document, operations) {
 // Build (rebuild) a document, based on a stream of operations
 // --------
 
-
 Document.methods = { node: {}, document: {}};
 
 
@@ -225,13 +224,13 @@ Document.methods.node = {
 };
 
 
-// Transform document, given an operation or operation sequence
+// Transform document, given an operation
 // --------
 
-Document.update = function(document, operation) {
-  // console.log('updating teh doc');
+Document.transform = function(doc, operation) {
+  console.log('transforming....', operation);
   var op = new Operation(operation);
-  op.apply(document);
+  op.apply(doc);
 };
 
 
@@ -256,6 +255,7 @@ Document.list = function(doc, fn, ctx) {
     return doc.nodes[id];
   }
 
+  if (!doc.head) return;
   var current = node(doc.head);
   var index = 0;
 

@@ -8,7 +8,7 @@ Start with a fresh document.
 
 ```js
 // If you don't pass a custom schema the latest Substance Document Schema is used
-var document = Document.create();
+var doc = Document.create();
 ```
 
 This creates a new document at revision 0. It's empty. It doesn't contain anything, as all document content need to be applied using operations.
@@ -19,14 +19,16 @@ Let's start with adding a new section:
 var newSectionOp = {
   "rev": 0,
   "user": "michael"
-  "steps": [
-    ["node:insert", {type": "section", "properties": {"id": "open-collab", name": "Open Collaboration"}}]
+  "methods": [
+    ["node:insert", {"type": "section", "properties": {"id": "open-collab", name": "Open Collaboration"}}]
   ]
 };
 
-var op = new Operation(newSectionOp).apply(document);
-```
+// Internally: var op = new Operation(newSectionOp).apply(doc);
+Document.transform(doc, newSectionOp);
 
+
+```
 After the command has been applied successfully the document is at revision one.
 
 ### Patches
@@ -38,7 +40,7 @@ var convGerman = {
   "name": "Convert to german",
   "rev": 1,
   "user": "john",
-  "steps": [
+  "methods": [
   	["node:insert", {"type": "text", "properties": {"content": "Ein erster Paragraph."}}],
     ["node:update", {"node": "open-collab", "properties": {"name": "Offene Kollaboration"}}]
   ]
@@ -55,11 +57,11 @@ Our document still doesn't have a title. So let's change that.
 var setTitleOp = {
   "rev": 1,
   "user": "michael",
-  "steps": [
+  "methods": [
     ["document:update", {"properties": {"content": "Hallo Welt"}}]
   ]
 };
-document.apply(setTitleOp);
+Document.transform(doc, setTitleOp);
 ```
 
 Also let's add a disclaimer, at the bottom of the document.
@@ -68,24 +70,24 @@ Also let's add a disclaimer, at the bottom of the document.
 var addTextOp = {
   "rev": 2,
   "user": "michael",
-  "steps": [
+  "methods": [
     ["document:update", {"properties": {"content": "Hallo Welt"}}]
   ]
 };
-document.apply(setTitleOp);
+Document.transform(doc, addTextOp);
 ```
 
-Finally, Michael discovers the patch and he want's to bring in those changes.
+Finally, Michael discovers the patch and he wants to bring in those changes.
 
 ```js
-patch.apply(document);
+Patch.apply(document, history, patch);
 ```
 
 Behind the scenes the following happens:
 
-1. `patch.apply` rolls back the document state to revision one, while remembering rev 2-3.
+1. `Patch.apply` rolls back the document state to revision one, while remembering rev 2-3.
 
-2. Once that is done the patch get's applied and we get a new rev 2'.
+2. Once that is done the patch gets applied and we get a new rev 2'.
 
 3. The remembered revs 2-3 are now applied on the fresh state.
 
