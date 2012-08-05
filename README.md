@@ -71,7 +71,7 @@ var addTextOp = {
   "rev": 2,
   "user": "michael",
   "methods": [
-    ["document:update", {"properties": {"content": "Hallo Welt"}}]
+    ["node:insert", {"type": "text", properties": {"content": "Hallo Welt"}}]
   ]
 };
 Document.transform(doc, addTextOp);

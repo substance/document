@@ -16,11 +16,53 @@ var newSectionOp = {
   ]
 };
 
-Document.transform(doc, newSectionOp);
+var addTextOp = {
+  "rev": 1,
+  "user": "michael",
+  "methods": [
+    ["node:insert", {"type": "text", "properties": {"content": "Hallo Welt"}}]
+  ]
+};
 
-// Functional
-Document.list(doc, function(node, index) {
-  console.log(index, node);
-});
+var setTitleOp = {
+  "rev": 2,
+  "user": "michael",
+  "methods": [
+    ["document:update", {"properties": {"content": "Hallo Welt"}}]
+  ]
+};
+
+var operations = [newSectionOp, addTextOp];
+
+// Document.transform(doc, newSectionOp);
+
+// // Functional
+// Document.list(doc, function(node, index) {
+//   console.log(index, node);
+// });
 
 console.log('Tests completed.');
+
+// Document session, takes a stream of operations and applies them fast forward style
+var session = new Document.Session(doc, {operations: operations});
+
+session.loadRevision(2);
+
+console.log('REV1');
+console.log(doc);
+
+session.undo();
+session.undo();
+
+console.log('After undo undo.');
+console.log(doc);
+
+session.redo();
+console.log('After redo.');
+console.log(doc);
+
+
+// session.loadRevision(1);
+
+// console.log('REV1');
+// console.log(doc);

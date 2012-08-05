@@ -48,33 +48,69 @@ Math.uuid = function (prefix) {
 // --------
 // 
 // Representing a document editing session
-// Not yet functional
 
-var Session = function(document, options) {
+var Session = function(doc, options) {
   var that = this;
   that.users = options.users || {};
+  that.operations = options.operations;
+  that.doc = doc;
+  // that.rev = 0;
 
-  this.enter = function(user) {
-    that.users[user.id] = { id: user.id, username: user.username, color: user.color || "red"};
-  };
-
-  this.leave = function(id) {
-    delete that.users[id];
-  };
-
-  // Update selection
-  this.select = function(options) {
-    if (that.users[options.user].selection) {
-      that.users[options.user].selection.forEach(function(node) {
-        delete that.selections[node];
-      });
-    }
-
-    that.users[options.user].selection = options.nodes;
-    options.nodes.forEach(function(node) {
-      that.selections[node] = options.user;
+  // Roll back to zero
+  this.reset = function() {
+    _.extend(that.doc, {
+      "id": doc.id,
+      "created_at": doc.created_at,
+      "updated_at": doc.updated_at,
+      "nodes": {},
+      "head": null,
+      "tail": null,
+      "properties": {},
+      "rev": 0,
     });
   };
+
+  // Reconstruct a particular revision
+  this.loadRevision = function(rev) {
+    that.reset();
+    
+    while (doc.rev < rev && doc.rev < that.operations.length) {
+      var op = new Operation(that.operations[doc.rev]);
+      op.apply(doc); // increments rev if successful
+    }
+  };
+
+  // Restore previous revision
+  this.undo = function() {
+    if (doc.rev>0) that.loadRevision(doc.rev-1);
+  };
+
+  // Restore next revision (if there is one)
+  this.redo = function() {
+    if (doc.rev<that.operations.length) that.loadRevision(doc.rev+1);
+  };
+
+  // this.enter = function(user) {
+  //   that.users[user.id] = { id: user.id, username: user.username, color: user.color || "red"};
+  // };
+
+  // this.leave = function(id) {
+  //   delete that.users[id];
+  // };
+
+  // Update selection
+  // this.select = function(options) {
+  //   if (that.users[options.user].selection) {
+  //     that.users[options.user].selection.forEach(function(node) {
+  //       delete that.selections[node];
+  //     });
+  //   }
+
+  //   that.users[options.user].selection = options.nodes;
+  //   options.nodes.forEach(function(node) {
+  //     that.selections[node] = options.user;
+  //   });
+  // };
 };
 
 
@@ -228,7 +264,6 @@ Document.methods.node = {
 // --------
 
 Document.transform = function(doc, operation) {
-  console.log('transforming....', operation);
   var op = new Operation(operation);
   op.apply(doc);
 };
