@@ -4,96 +4,142 @@ Read the official documentation [here](http://interior.substance.io/modules/docu
 
 ## Document Manipulation API
 
-Start with a fresh document.
+A complete JSON-serialized version of a document looks like this:
+
+```js
+var doc = {
+  "id": "hello-world",
+  "user": "michael",
+  "refs": {
+    "head": "commit-2",
+    "patch-1": "commit-5"
+  },
+  "commits": {
+    "commit-1": {
+      "op": ["node:insert", {"type": "section", "properties": {"name": "Hello?"}}],
+      "user": "michael",
+      "parent": null
+    },
+
+    "commit-2": {
+      "op": ["node:insert", {"type": "text", "properties": {"content": "Hello there."}}],
+      "user": "michael",
+      "parent": "commit-1"
+    },
+
+    "commit-3": {
+      "op": ["node:insert", {"type": "text", "properties": {"content": "Ein erster Paragraph."}}],
+      "user": "michael",
+      "parent": "commit-2"
+    },
+
+    "commit-4": {
+      "op": ["node:insert", {"type": "text", "properties": {"content": "This is the end."}}],
+      "user": "michael",
+      "parent": "commit-2"
+    },
+
+    "commit-5": {
+      "op": ["node:insert", {"type": "text", "properties": {"content": "Ein zweiter paragraph."}}],
+      "user": "michael",
+      "parent": "commit-3"
+    }
+  }
+};
+```
+
+
+Start tracking a document
 
 ```js
 // If you don't pass a custom schema the latest Substance Document Schema is used
-var doc = Document.create();
+var doc = new Document(doc)
 ```
 
-This creates a new document at revision 0. It's empty. It doesn't contain anything, as all document content need to be applied using operations.
+By default, the current head of your document gets reconstructed. So if you want to expect the current state of your document, do this:
 
-Let's start with adding a new section:
 
 ```js
-var newSectionOp = {
-  "rev": 0,
-  "user": "michael"
-  "methods": [
-    ["node:insert", {"type": "section", "properties": {"id": "open-collab", name": "Open Collaboration"}}]
-  ]
-};
-
-// Internally: var op = new Operation(newSectionOp).apply(doc);
-Document.transform(doc, newSectionOp);
-
-
+doc.content
 ```
-After the command has been applied successfully the document is at revision one.
 
-### Patches
-
-Now say John comes along, he doesn't have access to change the document directly. Instead he's suggesting a patch based on that revision 1.
+You get a JSON compatible representation of your document
 
 ```js
-var convGerman = {
-  "name": "Convert to german",
-  "rev": 1,
-  "user": "john",
-  "methods": [
-  	["node:insert", {"type": "text", "properties": {"content": "Ein erster Paragraph."}}],
-    ["node:update", {"node": "open-collab", "properties": {"name": "Offene Kollaboration"}}]
-  ]
-};
-
-var patch = new Patch(convGerman);
+{ properties: {},
+  nodes: 
+   { '9da1232c2f3a32742ddaa5cd320064a4': 
+      { type: 'section',
+        properties: [Object],
+        id: '9da1232c2f3a32742ddaa5cd320064a4',
+        prev: null,
+        next: null },
+     '9ad2c5c966f399bdcd0b61e144f02840': 
+      { type: 'text',
+        properties: [Object],
+        id: '9ad2c5c966f399bdcd0b61e144f02840',
+        prev: '9da1232c2f3a32742ddaa5cd320064a4',
+        next: null } },
+  head: '9da1232c2f3a32742ddaa5cd320064a4',
+  tail: '9ad2c5c966f399bdcd0b61e144f02840' }
 ```
 
-This patch is just stored separately, but not applied to the document yet, as it needs to be reviewed and confirmed. So let's assume in the meanwhile we have some more document updates.
-
-Our document still doesn't have a title. So let's change that.
+Much like as in Git to restore a specific reference or commit:
 
 ```js
-var setTitleOp = {
-  "rev": 1,
-  "user": "michael",
-  "methods": [
-    ["document:update", {"properties": {"content": "Hallo Welt"}}]
-  ]
-};
-Document.transform(doc, setTitleOp);
+doc.checkout('patch-1');
 ```
 
-Also let's add a disclaimer, at the bottom of the document.
+This time the reconstructed document, containing additional operations of a patch, looks like this:
 
 ```js
-var addTextOp = {
-  "rev": 2,
-  "user": "michael",
-  "methods": [
-    ["node:insert", {"type": "text", properties": {"content": "Hallo Welt"}}]
-  ]
-};
-Document.transform(doc, addTextOp);
+{ properties: {},
+  nodes: 
+   { '8bb75cd271ea1643e55ae781d7459a2a': 
+      { type: 'section',
+        properties: [Object],
+        id: '8bb75cd271ea1643e55ae781d7459a2a',
+        prev: null,
+        next: null },
+     db386446d62ea8150bbe1b303ab65412: 
+      { type: 'text',
+        properties: [Object],
+        id: 'db386446d62ea8150bbe1b303ab65412',
+        prev: '8bb75cd271ea1643e55ae781d7459a2a',
+        next: null },
+     b5f309cc0d2c9e34604891e8dd76ae17: 
+      { type: 'text',
+        properties: [Object],
+        id: 'b5f309cc0d2c9e34604891e8dd76ae17',
+        prev: 'db386446d62ea8150bbe1b303ab65412',
+        next: null },
+     fda8b680672bb9b0df073330a6a26e49: 
+      { type: 'text',
+        properties: [Object],
+        id: 'fda8b680672bb9b0df073330a6a26e49',
+        prev: 'b5f309cc0d2c9e34604891e8dd76ae17',
+        next: null } },
+  head: '8bb75cd271ea1643e55ae781d7459a2a',
+  tail: 'fda8b680672bb9b0df073330a6a26e49' }
 ```
+
 
 Finally, Michael discovers the patch and he wants to bring in those changes.
 
 ```js
 Patch.apply(document, history, patch);
+doc.merge()
 ```
 
 Behind the scenes the following happens:
 
-1. `Patch.apply` rolls back the document state to revision one, while remembering rev 2-3.
+1. The current head gets checked out
 
-2. Once that is done the patch gets applied and we get a new rev 2'.
+2. Operations of branch `patch-1` get applied
 
-3. The remembered revs 2-3 are now applied on the fresh state.
+3. If everything goes right, the head pointer is set to the latest commit of `patch-1`
 
-4. If everything goes right, we end up with a patched document at rev 4.
-
-Depending on the actual situation this patch operation might fail, and require manual conflict resolution. We'll implement conflict resolution in a later version of the library.
+Depending on the actual situation this merge operation might fail, and require manual conflict resolution. We'll implement conflict resolution in a later version of the library.
 
 
 ### Annotations
@@ -109,9 +155,9 @@ var commentOnSection = {
 };
 
 // Annotations are maintained externally.
-var annotations = new Annotations(document);
+var annotations = new Annotations(doc);
 
 annotations.add(commentOnSection);
 ```
 
-Side note: Once you initialize an annotation object on a document it listens for document updates and updates annotations accordingly. E.g. if a node is deleted etc. The crucial point here is that the document doesn't know anything about its annotations, they're kept fully external.
+Side note: Once you initialize an annotation object on a document it listens for document updates and updates annotations accordingly. E.g. if a node is deleted etc. The crucial point here is that the document doesn't know anything about its annotations, they're kept fully external. Annotations always belong to the head version of a document, and get updated if the head changes.
