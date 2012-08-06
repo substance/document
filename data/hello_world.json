@@ -1,0 +1,39 @@
+{
+  "id": "hello-world",
+  "user": "michael",
+  "refs": {
+    "head": "commit-2",
+    "patch-1": "commit-5"
+  },
+  "commits": {
+    "commit-1": {
+      "op": ["node:insert", {"type": "section", "properties": {"name": "Hello?"}}],
+      "user": "michael",
+      "parent": null
+    },
+
+    "commit-2": {
+      "op": ["node:insert", {"type": "text", "properties": {"content": "Hello there."}}],
+      "user": "michael",
+      "parent": "commit-1"
+    },
+
+    "commit-3": {
+      "op": ["node:insert", {"type": "text", "properties": {"content": "Ein erster Paragraph."}}],
+      "user": "michael",
+      "parent": "commit-2"
+    },
+
+    "commit-4": {
+      "op": ["node:insert", {"type": "text", "properties": {"content": "This is the end."}}],
+      "user": "michael",
+      "parent": "commit-2"
+    },
+
+    "commit-5": {
+      "op": ["node:insert", {"type": "text", "properties": {"content": "Ein zweiter paragraph."}}],
+      "user": "michael",
+      "parent": "commit-3"
+    }
+  }
+}
