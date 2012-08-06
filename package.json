@@ -2,7 +2,7 @@
   "name"          : "document",
   "description"   : "A document representation and transformation toolkit.",
   "url"           : "http://github.com/substance/document/",
-  "keywords"      : ["document", "substance", "server", "client", "browser", "realtime"],
+  "keywords"      : ["document", "substance", "server", "client", "browser", "realtime", "git"],
   "author"        : "Michael Aufreiter",
   "contributors"  : ["Oliver Buchtala", "Victor Saiz"],
   "dependencies"  : ["underscore"],

@@ -2,38 +2,32 @@
   "id": "hello-world",
   "user": "michael",
   "refs": {
-    "head": "commit-2",
-    "patch-1": "commit-5"
+    "master": "commit-4",
+    "patch-1": "commit-3"
   },
   "commits": {
     "commit-1": {
-      "op": ["node:insert", {"type": "section", "properties": {"name": "Hello?"}}],
+      "op": ["node:insert", {"id": "section:hello", "type": "section", "properties": {"name": "Hello?"}}],
       "user": "michael",
       "parent": null
     },
 
     "commit-2": {
-      "op": ["node:insert", {"type": "text", "properties": {"content": "Hello there."}}],
+      "op": ["node:insert", {"id": "text:hello", "type": "text", "target": "section:hello", "properties": {"content": "Hello there."}}],
       "user": "michael",
       "parent": "commit-1"
     },
 
     "commit-3": {
-      "op": ["node:insert", {"type": "text", "properties": {"content": "Ein erster Paragraph."}}],
+      "op": ["node:insert", {"id": "text:p1", "type": "text", "target": "text:hello", "properties": {"content": "Ein erster Paragraph."}}],
       "user": "michael",
       "parent": "commit-2"
     },
 
     "commit-4": {
-      "op": ["node:insert", {"type": "text", "properties": {"content": "This is the end."}}],
+      "op": ["node:insert", {"id": "text:outro", "type": "text", "target": "text:hello", "properties": {"content": "This is the end."}}],
       "user": "michael",
       "parent": "commit-2"
-    },
-
-    "commit-5": {
-      "op": ["node:insert", {"type": "text", "properties": {"content": "Ein zweiter paragraph."}}],
-      "user": "michael",
-      "parent": "commit-3"
     }
   }
 }

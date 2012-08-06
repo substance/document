@@ -126,7 +126,6 @@ This time the reconstructed document, containing additional operations of a patc
 Finally, Michael discovers the patch and he wants to bring in those changes.
 
 ```js
-Patch.apply(document, history, patch);
 doc.merge('patch-1');
 ```
 

@@ -52,43 +52,7 @@ Math.uuid = function (prefix) {
 var Session = function(doc, options) {
   var that = this;
   that.users = options.users || {};
-  that.operations = options.operations;
   that.doc = doc;
-  // that.rev = 0;
-
-  // Roll back to zero
-  this.reset = function() {
-    _.extend(that.doc, {
-      "id": doc.id,
-      "created_at": doc.created_at,
-      "updated_at": doc.updated_at,
-      "nodes": {},
-      "head": null,
-      "tail": null,
-      "properties": {},
-      "rev": 0,
-    });
-  };
-
-  // Reconstruct a particular revision
-  this.loadRevision = function(rev) {
-    that.reset();
-    
-    while (doc.rev < rev && doc.rev < that.operations.length) {
-      var op = new Operation(that.operations[doc.rev]);
-      op.apply(doc); // increments rev if successful
-    }
-  };
-
-  // Restore previous revision
-  this.undo = function() {
-    if (doc.rev>0) that.loadRevision(doc.rev-1);
-  };
-
-  // Restore next revision (if there is one)
-  this.redo = function() {
-    if (doc.rev<that.operations.length) that.loadRevision(doc.rev+1);
-  };
 
   // this.enter = function(user) {
   //   that.users[user.id] = { id: user.id, username: user.username, color: user.color || "red"};
@@ -114,40 +78,113 @@ var Session = function(doc, options) {
 };
 
 
-// Patch
-// --------
-// 
-// A patch contains an operation that can be applied on a particular document
-
-var Patch = function(document) {
-  // TODO: implement
-};
-
-
-// Operation
-// --------
-// 
-// An Operation that can be applied on a document
-
-var Operation = function(operation) {
-  this.operation = operation;
-
-  // Apply operation on a given document
-  this.apply = function(document) {
-    console.log('applying', operation);
-    _.each(this.operation.methods, function(cmd) {
-      Document.apply(document, cmd[0], cmd[1]);
-    });
-  };
-};
-
 
 // Document
 // --------
 // 
 // A generic model for representing and transforming digital documents
 
-var Document = {};
+var Document = function(doc, schema) {
+  this.model = doc;
+  this.schema = schema;
+  this.content = {
+    properties: {},
+    nodes: {},
+  };
+
+  // Store ops for redo
+  this.undoneOperations = [];
+};
+
+ _.extend(Document.prototype, _.Events, {
+
+  // TODO: error handling
+  checkout: function(ref) {
+    var that = this;
+    // var commit =  || ref;
+
+    // Current commit (=head)
+    var commit = this.getRef(ref);
+    if (!commit) return false;
+    this.head = ref;
+
+    var op = this.model.commits[commit];
+    var operations = [op];
+
+    while (op = this.model.commits[op.parent]) {
+      operations.push(op);
+    }
+
+    operations.reverse();
+
+    _.each(operations, function(op) {
+      that.apply(op, true);
+    });
+  },
+
+  // Get sha the current head points to
+  getRef: function(ref) {
+    return this.model.refs[ref];
+  },
+
+  // Go back in document history
+  // --------
+
+  undo: function() {
+    // TODO: implement
+  },
+
+  // If there are any undone operations
+  // --------
+
+  redo: function() {
+    // TODO: implement
+  },
+
+  // List all nodes in a document
+  // --------
+
+  list: function(fn, ctx) {
+    var doc = this.content;
+    function node(id) {
+      return doc.nodes[id];
+    }
+
+    if (!doc.head) return;
+    var current = node(doc.head);
+    var index = 0;
+
+    fn.call(ctx || doc, current, index);
+
+    while (current = node(current.next)) {
+      index += 1;
+      fn.call(ctx || doc, current, index);
+    }
+  },
+
+  toJSON: function() {
+    return this.content;
+  },
+
+  // Apply a given operation on the current document state
+  apply: function(operation, silent) {
+    var method = operation.op[0].split(':');
+    Document.methods[method[0]][method[1]](this.content, operation.op[1]);
+    if (!silent) this.commit(operation);
+  },
+  
+  // Create a commit for a certain operation
+  commit: function(op) {
+    var sha = Math.uuid();
+    // console.log('committing... parent=', this.head, this.getRef(this.head));
+    this.model.commits[sha] = {
+      op: op.op,
+      user: op.user,
+      parent: this.getRef(this.head)
+    };
+    this.model.refs[this.head] = sha;
+  }
+});
 
 // Create a new (empty) document
 // --------
@@ -164,45 +201,68 @@ Document.create = function(schema) {
   return doc;
 };
 
-
-// Build (rebuild) a document, based on a stream of operations
-// --------
-
-Document.build = function(document, operations) {
-  _.each(operations, function(op) {
-    var operation = new Operation(op);
-    operation.apply(that);
-  });
-};
-
-
 // Build (rebuild) a document, based on a stream of operations
 // --------
 
 Document.methods = { node: {}, document: {}};
 
 
-// Node interface
+// Node manipulation interface
+// --------
 
 Document.methods.node = {
+
   insert: function(doc, options) {
     var id = options.id ? options.id : Math.uuid();
 
     // Construct a new document node
-    doc.nodes[id] = _.extend(_.clone(options), {
+    var newNode = {
       id: id,
-      prev: doc.tail ? doc.tail : null,
-      next: null,
-    });
+      properties: _.clone(options.properties),
+      type: options.type
+    };
 
-    // Update document pointers
-    if (!doc.head) {
-      doc.head = id;
-    } else {
-      doc.head.next = id;
-    }
-    doc.tail = id;
     // TODO: validate against schema
+    // validate(newNode);
+
+    // Register new node
+    doc.nodes[newNode.id] = newNode;
+
+    // Insert position
+    if (options.target === "front") {
+      // This goes to the front
+      var headNode = doc.nodes[doc.head];
+
+      if (headNode) {
+        newNode.next = headNode.id;
+        headNode.prev = newNode.id;
+      }
+      newNode.prev = null;
+      doc.head = newNode.id;
+
+    } else if (!options.target || options.target === "back") {
+      // This goes to the back
+      var tailNode = doc.nodes[doc.tail];
+
+      if (tailNode) {
+        tailNode.next = newNode.id;  
+        newNode.prev = tailNode.id;  
+      } else { // Empty doc
+        doc.head = newNode.id;
+        newNode.prev = null;
+      }
+      newNode.next = null;
+      doc.tail = newNode.id;
+    } else {
+      // This goes after the target node
+      var targetNode = doc.nodes[options.target];
+      newNode.prev = targetNode.id;
+      newNode.next = targetNode.next;
+      targetNode.next = newNode.id;
+
+      // Update tail reference if necessary
+      if (targetNode.id === doc.tail) doc.tail = newNode.id;
+    }
   },
 
   update: function(doc, options) {
@@ -210,106 +270,50 @@ Document.methods.node = {
     // that.trigger('node:update', options.node);
   },
 
-
   move: function(doc, options) {
-    // TODO: make it work on new datastructue
+    var f  = doc.nodes[_.first(options.nodes)], // first node of selection
+        l  = doc.nodes[_.last(options.nodes)], // last node of selection
+        t  = doc.nodes[options.target], // target node
+        fp = doc.nodes[f.prev], // first-previous
+        ln = doc.nodes[l.next], // last-next
+        tn = doc.nodes[t.next]; // target-next
 
-    // if (checkRev(options.rev)) {
-    //   var f = that.get(_.first(options.nodes)), // first node of selection
-    //       l = that.get(_.last(options.nodes)), // last node of selection
-    //       t = that.get(options.target), // target node
-    //       fp = f.get('prev'), // first-previous
-    //       ln = l.get('next'), // last-next
-    //       tn = t.get('next'); // target-next
+    t.next = f.id;
+    t.prev = t.prev === l.id ? (fp ? fp.id : null)
+                             : (t.prev ? t.prev : null)
 
-    //   t.set({
-    //     next: f._id,
-    //     prev: t.get('prev') === l ? (fp ? fp._id : null)
-    //                               : (t.get('prev') ? t.get('prev')._id : null)
-    //   });
+    if (fp) {
+      fp.next = ln ? ln.id : null;
+    } else { // dealing with the first node
+      doc.head = ln.id; // why we had this before? doc.head = t.id;
+    }
 
-    //   if (fp) {
-    //     fp.set({next: ln ? ln._id : null});
-    //   } else {
-    //     // dealing with the first node
-    //     that.head = t;
-    //     console.log('dealing with the first elem');
-    //   }
-      
-    //   // First node of the selection is now preceded by the target node
-    //   f.set({prev: t._id});
+    // First node of the selection is now preceded by the target node
+    f.prev = t.id;
 
-    //   if (ln) ln.set({prev: fp ? fp._id : null});
-    //   l.set({next: tn ? tn._id : null});
+    // Set some pointers
+    if (ln) ln.prev = fp ? pf.id : null;
 
-    //   if (tn) {
-    //     tn.set({prev: l._id});
-    //   } else {
-    //     // Special case: target is tail node  
-    //     that.tail = l;
-    //   }
+    // Pointers, everywhere.
+    l.next = tn ? tn.id : null;
 
-    //   that.trigger('node:move', options);
-    //   that.rev += 1;
-    // }
+    if (tn) {
+      tn.prev = l.id;
+    } else { // Special case: target is tail node  
+      doc.tail = l.id;
+    }
+
+    // doc.trigger('node:move', options);
   },
 
   delete: function(doc, node) {
-
+    console.log('deleting... NOT YET IMPLEMENTED');
   }
 };
-
-
-// Transform document, given an operation
-// --------
-
-Document.transform = function(doc, operation) {
-  var op = new Operation(operation);
-  op.apply(doc);
-};
-
-
-// Apply a method on a given document
-// --------
-// 
-// Document.apply(doc, 'node:insert', { type: "section", name: "Hello World"});
-
-Document.apply = function(doc, method, params) {
-  var method = method.split(':');
-  Document.methods[method[0]][method[1]](doc, params);
-  doc.rev += 1;
-  return doc.rev;
-};
-
-
-// List all nodes in a document
-// --------
-
-Document.list = function(doc, fn, ctx) {
-  function node(id) {
-    return doc.nodes[id];
-  }
-
-  if (!doc.head) return;
-  var current = node(doc.head);
-  var index = 0;
-
-  fn.call(ctx || doc, current, index);
-
-  while (current = node(current.next)) {
-    index += 1;
-    fn.call(ctx || doc, current, index);
-  }
-};
-
-_.extend(Document.prototype, _.Events);
-
 
 // Export Module
 // --------
 
-Document.Patch = Patch;
-Document.Operation = Operation;
 Document.Session = Session;
 
 if (typeof exports !== 'undefined') {
