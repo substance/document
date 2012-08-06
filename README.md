@@ -127,7 +127,7 @@ Finally, Michael discovers the patch and he wants to bring in those changes.
 
 ```js
 Patch.apply(document, history, patch);
-doc.merge()
+doc.merge('patch-1');
 ```
 
 Behind the scenes the following happens:
