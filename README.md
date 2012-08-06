@@ -52,7 +52,6 @@ var doc = {
 Start tracking a document
 
 ```js
-// If you don't pass a custom schema the latest Substance Document Schema is used
 var doc = new Document(doc)
 ```
 
