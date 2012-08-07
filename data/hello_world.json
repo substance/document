@@ -2,8 +2,8 @@
   "id": "hello-world",
   "user": "michael",
   "refs": {
-    "master": "commit-4",
-    "patch-1": "commit-3"
+    "master": "commit-3",
+    "patch-1": "commit-4"
   },
   "commits": {
     "commit-1": {
@@ -27,7 +27,7 @@
     "commit-4": {
       "op": ["node:insert", {"id": "text:outro", "type": "text", "target": "text:hello", "properties": {"content": "This is the end."}}],
       "user": "michael",
-      "parent": "commit-2"
+      "parent": "commit-3"
     }
   }
 }

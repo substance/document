@@ -166,6 +166,10 @@ var Document = function(doc, schema) {
     return this.content;
   },
 
+  merge: function(ref) {
+    Document.merges["fast-forward"](this, ref);
+  },
+
   // Apply a given operation on the current document state
   apply: function(operation, silent) {
     var method = operation.op[0].split(':');
@@ -200,6 +204,48 @@ Document.create = function(schema) {
   };
   return doc;
 };
+
+
+// Merge Strategies
+// --------
+
+Document.merges = {
+
+  // Teh good old fast-forward merge
+  "fast-forward": function(doc, ref) {
+    // For the merge, operate on a temporary doc
+    var mergedDoc = new Document(doc.model);
+    var sha = mergedDoc.getRef(ref);
+    
+    // Checkout master
+    mergedDoc.checkout('master');
+
+    function commit(sha) {
+      return mergedDoc.model.commits[sha];
+    }
+
+    // Find operations between ref and master
+    var operations = [];
+
+    while (sha && sha !== mergedDoc.getRef('master')) {
+      var c = commit(sha);
+      operations.push(c);
+      sha = c.parent;
+    }
+
+    operations.reverse();
+
+    // Apply those guys
+    _.each(operations, function(op) {
+      mergedDoc.apply(op);
+    });
+    
+    doc.model = mergedDoc.model;
+    doc.checkout('master');
+    return true;
+  }
+};
+
 
 // Build (rebuild) a document, based on a stream of operations
 // --------
