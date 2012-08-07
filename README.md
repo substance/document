@@ -49,7 +49,7 @@ Start tracking a document
 var doc = new Document(doc);
 ```
 
-By default, the current head of your document gets reconstructed. So if you want to expect the current state of your document, do this:
+By default, the current head of your document gets reconstructed. So if you want to inspect the current state of your document, do this:
 
 
 ```js
