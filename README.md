@@ -43,7 +43,7 @@ Now we're ready to apply our annotations operation.
 
 ```js
 var op1 = {
-  "op": ["node:insert", {"id": "annotation:1", "type": "annotation", "pos": [0, 9], properties": {"content": "The Substance Document Model is a generic format for representing documents including their history."}}],
+  "op": ["node:insert", {"id": "annotation:1", "type": "annotation", "pos": [0, 9], "properties": {"content": "The Substance Document Model is a generic format for representing documents including their history."}}],
   "user": "michael"
 }
 annotations.apply(op1);
@@ -51,7 +51,7 @@ annotations.apply(op1);
 
 Before we do that... Let's recap for a moment. We have a document containing two nodes (a section and a text element) and we have an annotations document holding a comment.
 
-Or document operations graph looks like this:
+Our document operations graph looks like this:
 
 ```js
 {
@@ -143,7 +143,7 @@ doc.apply(opD);
 
 #### Michael is back
 
-Right after Victor has submitted his patch, Michael continutes to improve the document as well. He adds a conclusio.
+Right after Victor has submitted his patch, Michael continutes to improve the document as well. He adds a conclusion.
 
 
 ```js
@@ -154,6 +154,9 @@ var opE = {
 doc.apply(opE);
 ```
 
+After all these operations our graph describing everything that happened looks like this:
+
+![](https://raw.github.com/substance/document/master/assets/operations-graph-before-merge.png)
 
 #### Merge party
 
@@ -168,6 +171,10 @@ Since everything looks good, Michael just merges in the changes.
 ```js
 doc.merge('victor-patch-1');
 ```
+
+And we get this:
+
+![](https://raw.github.com/substance/document/master/assets/operations-graph-after-merge.png)
 
 Behind the scenes the following happens:
 
