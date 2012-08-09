@@ -184,7 +184,7 @@ If everything goes right, your annotation ranges should be updated accordingly. 
 - The content of a text node change in such a way that all the refenced characters get deleted. Thus the annotation should be deleted as well, or marked as unassigned.
 
 
-# Document Manipulation by example
+# Document manipulation by example
 
 Start tracking a new document.
 
@@ -192,7 +192,7 @@ Start tracking a new document.
 var doc = new Document({ id: "document:substance" }, substanceDocSchema);
 ```
 
-## Insert Section
+### Insert Section
 
 ```js
 var opA = {
@@ -203,17 +203,17 @@ var opA = {
 doc.apply(opA);
 ```
 
-## Insert Text
+### Insert Text
 
 ```js
 var opB = {
-  "op": ["node:insert", {"id": "text:a", "type": "text", "properties": {"content": "The Substance Document Model is a generic format for representing documents including their history."}}],
+  "op": ["node:insert", {"id": "text:a", "type": "text", "properties": {"content": "Substance Document Model is a generic format for representing documents including their history."}}],
   "user": "michael"
 }
 doc.apply(opB);
 ```
 
-## Add a new annotation
+### Add a new annotation
 
 Now we'd like to store additional contextual information, like a comment refering to a portion of text within the document. Let's add a comment explaining the word **Substance**. But first, we need to track an annotations object. The annotations object is just another Substance Document, using a different schema. They don't hold text nodes, sections etc. but `comments`, `links`, `ems`, and `strongs`.
 
@@ -225,7 +225,7 @@ Now we're ready to apply our annotations operation.
 
 ```js
 var op1 = {
-  "op": ["node:insert", {"id": "text:a", "type": "annotation", "pos": [4, 13], properties": {"content": "The Substance Document Model is a generic format for representing documents including their history."}}],
+  "op": ["node:insert", {"id": "annotation:1", "type": "annotation", "pos": [4, 13], properties": {"content": "The Substance Document Model is a generic format for representing documents including their history."}}],
   "user": "michael"
 }
 annotations.apply(op1);
@@ -279,16 +279,34 @@ And our annotations graph looks like this:
 }
 ```
 
-## Update text
+### Update text
 
-Now things get a little tricky, since if we change the contents of the text node.
-
+Now things get a little tricky, since once we change the contents of the text node the position of the associated annotation will be wrong.
 
 ```js
 var opC = {
-  "op": ["node:update", {"node": "text:a", "mooh"}],
+  "op": ["node:update", {"node": "text:a", "delta": "ins('The ') ret(100)"}],
   "user": "michael"
 }
+
 doc.apply(opC);
 ```
+
+So we need a mechanism to keep the annotations in sync with the plain text. Let's assume there is a neat helper that does that for us. And we could just use it like so:
+
+```js
+var transformer = new AnnotationTransformer(doc, annotations);
+```
+
+This piece just listens to completed document operations, checks if there are annotations affected and if that's the case, magically create operations on the annotations document to update the positions. 
+
+```js
+var op1 = {
+  "op": ["node:update", {"node": "annotation:1", "pos": [4, 13]}],
+  "user": "michael"
+};
+annotations.apply(op1);
+```
+
+By having delta updates on the anotation level allows us to walk back in time to a particular document state, and also see the annotations that existed at that same point in time. We'll show later how to do time travels based on the operations history.
 
