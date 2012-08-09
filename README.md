@@ -154,6 +154,9 @@ var opE = {
 doc.apply(opE);
 ```
 
+After all these operations our graph describing everything that happened looks like this:
+
+![](https://raw.github.com/substance/document/master/assets/operations-graph-before-merge.png)
 
 #### Merge party
 
@@ -168,6 +171,10 @@ Since everything looks good, Michael just merges in the changes.
 ```js
 doc.merge('victor-patch-1');
 ```
+
+And we get this:
+
+![](https://raw.github.com/substance/document/master/assets/operations-graph-after-merge.png)
 
 Behind the scenes the following happens:
 
