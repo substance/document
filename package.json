@@ -5,7 +5,7 @@
   "keywords"      : ["document", "substance", "server", "client", "browser", "realtime", "git"],
   "author"        : "Michael Aufreiter",
   "contributors"  : ["Oliver Buchtala", "Victor Saiz"],
-  "dependencies"  : ["underscore"],
+  "dependencies"  : ["underscore", "operational-transformation"],
   "lib"           : ".",
   "main"          : "index",
   "version"       : "0.0.1"
