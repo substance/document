@@ -51,7 +51,7 @@ annotations.apply(op1);
 
 Before we do that... Let's recap for a moment. We have a document containing two nodes (a section and a text element) and we have an annotations document holding a comment.
 
-Or document operations graph looks like this:
+Our document operations graph looks like this:
 
 ```js
 {
