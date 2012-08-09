@@ -143,7 +143,7 @@ doc.apply(opD);
 
 #### Michael is back
 
-Right after Victor has submitted his patch, Michael continutes to improve the document as well. He adds a conclusio.
+Right after Victor has submitted his patch, Michael continutes to improve the document as well. He adds a conclusion.
 
 
 ```js
