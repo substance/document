@@ -4,13 +4,13 @@ Read the official documentation [here](http://interior.substance.io/modules/docu
 
 ## Document Manipulation API
 
-Start tracking a new document.
+#### Start tracking a new document.
 
 ```js
 var doc = new Document({ id: "document:substance" }, substanceDocSchema);
 ```
 
-### Insert Section
+#### Insert Section
 
 ```js
 var opA = {
@@ -21,7 +21,7 @@ var opA = {
 doc.apply(opA);
 ```
 
-### Insert Text
+#### Insert Text
 
 ```js
 var opB = {
@@ -31,7 +31,7 @@ var opB = {
 doc.apply(opB);
 ```
 
-### Add a new annotation
+#### Add a new annotation
 
 Now we'd like to store additional contextual information, like a comment refering to a portion of text within the document. Let's add a comment explaining the word **Substance**. But first, we need to track an annotations object. The annotations object is just another Substance Document, using a different schema. They don't hold text nodes, sections etc. but `comments`, `links`, `ems`, and `strongs`.
 
@@ -97,7 +97,7 @@ And our annotations graph looks like this:
 }
 ```
 
-### Update text
+#### Update text
 
 Now things get a little tricky, since once we change the contents of the text node the position of the associated annotation will be wrong.
 
