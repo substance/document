@@ -43,7 +43,7 @@ Now we're ready to apply our annotations operation.
 
 ```js
 var op1 = {
-  "op": ["node:insert", {"id": "annotation:1", "type": "annotation", "pos": [0, 9], properties": {"content": "The Substance Document Model is a generic format for representing documents including their history."}}],
+  "op": ["node:insert", {"id": "annotation:1", "type": "annotation", "pos": [0, 9], "properties": {"content": "The Substance Document Model is a generic format for representing documents including their history."}}],
   "user": "michael"
 }
 annotations.apply(op1);
