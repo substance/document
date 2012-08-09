@@ -182,3 +182,113 @@ If everything goes right, your annotation ranges should be updated accordingly. 
 
 - A node gets deleted, what happens to the annotations pointing to that node? Should it get deleted? Should it get assigned to the document level?
 - The content of a text node change in such a way that all the refenced characters get deleted. Thus the annotation should be deleted as well, or marked as unassigned.
+
+
+# Document Manipulation by example
+
+Start tracking a new document.
+
+```js
+var doc = new Document({ id: "document:substance" }, substanceDocSchema);
+```
+
+## Insert Section
+
+```js
+var opA = {
+  "op": ["node:insert", {"id": "section:a", "type": "section", "properties": {"name": "Substance Document Model"}}],
+  "user": "michael",
+  "parent": "null"
+};
+doc.apply(opA);
+```
+
+## Insert Text
+
+```js
+var opB = {
+  "op": ["node:insert", {"id": "text:a", "type": "text", "properties": {"content": "The Substance Document Model is a generic format for representing documents including their history."}}],
+  "user": "michael"
+}
+doc.apply(opB);
+```
+
+## Add a new annotation
+
+Now we'd like to store additional contextual information, like a comment refering to a portion of text within the document. Let's add a comment explaining the word **Substance**. But first, we need to track an annotations object. The annotations object is just another Substance Document, using a different schema. They don't hold text nodes, sections etc. but `comments`, `links`, `ems`, and `strongs`.
+
+```js
+var annotations = new Document({ id: "annotations:substance" }, substanceAnnotationSchema);
+```
+
+Now we're ready to apply our annotations operation.
+
+```js
+var op1 = {
+  "op": ["node:insert", {"id": "text:a", "type": "annotation", "pos": [4, 13], properties": {"content": "The Substance Document Model is a generic format for representing documents including their history."}}],
+  "user": "michael"
+}
+annotations.apply(op1);
+```
+
+Before we do that... Let's recap for a moment. We have a document containing two nodes (a section and a text element) and we have an annotations document holding a comment.
+
+Or document operations graph looks like this:
+
+```js
+{
+  "id": "document:substance",
+  "user": "michael",
+  "refs": {
+    "master": "commit-4",
+    "patch-1": "commit-3"
+  },
+  "operations": {
+    "op-a": {
+      "op": ["node:insert", {"id": "section:hello", "type": "section", "properties": {"name": "Hello?"}}],
+      "user": "michael",
+      "parent": null
+    },
+
+    "op-b": {
+      "op": ["node:insert", {"id": "text:hello", "type": "text", "target": "section:hello", "properties": {"content": "Hello there."}}],
+      "user": "michael",
+      "parent": "op-a"
+    }
+  }
+}
+```
+
+And our annotations graph looks like this:
+
+```js
+{
+  "id": "annotations:substance",
+  "user": "michael",
+  "refs": {
+    "master": "commit-4",
+    "patch-1": "commit-3"
+  },
+  "commits": {
+    "commit-1": {
+      "op": ["node:insert", {"id": "section:hello", "type": "section", "properties": {"name": "Hello?"}}],
+      "user": "michael",
+      "parent": null
+    }
+  }
+}
+```
+
+## Update text
+
+Now things get a little tricky, since if we change the contents of the text node.
+
+
+```js
+var opC = {
+  "op": ["node:update", {"node": "text:a", "mooh"}],
+  "user": "michael"
+}
+doc.apply(opC);
+```
+
