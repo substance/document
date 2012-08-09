@@ -1,6 +1,6 @@
 {
   "version": "0.0.1",
-  "name": "Substance Document",
+  "name": "Substance Document Schema",
   "properties": {
     "title": {
       "name": "Document Title",

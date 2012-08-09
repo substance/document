@@ -1,0 +1,56 @@
+{
+  "version": "0.0.1",
+  "name": "Substance Annotations Schema",
+  "properties": {
+  },
+
+  "nodes": {
+    "em": {
+      "name": "Emphasis",
+      "properties": {
+        "pos": {
+          "name": "Position",
+          "type": "object"
+        }
+      }
+    },
+
+    "strong": {
+      "name": "strong",
+      "properties": {
+        "pos": {
+          "name": "Position",
+          "type": "object"
+        }
+      }
+    },
+
+    "link": {
+      "name": "Link",
+      "properties": {
+        "url": {
+          "name": "URL to Resource",
+          "type": "string"
+        },
+        "pos": {
+          "name": "Position",
+          "type": "object"
+        }
+      }
+    },
+
+    "comment": {
+      "name": "Comment",
+      "properties": {
+        "content": {
+          "name": "The actual comment",
+          "type": "string"
+        },
+        "pos": {
+          "name": "Position",
+          "type": "object"
+        }
+      }
+    }
+  }
+}
