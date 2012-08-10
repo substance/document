@@ -2,32 +2,32 @@
   "id": "hello-world",
   "user": "michael",
   "refs": {
-    "master": "commit-3",
-    "patch-1": "commit-4"
+    "master": "op-3",
+    "patch-1": "op-4"
   },
-  "commits": {
-    "commit-1": {
-      "op": ["node:insert", {"id": "section:hello", "type": "section", "properties": {"name": "Hello?"}}],
+  "operations": {
+    "op-1": {
+      "op": ["insert", {"id": "section:hello", "type": "section", "properties": {"name": "Hello?"}}],
       "user": "michael",
       "parent": null
     },
 
-    "commit-2": {
-      "op": ["node:insert", {"id": "text:hello", "type": "text", "target": "section:hello", "properties": {"content": "Hello there."}}],
+    "op-2": {
+      "op": ["insert", {"id": "text:hello", "type": "text", "target": "section:hello", "properties": {"content": "Helo wrld"}}],
       "user": "michael",
-      "parent": "commit-1"
+      "parent": "op-1"
     },
 
-    "commit-3": {
-      "op": ["node:insert", {"id": "text:p1", "type": "text", "target": "text:hello", "properties": {"content": "Ein erster Paragraph."}}],
+    "op-3": {
+      "op": ["insert", {"id": "text:p1", "type": "text", "target": "text:hello", "properties": {"content": "Ein erster Paragraph."}}],
       "user": "michael",
-      "parent": "commit-2"
+      "parent": "op-2"
     },
 
-    "commit-4": {
-      "op": ["node:insert", {"id": "text:outro", "type": "text", "target": "text:hello", "properties": {"content": "This is the end."}}],
+    "op-4": {
+      "op": ["insert", {"id": "text:outro", "type": "text", "target": "text:hello", "properties": {"content": "This is the end."}}],
       "user": "michael",
-      "parent": "commit-3"
+      "parent": "op-3"
     }
   }
 }

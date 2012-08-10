@@ -1,0 +1,20 @@
+{
+  "id": "annotations:substance",
+  "user": "michael",
+  "refs": {
+    "master": "second-op",
+    "op-3": "second-op"
+  },
+  "operations": {
+    "first-op": {
+      "op": ["insert", {"id": "annotation:1", "type": "em", "properties": {"node": "text:hello", "pos": [0,4]}}],
+      "user": "michael",
+      "parent": null
+    },
+    "second-op": {
+      "op": ["insert", {"id": "annotation:2", "node": "text:hello", "type": "strong", "properties": {"node": "text:hello", "pos": [5,9]} }],
+      "user": "michael",
+      "parent": "first-op"
+    }
+  }
+}
