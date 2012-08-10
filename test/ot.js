@@ -32,7 +32,6 @@ var newTxt = o.apply("lorem ipsum");
 console.log('applied operation:', newTxt);
 
 
-
 // The Sequence
 // --------
 
@@ -51,12 +50,12 @@ function createOperation(ops) {
   return operation;
 };
 
-
-// ---
-
-createOperation([["ret", 11], ["ins", " dolor"]]);
-
-var o = ot.Operation.fromJSON(obj);
+var o = createOperation([["ret", 11], ["ins", " dolor"]]);
 var newTxt = o.apply("lorem ipsum");
+console.log('applied operation:', newTxt);
 
+// var textOp = ["update", {id: "text:1", "delta": "ret(2) ins(l) ret(4) ins(o) ret(3)"}];
+
+var o = createOperation([["ret", 2], ["ins", "l"], ["ret", 4], ["ins", "o"], ["ret", 3]]);
+var newTxt = o.apply("helo wrld");
 console.log('applied operation:', newTxt);
