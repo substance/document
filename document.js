@@ -1,9 +1,10 @@
 if (typeof exports !== 'undefined') {
-  _    = require('underscore');
+  var _    = require('underscore');
+  var ot   = require('operational-transformation');
 }
 
-// Util
-// --------
+// UUID
+// -----------------
 
 /*!
 Math.uuid.js (v1.4)
@@ -44,38 +45,139 @@ Math.uuid = function (prefix) {
 };
 
 
-// Session
-// --------
+// _.Events
+// -----------------
 // 
-// Representing a document editing session
+// Creates a TextOperation based on an array-based serialization
 
-var Session = function(doc, options) {
-  var that = this;
-  that.users = options.users || {};
-  that.doc = doc;
+function createTextOperation(ops) {
+  var operation = new ot.Operation(0)
 
-  // this.enter = function(user) {
-  //   that.users[user.id] = { id: user.id, username: user.username, color: user.color || "red"};
-  // };
+  function map(method) {
+    if (method === "ret") return "retain";
+    if (method === "del") return "delete";
+    if (method === "ins") return "insert";
+  }
 
-  // this.leave = function(id) {
-  //   delete that.users[id];
-  // };
-
-  // Update selection
-  // this.select = function(options) {
-  //   if (that.users[options.user].selection) {
-  //     that.users[options.user].selection.forEach(function(node) {
-  //       delete that.selections[node];
-  //     });
-  //   }
-
-  //   that.users[options.user].selection = options.nodes;
-  //   options.nodes.forEach(function(node) {
-  //     that.selections[node] = options.user;
-  //   });
-  // };
+  _.each(ops, function(op) {
+    operation[map(op[0])](op[1]);
+  });
+  return operation;
 };
+
+
+// _.Events
+// -----------------
+
+// Regular expression used to split event strings
+var eventSplitter = /\s+/;
+
+// A module that can be mixed in to *any object* in order to provide it with
+// custom events. You may bind with `on` or remove with `off` callback functions
+// to an event; trigger`-ing an event fires all callbacks in succession.
+//
+//     var object = {};
+//     _.extend(object, Backbone.Events);
+//     object.on('expand', function(){ alert('expanded'); });
+//     object.trigger('expand');
+//
+_.Events = {
+
+  // Bind one or more space separated events, `events`, to a `callback`
+  // function. Passing `"all"` will bind the callback to all events fired.
+  on: function(events, callback, context) {
+
+    var calls, event, node, tail, list;
+    if (!callback) return this;
+    events = events.split(eventSplitter);
+    calls = this._callbacks || (this._callbacks = {});
+
+    // Create an immutable callback list, allowing traversal during
+    // modification.  The tail is an empty object that will always be used
+    // as the next node.
+    while (event = events.shift()) {
+      list = calls[event];
+      node = list ? list.tail : {};
+      node.next = tail = {};
+      node.context = context;
+      node.callback = callback;
+      calls[event] = {tail: tail, next: list ? list.next : node};
+    }
+
+    return this;
+  },
+
+  // Remove one or many callbacks. If `context` is null, removes all callbacks
+  // with that function. If `callback` is null, removes all callbacks for the
+  // event. If `events` is null, removes all bound callbacks for all events.
+  off: function(events, callback, context) {
+    var event, calls, node, tail, cb, ctx;
+
+    // No events, or removing *all* events.
+    if (!(calls = this._callbacks)) return;
+    if (!(events || callback || context)) {
+      delete this._callbacks;
+      return this;
+    }
+
+    // Loop through the listed events and contexts, splicing them out of the
+    // linked list of callbacks if appropriate.
+    events = events ? events.split(eventSplitter) : _.keys(calls);
+    while (event = events.shift()) {
+      node = calls[event];
+      delete calls[event];
+      if (!node || !(callback || context)) continue;
+      // Create a new list, omitting the indicated callbacks.
+      tail = node.tail;
+      while ((node = node.next) !== tail) {
+        cb = node.callback;
+        ctx = node.context;
+        if ((callback && cb !== callback) || (context && ctx !== context)) {
+          this.on(event, cb, ctx);
+        }
+      }
+    }
+
+    return this;
+  },
+
+  // Trigger one or many events, firing all bound callbacks. Callbacks are
+  // passed the same arguments as `trigger` is, apart from the event name
+  // (unless you're listening on `"all"`, which will cause your callback to
+  // receive the true name of the event as the first argument).
+  trigger: function(events) {
+    var event, node, calls, tail, args, all, rest;
+    if (!(calls = this._callbacks)) return this;
+    all = calls.all;
+    events = events.split(eventSplitter);
+    rest = Array.prototype.slice.call(arguments, 1);
+
+    // For each event, walk through the linked list of callbacks twice,
+    // first to trigger the event, then to trigger any `"all"` callbacks.
+    while (event = events.shift()) {
+      if (node = calls[event]) {
+        tail = node.tail;
+        while ((node = node.next) !== tail) {
+          node.callback.apply(node.context || this, rest);
+        }
+      }
+      if (node = all) {
+        tail = node.tail;
+        args = [event].concat(rest);
+        while ((node = node.next) !== tail) {
+          node.callback.apply(node.context || this, args);
+        }
+      }
+    }
+
+    return this;
+  }
+
+};
+
+// Aliases for backwards compatibility.
+_.Events.bind   = _.Events.on;
+_.Events.unbind = _.Events.off;
 
 
 
@@ -90,6 +192,10 @@ var Document = function(doc, schema) {
   this.content = {
     properties: {},
     nodes: {},
+  };
+
+  this.callbacks = {
+    "operation:applied": function() {}
   };
 
   // Store ops for redo
@@ -108,10 +214,10 @@ var Document = function(doc, schema) {
     if (!commit) return false;
     this.head = ref;
 
-    var op = this.model.commits[commit];
+    var op = this.model.operations[commit];
     var operations = [op];
 
-    while (op = this.model.commits[op.parent]) {
+    while (op = this.model.operations[op.parent]) {
       operations.push(op);
     }
 
@@ -172,16 +278,18 @@ var Document = function(doc, schema) {
 
   // Apply a given operation on the current document state
   apply: function(operation, silent) {
-    var method = operation.op[0].split(':');
-    Document.methods[method[0]][method[1]](this.content, operation.op[1]);
-    if (!silent) this.commit(operation);
+    // var method = operation.op[0].split(':');
+    Document.methods[operation.op[0]](this.content, operation.op[1]);
+    if (!silent) {
+      this.commit(operation);
+      this.trigger('operation:applied', operation);
+    }
   },
   
   // Create a commit for a certain operation
   commit: function(op) {
     var sha = Math.uuid();
-    // console.log('committing... parent=', this.head, this.getRef(this.head));
-    this.model.commits[sha] = {
+    this.model.operations[sha] = {
       op: op.op,
       user: op.user,
       parent: this.getRef(this.head)
@@ -221,7 +329,7 @@ Document.merges = {
     mergedDoc.checkout('master');
 
     function commit(sha) {
-      return mergedDoc.model.commits[sha];
+      return mergedDoc.model.operations[sha];
     }
 
     // Find operations between ref and master
@@ -247,26 +355,19 @@ Document.merges = {
 };
 
 
-// Build (rebuild) a document, based on a stream of operations
-// --------
-
-Document.methods = { node: {}, document: {}};
-
-
 // Node manipulation interface
 // --------
 
-Document.methods.node = {
+Document.methods = {
 
   insert: function(doc, options) {
     var id = options.id ? options.id : Math.uuid();
 
     // Construct a new document node
-    var newNode = {
+    var newNode = _.extend(options.properties, {
       id: id,
-      properties: _.clone(options.properties),
       type: options.type
-    };
+    });
 
     // TODO: validate against schema
     // validate(newNode);
@@ -312,8 +413,14 @@ Document.methods.node = {
   },
 
   update: function(doc, options) {
-    // that.nodes.get(options.node).set(options.properties);
-    // that.trigger('node:update', options.node);
+    var node = doc.nodes[options.id];
+    if (node.type === "text") {
+      // Use OT delta updates for text nodes
+      node.content = createTextOperation(options.delta).apply(node.content);
+    } else {
+      delete options.id;
+      _.extend(node, options);
+    }
   },
 
   move: function(doc, options) {
@@ -348,8 +455,6 @@ Document.methods.node = {
     } else { // Special case: target is tail node  
       doc.tail = l.id;
     }
-
-    // doc.trigger('node:move', options);
   },
 
   delete: function(doc, node) {
@@ -357,10 +462,9 @@ Document.methods.node = {
   }
 };
 
+
 // Export Module
 // --------
-
-Document.Session = Session;
 
 if (typeof exports !== 'undefined') {
   module.exports = Document;
