@@ -16,7 +16,7 @@ assert.ok(doc.content.nodes["text:outro"]);
 // Add another node to front
 
 doc.apply({
-  "op": ["node:insert", {"id": "text:intro", "type": "text", "target": "front", "properties": {"content": "Some fresh introduction."}}],
+  "op": ["insert", {"id": "text:intro", "type": "text", "target": "front", "properties": {"content": "Some fresh introduction."}}],
   "user": "michael"
 });
 
@@ -25,7 +25,7 @@ assert.ok(doc.content.nodes["text:intro"]);
 // Move [text:intro] after text:hello
 
 doc.apply({
-  "op": ["node:move", {"nodes": ["text:intro"], "target": "text:hello"}],
+  "op": ["move", {"nodes": ["text:intro"], "target": "text:hello"}],
   "user": "michael"
 });
 
