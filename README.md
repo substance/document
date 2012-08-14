@@ -2,7 +2,7 @@
 
 Read the official documentation [here](http://interior.substance.io/modules/document.html), which gets updated on every major release.
 
-## Document Manipulation API
+## Getting started
 
 #### Start tracking a new document.
 
@@ -14,7 +14,7 @@ var doc = new Document({ id: "document:substance" }, substanceDocSchema);
 
 ```js
 var opA = {
-  "op": ["node:insert", {"id": "section:a", "type": "section", "properties": {"name": "Substance Document Model"}}],
+  "op": ["insert", {"id": "section:a", "type": "section", "properties": {"name": "Substance Document Model"}}],
   "user": "michael",
   "parent": "null"
 };
@@ -25,7 +25,7 @@ doc.apply(opA);
 
 ```js
 var opB = {
-  "op": ["node:insert", {"id": "text:a", "type": "text", "properties": {"content": "Substance Document Model is a generic format for representing documents including their history."}}],
+  "op": ["insert", {"id": "text:a", "type": "text", "properties": {"content": "Substance Document Model is a generic format for representing documents including their history."}}],
   "user": "michael"
 }
 doc.apply(opB);
@@ -43,7 +43,7 @@ Now we're ready to apply our annotations operation.
 
 ```js
 var op1 = {
-  "op": ["node:insert", {"id": "annotation:1", "type": "annotation", "pos": [0, 9], "properties": {"content": "The Substance Document Model is a generic format for representing documents including their history."}}],
+  "op": ["insert", {"id": "annotation:1", "type": "annotation", "pos": [0, 9], "properties": {"content": "The Substance Document Model is a generic format for representing documents including their history."}}],
   "user": "michael"
 }
 annotations.apply(op1);
@@ -180,11 +180,67 @@ Behind the scenes the following happens:
 
 1. Checkout of the version right before victor applied the patch.
 
-2. Apply Victors operation and let it point to the previous 
+2. Apply Victors operation and let it point to the previous operation
 
 3. Apply Michael's operation (opE)
 
 4. Set the master pointer to the latest commit.
 
-Depending on the actual situation this merge operation might fail, and require manual conflict resolution. We'll implement conflict resolution in a later version of the library. To move on fast we just added support for fast-forward merges. So even the shown resolvable usecase is not yet supported.
+Depending on the actual situation this merge operation might fail and require manual conflict resolution. We'll implement conflict resolution in a later version of the library. To move on fast we just added support for fast-forward merges. So even the shown resolvable usecase is not yet supported.
 
+## Supported Operations
+
+### Insert Node
+
+Parameters:
+
+- `id` - Unique id of the element
+- `type` - Type of the new node
+- `properties` (optional) - 
+
+Inserting a text node.
+
+```js
+["insert", {"id": "text:e", "type": "text", "properties": {"content": "The end."}}]
+```
+
+### Update Node
+
+Parameters:
+
+- `id` - Id of the node to be updated
+- `properties` (optional) - Properties with new values
+- `delta` (optional) - Only available for text nodes
+
+Updating a text node.
+
+```js
+["update", {id: "text:hello", "delta": [["ret", 2], ["ins", "l"], ["ret", 4], ["ins", "o"], ["ret", 3]]}]
+```
+
+Updating an image node.
+
+```js
+["update", {id: "image:hello", {"properties": "caption": "Hello World"}}]
+```
+
+### Move Node(s)
+
+Parameters:
+
+- `nodes` - Node selection that should be moved to a new location
+- `target` - Target node, selection will be appended here
+
+```js
+["move", {"nodes": ["section:hello", "text:hello"], "target": "text:hello"}]
+```
+
+### Delete Node(s)
+
+Parameters:
+
+- `nodes` - Node selection that should be removed from the document
+
+```js
+["delete", {"nodes": ["text:hello"]}]
+```
