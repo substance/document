@@ -89,7 +89,7 @@ And our annotations graph looks like this:
   },
   "commits": {
     "commit-1": {
-      "op": ["node:insert", {"id": "section:hello", "type": "section", "properties": {"name": "Hello?"}}],
+      "op": ["insert", {"id": "section:hello", "type": "section", "properties": {"name": "Hello?"}}],
       "user": "michael",
       "parent": null
     }
@@ -103,7 +103,7 @@ Now things get a little tricky, since once we change the contents of the text no
 
 ```js
 var opC = {
-  "op": ["node:update", {"node": "text:a", "delta": "ins('The ') ret(100)"}],
+  "op": ["update", {id: "text:hello", "delta": [["ret", 2], ["ins", "l"], ["ret", 4], ["ins", "o"], ["ret", 3]]}],
   "user": "michael"
 }
 
