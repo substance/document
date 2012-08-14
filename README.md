@@ -134,7 +134,7 @@ Now Victor is coming by. Since he is not authorized to change the documet direct
 
 ```js
 var opD = {
-  "op": ["node:update", {"node": "text:a", "delta": "ret(30) ins('evolutionary') ret(100)"}],
+  "op": ["update", {"node": "text:a", "delta": [["ret", 30], ["ins", "evolutionary"], ["ret", 100]]}],
   "user": "victor"
 };
 
@@ -148,7 +148,7 @@ Right after Victor has submitted his patch, Michael continutes to improve the do
 
 ```js
 var opE = {
-  "op": ["node:insert", {"id": "text:e", "type": "text", "properties": {"content": "The end."}}],
+  "op": ["insert", {"id": "text:e", "type": "text", "properties": {"content": "The end."}}],
   "user": "michael"
 };
 doc.apply(opE);
