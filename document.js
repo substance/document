@@ -186,7 +186,7 @@ _.Events.unbind = _.Events.off;
 // 
 // A generic model for representing and transforming digital documents
 
-var Document = function(doc, schema) {
+var Document = function(doc, schema, options) {
   this.model = doc;
   this.schema = schema;
   this.content = {
@@ -198,6 +198,9 @@ var Document = function(doc, schema) {
     "operation:applied": function() {}
   };
 
+  // Checkout master branch
+  this.checkout(options.ref || 'master');
+
   // Store ops for redo
   this.undoneOperations = [];
 };
@@ -206,26 +209,41 @@ var Document = function(doc, schema) {
 
   // TODO: error handling
   checkout: function(ref) {
-    var that = this;
-    // var commit =  || ref;
-
-    // Current commit (=head)
-    var commit = this.getRef(ref);
-    if (!commit) return false;
+    _.each(this.operations(ref), function(op) {
+      this.apply(op, true);
+    }, this);
     this.head = ref;
+  },
 
+  // List operations 
+  // --------
+
+  operations: function(ref) {
+    // Current commit (=head)
+    var commit = this.getRef(ref) || ref;
+    
     var op = this.model.operations[commit];
+
+    if (!op) return [];
+    op.sha = commit;
+
     var operations = [op];
 
+    var prev = op;
+
     while (op = this.model.operations[op.parent]) {
+      op.sha = prev.parent;
       operations.push(op);
+      prev = op;
     }
 
-    operations.reverse();
+    return operations.reverse();
+  },
 
-    _.each(operations, function(op) {
-      that.apply(op, true);
-    });
+  // History for current head
+  // TODO: do we need this?
+  history: function() {
+    return this.operations(this.head);
   },
 
   // Get sha the current head points to
@@ -387,7 +405,7 @@ Document.methods = {
       newNode.prev = null;
       doc.head = newNode.id;
 
-    } else if (!options.target || options.target === "back") {
+    } else if (!options.target || options.target === "back") {
       // This goes to the back
       var tailNode = doc.nodes[doc.tail];
 
@@ -469,5 +487,6 @@ Document.methods = {
 if (typeof exports !== 'undefined') {
   module.exports = Document;
 } else {
-  sc.models.Document = Document;  
+  if (!window.Substance) window.Substance = {};
+  Substance.Document = Document;
 }
