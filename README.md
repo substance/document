@@ -211,6 +211,7 @@ Parameters:
 - `id` - Id of the node to be updated
 - `properties` (optional) - Properties with new values
 - `delta` (optional) - Only available for text nodes
+- `target` (optional) - Can either be 'front', 'back' or the id of a target node
 
 Updating a text node.
 
