@@ -45,6 +45,47 @@ Math.uuid = function (prefix) {
 };
 
 
+// Shared empty constructor function to aid in prototype-chain creation.
+var ctor = function(){};
+
+// Helper function to correctly set up the prototype chain, for subclasses.
+// Similar to `goog.inherits`, but uses a hash of prototype properties and
+// class properties to be extended.
+// Taken from Underscore.js (c) Jeremy Ashkenas
+_.inherits = function(parent, protoProps, staticProps) {
+  var child;
+
+  // The constructor function for the new subclass is either defined by you
+  // (the "constructor" property in your `extend` definition), or defaulted
+  // by us to simply call `super()`.
+  if (protoProps && protoProps.hasOwnProperty('constructor')) {
+    child = protoProps.constructor;
+  } else {
+    child = function(){ return parent.apply(this, arguments); };
+  }
+
+  // Set the prototype chain to inherit from `parent`, without calling
+  // `parent`'s constructor function.
+  ctor.prototype = parent.prototype;
+  child.prototype = new ctor();
+
+  // Add prototype properties (instance properties) to the subclass,
+  // if supplied.
+  if (protoProps) _.extend(child.prototype, protoProps);
+
+  // Add static properties to the constructor function, if supplied.
+  if (staticProps) _.extend(child, staticProps);
+
+  // Correctly set child's `prototype.constructor`, for `instanceof`.
+  child.prototype.constructor = child;
+
+  // Set a convenience property in case the parent's prototype is needed later.
+  child.__super__ = parent.prototype;
+
+  return child;
+};
+
+
 // _.Events
 // -----------------
 // 
@@ -186,16 +227,12 @@ _.Events.unbind = _.Events.off;
 // 
 // A generic model for representing and transforming digital documents
 
-var Document = function(doc, schema, options) {
-  this.model = doc;
-  this.schema = schema;
+var Document = function(options) {
+  this.model = options.document;
+  this.schema = options.schema;
   this.content = {
     properties: {},
     nodes: {},
-  };
-
-  this.callbacks = {
-    "operation:applied": function() {}
   };
 
   // Checkout master branch
@@ -446,12 +483,27 @@ Document.methods = {
         l  = doc.nodes[_.last(options.nodes)], // last node of selection
         t  = doc.nodes[options.target], // target node
         fp = doc.nodes[f.prev], // first-previous
-        ln = doc.nodes[l.next], // last-next
-        tn = doc.nodes[t.next]; // target-next
+        ln = doc.nodes[l.next]; // last-next
+         
+    if (t) var tn = doc.nodes[t.next]; // target-next
 
-    t.next = f.id;
-    t.prev = t.prev === l.id ? (fp ? fp.id : null)
-                             : (t.prev ? t.prev : null)
+    // Move to the front
+    if (options.target === "front") {
+      l.next = doc.head;
+      doc.head = f.id;
+      f.prev = null;
+    } else {
+      console.log('WHY?');
+      t.next = f.id;
+      t.prev = t.prev === l.id ? (fp ? fp.id : null)
+                               : (t.prev ? t.prev : null);
+
+      // First node of the selection is now preceded by the target node
+      f.prev = t.id;
+
+      // Pointers, everywhere.
+      l.next = tn ? tn.id : null;
+    }
 
     if (fp) {
       fp.next = ln ? ln.id : null;
@@ -459,14 +511,8 @@ Document.methods = {
       doc.head = ln.id; // why we had this before? doc.head = t.id;
     }
 
-    // First node of the selection is now preceded by the target node
-    f.prev = t.id;
-
     // Set some pointers
-    if (ln) ln.prev = fp ? pf.id : null;
-
-    // Pointers, everywhere.
-    l.next = tn ? tn.id : null;
+    if (ln) ln.prev = fp ? fp.id : null;
 
     if (tn) {
       tn.prev = l.id;
@@ -481,6 +527,22 @@ Document.methods = {
 };
 
 
+// Document
+// --------
+
+var AnnotatedDocument = _.inherits(Document, {
+  constructor: function(options) {
+
+    this.annotations = new Document({
+      document: options.annotations,
+      ref: options.ref
+    });
+
+    Document.call(this, options);
+  }
+});
+
+
 // Export Module
 // --------
 
@@ -489,4 +551,5 @@ if (typeof exports !== 'undefined') {
 } else {
   if (!window.Substance) window.Substance = {};
   Substance.Document = Document;
+  Substance.AnnotatedDocument = AnnotatedDocument;
 }
