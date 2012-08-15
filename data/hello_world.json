@@ -7,7 +7,7 @@
   },
   "operations": {
     "op-1": {
-      "op": ["insert", {"id": "section:hello", "type": "section", "properties": {"name": "Hello?"}}],
+      "op": ["insert", {"id": "section:hello", "type": "section", "properties": {"name": "Hello World"}}],
       "user": "michael",
       "parent": null
     },
