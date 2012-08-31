@@ -7,7 +7,7 @@ Read the official documentation [here](http://interior.substance.io/modules/docu
 #### Start tracking a new document.
 
 ```js
-var doc = new Document({ id: "document:substance" }, substanceDocSchema);
+var doc = new Document({ id: "document:substance" }, substanceDocumentSchema);
 ```
 
 #### Insert Section
@@ -15,8 +15,7 @@ var doc = new Document({ id: "document:substance" }, substanceDocSchema);
 ```js
 var opA = {
   "op": ["node:insert", {"id": "section:a", "type": "section", "properties": {"name": "Substance Document Model"}}],
-  "user": "michael",
-  "parent": "null"
+  "user": "michael"
 };
 doc.apply(opA);
 ```
@@ -36,7 +35,7 @@ doc.apply(opB);
 Now we'd like to store additional contextual information, like a comment refering to a portion of text within the document. Let's add a comment explaining the word **Substance**. But first, we need to track an annotations object. The annotations object is just another Substance Document, using a different schema. They don't hold text nodes, sections etc. but `comments`, `links`, `ems`, and `strongs`.
 
 ```js
-var annotations = new Document({ id: "annotations:substance" }, substanceAnnotationSchema);
+var annotations = new Document({ id: "annotations:substance" }, substanceAnnotationsSchema);
 ```
 
 Now we're ready to apply our annotations operation.

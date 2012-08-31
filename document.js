@@ -45,6 +45,47 @@ Math.uuid = function (prefix) {
 };
 
 
+// Shared empty constructor function to aid in prototype-chain creation.
+var ctor = function(){};
+
+// Helper function to correctly set up the prototype chain, for subclasses.
+// Similar to `goog.inherits`, but uses a hash of prototype properties and
+// class properties to be extended.
+// Taken from Underscore.js (c) Jeremy Ashkenas
+_.inherits = function(parent, protoProps, staticProps) {
+  var child;
+
+  // The constructor function for the new subclass is either defined by you
+  // (the "constructor" property in your `extend` definition), or defaulted
+  // by us to simply call `super()`.
+  if (protoProps && protoProps.hasOwnProperty('constructor')) {
+    child = protoProps.constructor;
+  } else {
+    child = function(){ return parent.apply(this, arguments); };
+  }
+
+  // Set the prototype chain to inherit from `parent`, without calling
+  // `parent`'s constructor function.
+  ctor.prototype = parent.prototype;
+  child.prototype = new ctor();
+
+  // Add prototype properties (instance properties) to the subclass,
+  // if supplied.
+  if (protoProps) _.extend(child.prototype, protoProps);
+
+  // Add static properties to the constructor function, if supplied.
+  if (staticProps) _.extend(child, staticProps);
+
+  // Correctly set child's `prototype.constructor`, for `instanceof`.
+  child.prototype.constructor = child;
+
+  // Set a convenience property in case the parent's prototype is needed later.
+  child.__super__ = parent.prototype;
+
+  return child;
+};
+
+
 // _.Events
 // -----------------
 // 
@@ -169,10 +210,8 @@ _.Events = {
         }
       }
     }
-
     return this;
   }
-
 };
 
 // Aliases for backwards compatibility.
@@ -181,22 +220,28 @@ _.Events.unbind = _.Events.off;
 
 
 
+
+function verifyState(doc) {
+  // TODO: implement state checker that raises an error once the doc state gets invalid
+}
+
+
 // Document
 // --------
 // 
 // A generic model for representing and transforming digital documents
 
-var Document = function(doc, schema) {
-  this.model = doc;
-  this.schema = schema;
+var Document = function(options) {
+  this.id = options.id;
+  this.model = options.document;
+  this.schema = options.schema;
   this.content = {
     properties: {},
     nodes: {},
   };
 
-  this.callbacks = {
-    "operation:applied": function() {}
-  };
+  // Checkout master branch
+  this.checkout(options.ref || 'master');
 
   // Store ops for redo
   this.undoneOperations = [];
@@ -206,26 +251,42 @@ var Document = function(doc, schema) {
 
   // TODO: error handling
   checkout: function(ref) {
-    var that = this;
-    // var commit =  || ref;
 
-    // Current commit (=head)
-    var commit = this.getRef(ref);
-    if (!commit) return false;
+    _.each(this.operations(ref), function(op) {
+      this.apply(op, true);
+    }, this);
     this.head = ref;
+  },
 
+  // List operations 
+  // --------
+
+  operations: function(ref) {
+    // Current commit (=head)
+    var commit = this.getRef(ref) || ref;
+    
     var op = this.model.operations[commit];
+
+    if (!op) return [];
+    op.sha = commit;
+
     var operations = [op];
 
+    var prev = op;
+
     while (op = this.model.operations[op.parent]) {
+      op.sha = prev.parent;
       operations.push(op);
+      prev = op;
     }
 
-    operations.reverse();
+    return operations.reverse();
+  },
 
-    _.each(operations, function(op) {
-      that.apply(op, true);
-    });
+  // History for current head
+  // TODO: do we need this?
+  history: function() {
+    return this.operations(this.head);
   },
 
   // Get sha the current head points to
@@ -251,7 +312,18 @@ var Document = function(doc, schema) {
   // --------
 
   list: function(fn, ctx) {
+    _.each(this.nodes(), function(node, index) {
+      fn.call(ctx || this, node, index);
+    });
+  },
+
+  // Traverse the document sequentially
+  // --------
+
+  nodes: function() {
+    var result = [];
     var doc = this.content;
+    
     function node(id) {
       return doc.nodes[id];
     }
@@ -260,12 +332,12 @@ var Document = function(doc, schema) {
     var current = node(doc.head);
     var index = 0;
 
-    fn.call(ctx || doc, current, index);
-
+    result.push(current);
     while (current = node(current.next)) {
       index += 1;
-      fn.call(ctx || doc, current, index);
+      result.push(current);
     }
+    return result;
   },
 
   toJSON: function() {
@@ -278,8 +350,8 @@ var Document = function(doc, schema) {
 
   // Apply a given operation on the current document state
   apply: function(operation, silent) {
-    // var method = operation.op[0].split(':');
     Document.methods[operation.op[0]](this.content, operation.op[1]);
+    verifyState(this); // This is a checker for state verification
     if (!silent) {
       this.commit(operation);
       this.trigger('operation:applied', operation);
@@ -288,13 +360,13 @@ var Document = function(doc, schema) {
   
   // Create a commit for a certain operation
   commit: function(op) {
-    var sha = Math.uuid();
-    this.model.operations[sha] = {
-      op: op.op,
-      user: op.user,
-      parent: this.getRef(this.head)
-    };
-    this.model.refs[this.head] = sha;
+    op.sha = op.sha || Math.uuid();
+    op.head = op.head || this.head;
+    op.parent = this.getRef(op.head);
+
+    this.model.operations[op.sha] = _.clone(op);
+
+    this.model.refs[this.head] = op.sha;
   }
 });
 
@@ -364,7 +436,9 @@ Document.methods = {
     var id = options.id ? options.id : Math.uuid();
 
     // Construct a new document node
-    var newNode = _.extend(options.properties, {
+    var newNode = _.clone(options.properties);
+
+    _.extend(newNode, {
       id: id,
       type: options.type
     });
@@ -387,7 +461,7 @@ Document.methods = {
       newNode.prev = null;
       doc.head = newNode.id;
 
-    } else if (!options.target || options.target === "back") {
+    } else if (!options.target || options.target === "back") {
       // This goes to the back
       var tailNode = doc.nodes[doc.tail];
 
@@ -414,7 +488,7 @@ Document.methods = {
 
   update: function(doc, options) {
     var node = doc.nodes[options.id];
-    if (node.type === "text") {
+    if (_.include(["text", "section"], node.type) && options.delta) {
       // Use OT delta updates for text nodes
       node.content = createTextOperation(options.delta).apply(node.content);
     } else {
@@ -428,12 +502,26 @@ Document.methods = {
         l  = doc.nodes[_.last(options.nodes)], // last node of selection
         t  = doc.nodes[options.target], // target node
         fp = doc.nodes[f.prev], // first-previous
-        ln = doc.nodes[l.next], // last-next
-        tn = doc.nodes[t.next]; // target-next
+        ln = doc.nodes[l.next]; // last-next
+       
+    if (t) var tn = doc.nodes[t.next]; // target-next
 
-    t.next = f.id;
-    t.prev = t.prev === l.id ? (fp ? fp.id : null)
-                             : (t.prev ? t.prev : null)
+    // Move to the front
+    if (options.target === "front") {
+      l.next = doc.head;
+      doc.head = f.id;
+      f.prev = null;
+    } else {
+      t.next = f.id;
+      t.prev = t.prev === l.id ? (fp ? fp.id : null)
+                               : (t.prev ? t.prev : null);
+
+      // First node of the selection is now preceded by the target node
+      f.prev = t.id;
+
+      // Pointers, everywhere.
+      l.next = tn ? tn.id : null;
+    }
 
     if (fp) {
       fp.next = ln ? ln.id : null;
@@ -441,14 +529,8 @@ Document.methods = {
       doc.head = ln.id; // why we had this before? doc.head = t.id;
     }
 
-    // First node of the selection is now preceded by the target node
-    f.prev = t.id;
-
     // Set some pointers
-    if (ln) ln.prev = fp ? pf.id : null;
-
-    // Pointers, everywhere.
-    l.next = tn ? tn.id : null;
+    if (ln) ln.prev = fp ? fp.id : null;
 
     if (tn) {
       tn.prev = l.id;
@@ -457,17 +539,66 @@ Document.methods = {
     }
   },
 
-  delete: function(doc, node) {
-    console.log('deleting... NOT YET IMPLEMENTED');
+  delete: function(doc, options) {
+    var f  = doc.nodes[_.first(options.nodes)], // first node of selection
+        l  = doc.nodes[_.last(options.nodes)], // last node of selection
+        fp = doc.nodes[f.prev], // first-previous
+        ln = doc.nodes[l.next]; // last-next
+
+    if (fp) fp.next = l.next;
+    if (ln) ln.prev = f.prev;
+
+    _.each(options.nodes, function(node) {
+      delete doc.nodes[node];
+    });
   }
 };
+
+
+// Document
+// --------
+
+var AnnotatedDocument = _.inherits(Document, {
+  constructor: function(options) {
+    this.annotations = new Document({
+      document: options.annotations,
+      ref: options.ref
+    });
+    Document.call(this, options);
+  },
+
+  // For a given node id, return all associated comments
+  comments: function(node) {
+    var comments = _.filter(this.annotations.nodes(), function(annotation) {
+      if (annotation.type !== "comment") return false;
+      return _.intersection([node], annotation.nodes).length > 0;
+    });
+    return comments.length;
+  },
+
+  toJSON: function() {
+    return {
+      id: this.id,
+      document: this.model,
+      annotations: this.annotations.model
+    };
+  }
+});
 
 
 // Export Module
 // --------
 
+// Export Module
+// --------
+
 if (typeof exports !== 'undefined') {
-  module.exports = Document;
+  module.exports = {
+    Document: Document,
+    AnnotatedDocument: AnnotatedDocument
+  };
 } else {
-  sc.models.Document = Document;  
+  if (!window.Substance) window.Substance = {};
+  Substance.Document = Document;
+  Substance.AnnotatedDocument = AnnotatedDocument;
 }
