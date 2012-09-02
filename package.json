@@ -7,6 +7,6 @@
   "contributors"  : ["Oliver Buchtala", "Victor Saiz"],
   "dependencies"  : ["underscore", "operational-transformation"],
   "lib"           : ".",
-  "main"          : "index",
+  "main"          : "document",
   "version"       : "0.1.0"
 }
