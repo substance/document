@@ -311,6 +311,11 @@ var Document = function(options) {
 
   // TODO: error handling
   checkout: function(ref) {
+    // Reset content
+    this.content = {
+      properties: {},
+      nodes: {},
+    };
 
     _.each(this.operations(ref), function(op) {
       this.apply(op, true);
