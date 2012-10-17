@@ -86,7 +86,7 @@ _.inherits = function(parent, protoProps, staticProps) {
 };
 
 
-// _.Events
+// createTextOperation
 // -----------------
 // 
 // Creates a TextOperation based on an array-based serialization
@@ -286,12 +286,12 @@ function verifyState(doc, operation, oldDoc) {
 }
 
 
-// Document
+// RawDocument
 // --------
 // 
 // A generic model for representing and transforming digital documents
 
-var Document = function(doc, schema) {
+var RawDocument = function(doc, schema) {
   this.id = doc.id;
 
   this.model = doc;
@@ -305,10 +305,10 @@ var Document = function(doc, schema) {
   this.checkout('master');
 
   // Store ops for redo
-  this.undoneOperations = [];
+  // this.undoneOperations = [];
 };
 
- _.extend(Document.prototype, _.Events, {
+ _.extend(RawDocument.prototype, _.Events, {
 
   // TODO: error handling
   checkout: function(ref) {
@@ -337,7 +337,6 @@ var Document = function(doc, schema) {
     op.sha = commit;
 
     var operations = [op];
-
     var prev = op;
 
     while (op = this.model.document.operations[op.parent]) {
@@ -416,7 +415,7 @@ var Document = function(doc, schema) {
 
   // Apply a given operation on the current document state
   apply: function(operation, options) {
-    // TODO: this might slow things done, it's for debug purposes
+    // TODO: this might slow things down, it's for debug purposes
     var prevState = JSON.parse(JSON.stringify(this.content));
     Document.methods[operation.op[0]](this.content, operation.op[1]);
 
@@ -439,6 +438,137 @@ var Document = function(doc, schema) {
   }
 });
 
+
+
+
+
+// Document
+// --------
+// 
+// Contains annotations and comments
+
+var Document = _.inherits(RawDocument, {
+  constructor: function(options) {
+    var that = this;
+
+    // Remember annotation ops
+    this.annotationOps = options.annotations;
+
+    // Holds annotations state (em, str)
+    this.annotations = {};
+
+    // Holds comments state
+    this.comments = {};
+    RawDocument.call(this, options);
+  },
+
+  getAnnotations: function(node) {
+    var annotations = {};
+    _.each(this.annotations, function(a) {
+      if (a.node === node) annotations[a.id] = a;
+    });
+    return annotations;
+  },
+
+  // Returns all comments referring to a given node
+  // TODO: combine with getNodeComments, getDocumentComments
+  getComments: function(node) {
+    var comments = [];
+    _.each(this.comments, function(c) {
+      if (!node && !c.annotation) return comments.push(c);
+      if (c.node === node) comments.push(c);
+    }, this);
+    return comments;
+  },
+
+  getCommentsForAnnotation: function(annotation) {
+    var comments = [];
+    _.each(this.comments, function(c) {
+      if (c.annotation === annotation) comments.push(c);
+    }, this);
+    return comments;
+  },
+
+  // Get comments directly attached to the node
+  getNodeComments: function(node) {
+    var comments = [];
+    _.each(this.comments, function(c) {
+      if (c.node === node && !c.annotation) comments.push(c);
+    }, this);
+    return comments;
+  },
+
+  getDocumentComments: function() {
+    var comments = [];
+    _.each(this.comments, function(c) {
+      if (!c.node) comments.push(c);
+    }, this);
+    return comments;
+  },
+
+  // Store annotation op in the operation graph
+  storeAnnotationOp: function(op, scope) {
+    // Get latest sha
+    var sha = this.model.document.refs.master;
+
+    if (!this.model.annotations[sha]) {
+      this.model.annotations[sha] = {
+        "annotations": [],
+        "comments": [],
+      };
+    }
+    this.model.annotations[sha][scope+'s'].push(op);
+  },
+
+  apply: function(op, options) {
+    options = options ? options : {};
+
+    switch (options.scope) {
+      case "annotation": Annotation.methods[op[0]](this, op[1]); break;
+      case "comment": Comment.methods[op[0]](this, op[1]); break;
+      default: RawDocument.prototype.apply.call(this, op, options);
+    }
+
+    if (_.include(['annotation', 'comment'], options.scope) && !options.silent) {
+      this.storeAnnotationOp(op, options.scope);
+    }
+  },
+
+  checkout: function(ref) {
+    var ops = this.operations(ref);
+
+    // Reset annotations
+    this.annotations = {};
+    this.comments = {};
+
+    // Checkout the document
+    RawDocument.prototype.checkout.call(this, ref);
+
+    // Checkout annotations
+    _.each(ops, function(op, index) {
+      var additions = this.annotationOps[op.sha];
+
+      if (additions) {
+        // console.log('additions found', additions);
+        // Applying annotation ops
+        _.each(additions.annotations, function(op) {
+          this.apply(op, {silent: true, scope: "annotation"});
+        }, this);
+
+        // Applying comment ops
+        _.each(additions.comments, function(op) {
+          this.apply(op, {silent: true, scope: "comment"});
+        }, this);
+      }
+    }, this);
+  },
+
+  toJSON: function() {
+    return this.model;
+  }
+});
+
+
 // Create a new (empty) document
 // --------
 
@@ -453,6 +583,8 @@ Document.create = function(schema) {
   };
   return doc;
 };
+
+
 
 
 // Merge Strategies
@@ -494,6 +626,8 @@ Document.merges = {
     return true;
   }
 };
+
+
 
 
 // Document Methods
@@ -653,132 +787,6 @@ Document.methods = {
 };
 
 
-// AnnotatedDocument
-// --------
-
-var AnnotatedDocument = _.inherits(Document, {
-  constructor: function(options) {
-    var that = this;
-
-    // Remember annotation ops
-    this.annotationOps = options.annotations;
-
-    // Holds annotations state (em, str)
-    this.annotations = {};
-
-    // Holds comments state
-    this.comments = {};
-
-    Document.call(this, options);
-  },
-
-  getAnnotations: function(node) {
-    var annotations = {};
-    _.each(this.annotations, function(a) {
-      if (a.node === node) annotations[a.id] = a;
-    });
-    return annotations;
-  },
-
-  // Returns all comments referring to a given node
-  // TODO: combine with getNodeComments, getDocumentComments
-  getComments: function(node) {
-    var comments = [];
-    _.each(this.comments, function(c) {
-      if (!node && !c.annotation) return comments.push(c);
-      if (c.node === node) comments.push(c);
-    }, this);
-    return comments;
-  },
-
-  getCommentsForAnnotation: function(annotation) {
-    var comments = [];
-    _.each(this.comments, function(c) {
-      if (c.annotation === annotation) comments.push(c);
-    }, this);
-    return comments;
-  },
-
-  // Get comments directly attached to the node
-  getNodeComments: function(node) {
-    var comments = [];
-    _.each(this.comments, function(c) {
-      if (c.node === node && !c.annotation) comments.push(c);
-    }, this);
-    return comments;
-  },
-
-  getDocumentComments: function() {
-    var comments = [];
-    _.each(this.comments, function(c) {
-      if (!c.node) comments.push(c);
-    }, this);
-    return comments;
-  },
-
-  // Store annotation op in the operation graph
-  storeAnnotationOp: function(op, scope) {
-    // Get latest sha
-    var sha = this.model.document.refs.master;
-
-    if (!this.model.annotations[sha]) {
-      this.model.annotations[sha] = {
-        "annotations": [],
-        "comments": [],
-      };
-    }
-    this.model.annotations[sha][scope+'s'].push(op);
-  },
-
-  apply: function(op, options) {
-    options = options ? options : {};
-
-    switch (options.scope) {
-      case "annotation": Annotation.methods[op[0]](this, op[1]); break;
-      case "comment": Comment.methods[op[0]](this, op[1]); break;
-      default: Document.prototype.apply.call(this, op, options);
-    }
-
-    if (_.include(['annotation', 'comment'], options.scope) && !options.silent) {
-      this.storeAnnotationOp(op, options.scope);
-    }
-  },
-
-  checkout: function(ref) {
-    var ops = this.operations(ref);
-
-    // Reset annotations
-    this.annotations = {};
-    this.comments = {};
-
-    // Checkout the document
-    Document.prototype.checkout.call(this, ref);
-
-    // Checkout annotations
-    _.each(ops, function(op, index) {
-      var additions = this.annotationOps[op.sha];
-
-      if (additions) {
-        // console.log('additions found', additions);
-        // Applying annotation ops
-        _.each(additions.annotations, function(op) {
-          this.apply(op, {silent: true, scope: "annotation"});
-        }, this);
-
-        // Applying comment ops
-        _.each(additions.comments, function(op) {
-          this.apply(op, {silent: true, scope: "comment"});
-        }, this);
-      }
-    }, this);
-  },
-
-
-  toJSON: function() {
-    return this.model;
-  }
-});
-
 
 // Annotation Methods
 // --------
@@ -820,17 +828,16 @@ Comment.methods = {
 };
 
 
-
 // Export Module
 // --------
 
 if (typeof exports !== 'undefined') {
   module.exports = {
-    Document: Document,
-    AnnotatedDocument: AnnotatedDocument
+    RawDocument: RawDocument,
+    Document: Document
   };
 } else {
   if (!window.Substance) window.Substance = {};
+  Substance.RawDocument = RawDocument;
   Substance.Document = Document;
-  Substance.AnnotatedDocument = AnnotatedDocument;
 }

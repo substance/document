@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset='UTF-8'/>
+  <title>Substance Document</title>
+
+  <link rel='stylesheet' href='console.css'/>
+  <script src="lib/underscore.js"></script>
+  <script src="lib/jquery.min.js"></script>
+  <script src="lib/backbone.js"></script>
+  <script src="lib/operation.js"></script>
+  <script src="document.js"></script>
+  <script src="console.js"></script>
+
+  <!-- Startpage -->
+  <script type="text/html" name="start">
+    <div id="help">
+      <img src="images/introduction.png"/>
+    </div>
+  </script>
+
+  <script type="text/html" name="application">
+		<div class="testsuites">
+			<div class="current">Substance Test</div>
+			<div class="options">
+				<a href="#" class="load-testsuite" data-file="substance.json">Substance Test doc</a>
+				<a href="#" class="load-testsuite" data-file="empty.json">Empty doc</a>
+			</div>
+		</div>
+		<div id="document"></div>
+  </script>
+
+  <script type="text/html" name="document">
+  	<h4>History</h4>
+		<div class="operations">
+			<% applied = true %>
+			<% _.each(operations, function(op) { %>
+				<a href="#" class="operation<%= applied ? ' applied' : '' %>" data-sha="<%= op.sha %>"></a>
+				<% if (op.sha === sha) applied = false; %>
+			<% }); %>
+		
+		</div>
+
+		<h4>Command</h4>
+		<div class="console">
+			<textarea id="command" class="command">["insert", {"id": "section:test", "type": "section", "data": {"content": "Test"}}]</textarea>
+			<div class="scope">Document</div>
+			<a href="#" class="apply-operation disabled">Apply</a>
+		</div>
+
+		<div class="select-output">
+			<a href="#" class="toggle-visualization active">Visualization</a>
+			<a href="#" class="toggle-state">Content</a>
+			<a href="#" class="toggle-operations">Operations</a>
+		</div>
+
+		<div class="output visualization">
+			<div class="document">
+				<% _.each(nodes, function(node) { %>
+					<div class="node" data-id="<%= node.id %>">
+						<% annotations = document.getAnnotations(node.id); %>
+
+						<% _.each(annotations, function(a) { %>
+							<div class="annotation" data-id="<%= a.id %>"></div>
+						<% }); %>
+					</div>
+				<% }); %>
+			</div>
+		</div>
+  </script>
+
+</head>
+<body>
+	<div id="container">
+
+
+	</div>
+
+</body>
+</html>
