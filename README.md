@@ -11,34 +11,43 @@ The Substance Document Model is essentially a Javascript framework that allows t
 #### Start tracking a new document.
 
 ```js
-var doc = new Document({ id: "document:substance" }, substanceDocSchema);
+var doc = new Substance.Document({ id: "document:substance" }, substanceDocSchema);
 ```
 
-Alternatively you can pass in the history of an existing document, by providing all operations that happenend on that document, in order to reconstruct the latest document state.
+Alternatively, you can pass in the history of an existing document, by providing all operations that happenend on that document, which are used to reconstruct the latest document state.
 
 ```js
-var doc = new Document({ id: "document:substance" }, substanceDocSchema);
+var doc = new Substance.Document(operations, substanceDocSchema);
 ```
 
 #### Insert Section
 
 ```js
-var opA = {
-  "op": ["insert", {"id": "section:a", "type": "section", "properties": {"name": "Substance Document Model"}}],
-  "user": "michael"
-};
-doc.apply(opA);
+var opA = ["insert", {"id": "section:a", "type": "section", "properties": {"name": "Substance Document Model"}}];
+
+doc.apply(opA, {"user": "michael"});
 ```
 
 #### Insert Text
 
 ```js
-var opB = {
-  "op": ["insert", {"id": "text:a", "type": "text", "properties": {"content": "Substance Document Model is a generic format for representing documents including their history."}}],
-  "user": "michael"
-}
-doc.apply(opB);
+var opB = ["insert", {"id": "text:a", "type": "text", "properties": {"content": "Substance Document Model is a generic format for representing documents including their history."}}];
+
+doc.apply(opB, {"user": "michael"});
 ```
+
+Let's look at the state of our document, after those two operations have been applied.
+
+```js
+{
+  "id": "document:substance",
+  "nodes": {},
+  "properties": {},
+  "annotations": {},
+  "comments": {}
+}
+```
+
 
 #### Add a new annotation
 
