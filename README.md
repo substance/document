@@ -1,10 +1,20 @@
 # Substance Document Model
 
-Read the official documentation [here](http://interior.substance.io/modules/document.html), which gets updated on every major release.
+The Substance Document Model aims to be a quasi-standard for representing arbitrary digital documents. It doesn’t make any assumptions on a concrete type or structure. Instead it is supposed to be a foundation to create your own document model on top of it, tailored to your particular use-case. A Substance document model can range from loosly structured documents involving sections and text, such as reports or articles to things that you wouldn’t consider a document anymore but in fact are.
+
+Let’s take the mess of filling out forms as an example. The reason why we are still filling them out by hand and manually transfer them into a database system is simply the lack of suitable generic document representations and form composition tools. In many cases we are dealing with a mixture of structured and unstructured parts. There might be a disclaimer, which is not editable in conjunction with a person’s contact info plus a list of purchased items.
 
 ## Getting started
 
+The Substance Document Model is essentially a Javascript framework that allows transforming digital documents in various ways.
+
 #### Start tracking a new document.
+
+```js
+var doc = new Document({ id: "document:substance" }, substanceDocSchema);
+```
+
+Alternatively you can pass in the history of an existing document, by providing all operations that happenend on that document, in order to reconstruct the latest document state.
 
 ```js
 var doc = new Document({ id: "document:substance" }, substanceDocSchema);
@@ -15,8 +25,7 @@ var doc = new Document({ id: "document:substance" }, substanceDocSchema);
 ```js
 var opA = {
   "op": ["insert", {"id": "section:a", "type": "section", "properties": {"name": "Substance Document Model"}}],
-  "user": "michael",
-  "parent": "null"
+  "user": "michael"
 };
 doc.apply(opA);
 ```
