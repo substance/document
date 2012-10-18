@@ -6,9 +6,76 @@ $(function() {
   // Render Underscore templates
   _.tpl = function (tpl, ctx) {
     var source = $('script[name='+tpl+']').html();
-    // var source = templates[tpl];
     return _.template(source, ctx);
   };
+
+
+  // Commands
+  // ---------------
+
+  var SUBSTANCE_COMMANDS = {
+    "document": [
+      {
+        "name": "Insert Section",
+        "op": ["insert", {"id": "UNIQUE_ID", "type": "section", "target": "NODE_ID|front|back", "data": {"content": "SECTION_NAME"}}]
+      },
+      {
+        "name": "Insert Text",
+        "op": ["insert", {"id": "UNIQUE_ID", "type": "text", "target": "NODE_ID|front|back", "data": {"content": "CONTENT"}}]
+      },
+      {
+        "name": "Update Text (Delta)",
+        "op": ["update", {"id": "NODE_ID", "data": [["ret", 5], ["ins", " world!"]]}]
+      },
+      {
+        "name": "Update Section (Properties)",
+        "op": ["update", {"id": "NODE_ID", "data": {"content": "NEW_CONTENT"}}]
+      },
+      {
+        "name": "Move Node(s)",
+        "op": ["move", {"nodes": ["NODE_ID", "ANOTHER_NODE_ID"], "target": "TARGET_NODE_ID"}]
+      },
+      {
+        "name": "Delete Node(s)",
+        "op": ["delete", {"nodes": ["NODE_ID", "ANOTHER_NODE_ID"]}]
+      }
+    ],
+
+    "annotation": [
+      {
+        "name": "Emphasize",
+        "op": ["insert", {"id": "em:1", "type": "em", "node": "section:1", "pos": [8, 10]}]
+      },
+      {
+        "name": "Strong",
+        "op": ["insert", {"id": "em:1", "type": "str", "node": "text:2", "pos": [0, 3]}]
+      },
+      {
+        "name": "Suggestion",
+        "op": ["insert", {"id": "suggestion:1", "type": "suggestion", "node": "text:2", "pos": [5, 5]}]
+      }
+    ],
+
+    "comment": [
+      {
+        "name": "Insert Comment (on document)",
+        "op": ["insert", {"id": "comment:a", "content": "I like this document!"}]
+      },
+      {
+        "name": "Insert Comment (on node)",
+        "op": ["insert", {"id": "comment:a", "content": "Good argumentation."}]
+      },
+      {
+        "name": "Insert Comment (on annotation)",
+        "op": ["insert", {"id": "comment:a", "node": "text:2", "annotation": "suggestion:1", "content": "Better idea."}]
+      },
+      {
+        "name": "Update comment",
+        "op": ["update", {"id": "comment:a", "content": "Hello wrrld"}]
+      }
+    ]
+  };
+
 
 
   var Router = Backbone.Router.extend({
@@ -89,16 +156,55 @@ $(function() {
   var Document = Backbone.View.extend({
     events: {
       'click .operation': '_checkoutOperation',
-      'click .apply-operation': '_applyOperation'
+      'click .apply-operation': '_applyOperation',
+      'change #select_scope': '_selectScope',
+      'change #select_example': '_selectExample',
+      'click .toggle-output': '_toggleOutput'
+    },
+
+    _toggleOutput: function(e) {
+      var view = $(e.currentTarget).attr('data-output');
+      
+      this.$('.toggle-output').removeClass('active');
+      this.$(e.currentTarget).addClass('active');
+
+      if (view === "visualization") {
+        this.render();
+      } else if (view === "content") {
+        this.$('.output .document').html('<textarea class="json">'+JSON.stringify(this.model.content, null, '  ')+'</textarea>');
+      } else {
+        this.$('.output .document').html('<textarea class="json">'+JSON.stringify(this.model.model, null, '  ')+'</textarea>');
+      }
+      return false;
+    },
+
+    _selectScope: function() {
+      this.scope = $('#select_scope').val();
+      this.render(); // rerender it
+      return false;
+    },
+
+    _selectExample: function() {
+      var index = $('#select_example').val();
+      if (index === "") {
+        $('#command').val('');
+        return;
+      }
+
+      var op = SUBSTANCE_COMMANDS[this.scope][index];
+      $('#command').val(JSON.stringify(op.op, null, '  '));
+      return false;
     },
 
     _applyOperation: function() {
       var op = JSON.parse(this.$('#command').val());
-      console.log(op);
-      this.model.apply({
-        op: op,
-        user: "Foo"
+
+      this.model.apply(op, {
+        user: "demo",
+        scope: this.scope
       });
+
+      this.sha = 'master';
       this.render();
       return false;
     },
@@ -113,12 +219,9 @@ $(function() {
 
     initialize: function (options) {
       this.sha = 'master';
+      this.scope = 'document';
     },
 
-    // Toggle document view
-    document: function(id) {
-
-    },
 
     // Toggle Start view
     start: function() {
@@ -133,9 +236,17 @@ $(function() {
         nodes: this.model.nodes(),
         document: this.model
       }));
+
+      this.renderScope();
+    },
+
+    renderScope: function() {
+      this.$('#scope').html(_.tpl('scope', {
+        scope: this.scope,
+        commands: SUBSTANCE_COMMANDS
+      }));
     }
   });
-
 
   window.app = new Application({el: '#container'});
   app.render();

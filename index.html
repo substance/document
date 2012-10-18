@@ -31,50 +31,67 @@
   </script>
 
   <script type="text/html" name="document">
-  	<h4>History</h4>
 		<div class="operations">
 			<% applied = true %>
 			<% _.each(operations, function(op) { %>
 				<a href="#" class="operation<%= applied ? ' applied' : '' %>" data-sha="<%= op.sha %>"></a>
 				<% if (op.sha === sha) applied = false; %>
 			<% }); %>
-		
 		</div>
 
-		<h4>Command</h4>
-		<div class="console">
-			<textarea id="command" class="command">["insert", {"id": "section:test", "type": "section", "data": {"content": "Test"}}]</textarea>
-			<div class="scope">Document</div>
-			<a href="#" class="apply-operation disabled">Apply</a>
-		</div>
 
-		<div class="select-output">
-			<a href="#" class="toggle-visualization active">Visualization</a>
-			<a href="#" class="toggle-state">Content</a>
-			<a href="#" class="toggle-operations">Operations</a>
-		</div>
+    <div class="console-wrapper">
+      <div class="console">
+        <div class="scope" id="scope">
 
-		<div class="output visualization">
-			<div class="document">
-				<% _.each(nodes, function(node) { %>
-					<div class="node" data-id="<%= node.id %>">
-						<% annotations = document.getAnnotations(node.id); %>
+        </div>
+        <div class="action">
+          <textarea id="command" class="command"></textarea>
+          <a href="#" class="apply-operation disabled">Apply</a>
+        </div>
+      </div>
 
-						<% _.each(annotations, function(a) { %>
-							<div class="annotation" data-id="<%= a.id %>"></div>
-						<% }); %>
-					</div>
-				<% }); %>
-			</div>
-		</div>
+      <div class="output visualization">
+        <div class="select-output">
+          <a href="#" class="toggle-output active" data-output="visualization">Visualization</a>
+          <a href="#" class="toggle-output" data-output="content">Content</a>
+          <a href="#" class="toggle-output last" data-output="operations">Operations</a>
+        </div>
+
+        <div class="document">
+          <% _.each(nodes, function(node) { %>
+            <div class="node <%= node.type %>" data-id="<%= node.id %>">
+              <%= node.content %>
+              <% annotations = document.getAnnotations(node.id); %>
+
+              <% _.each(annotations, function(a) { %>
+                <div class="annotation" data-id="<%= a.id %>"></div>
+              <% }); %>
+            </div>
+          <% }); %>
+        </div>
+      </div>
+    </div>
+  </script>
+
+  <script type="text/html" name="scope">
+    Operation:
+    <select name="scope" id="select_scope">
+      <option value="document"<%= scope === "document" ? " selected" : "" %>>Document</option>
+      <option value="annotation"<%= scope === "annotation" ? " selected" : "" %>>Annotation</option>
+      <option value="comment"<%= scope === "comment" ? " selected" : "" %>>Comment</option>
+    </select>
+    <select name="examples" id="select_example">
+      <option value="">Choose Example</option>
+      <% _.each(commands[scope], function(c, index) { %>
+        <option value="<%= index %>"><%= c.name %></option>
+      <% }); %>
+    </select>
   </script>
 
 </head>
 <body>
 	<div id="container">
-
-
 	</div>
-
 </body>
 </html>
