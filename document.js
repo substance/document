@@ -218,7 +218,6 @@ _.Events = {
 _.Events.bind   = _.Events.on;
 _.Events.unbind = _.Events.off;
 
-
 // Invariant, that must hold after each operation
 // --------
 
@@ -294,32 +293,39 @@ function verifyState(doc, operation, oldDoc) {
 var RawDocument = function(doc, schema) {
   this.id = doc.id;
 
-  this.model = doc;
-
-  this.content = {
-    properties: {},
-    nodes: {},
+  var defaults = {
+    refs: {},
+    operations: {},
+    additions: {}
   };
+
+  this.model = _.extend(defaults, doc);
 
   // Checkout master branch
   this.checkout('master');
-
-  // Store ops for redo
-  // this.undoneOperations = [];
 };
 
  _.extend(RawDocument.prototype, _.Events, {
 
-  // TODO: error handling
-  checkout: function(ref) {
+  reset: function() {
     // Reset content
     this.content = {
       properties: {},
       nodes: {},
+      annotations: {},
+      comments: {}
     };
 
+    // Also reset annotations
+    this.annotations = {};
+    this.comments = {};
+  },
+
+  // TODO: error handling
+  checkout: function(ref) {
+    this.reset();
     _.each(this.operations(ref), function(op) {
-      this.apply(op, {silent: true});
+      this.apply(op.op, {silent: true});
     }, this);
     this.head = ref;
   },
@@ -331,7 +337,7 @@ var RawDocument = function(doc, schema) {
     // Current commit (=head)
     var commit = this.getRef(ref) || ref;
     
-    var op = this.model.document.operations[commit];
+    var op = this.model.operations[commit];
 
     if (!op) return [];
     op.sha = commit;
@@ -339,7 +345,7 @@ var RawDocument = function(doc, schema) {
     var operations = [op];
     var prev = op;
 
-    while (op = this.model.document.operations[op.parent]) {
+    while (op = this.model.operations[op.parent]) {
       op.sha = prev.parent;
       operations.push(op);
       prev = op;
@@ -348,15 +354,9 @@ var RawDocument = function(doc, schema) {
     return operations.reverse();
   },
 
-  // History for current head
-  // TODO: do we need this?
-  history: function() {
-    return this.operations(this.head);
-  },
-
-  // Get sha the current head points to
+  // Get sha the given ref points to
   getRef: function(ref) {
-    return this.model.document.refs[ref];
+    return this.model.refs[ref];
   },
 
   // Go back in document history
@@ -409,17 +409,21 @@ var RawDocument = function(doc, schema) {
     return this.content;
   },
 
-  merge: function(ref) {
-    Document.merges["fast-forward"](this, ref);
-  },
-
   // Apply a given operation on the current document state
   apply: function(operation, options) {
+    // We're somewhere in the history
+    // TODO: this doesn't work with branches!
+    if (!options.silent && this.head !== 'master') {
+      this.model.refs['master'] = this.head;
+      this.head = 'master';
+    }
+
     // TODO: this might slow things down, it's for debug purposes
     var prevState = JSON.parse(JSON.stringify(this.content));
-    Document.methods[operation.op[0]](this.content, operation.op[1]);
+    Document.methods[operation[0]](this.content, operation[1]);
 
-    verifyState(this.content, operation, prevState); // This is a checker for state verification
+    // This is a checker for state verification
+    verifyState(this.content, operation, prevState);
 
     if (!options.silent) {
       this.commit(operation);
@@ -429,42 +433,33 @@ var RawDocument = function(doc, schema) {
   
   // Create a commit for a certain operation
   commit: function(op) {
-    op.sha = op.sha || Math.uuid();
-    op.head = op.head || this.head;
-    op.parent = this.getRef(op.head);
+    var commit = {
+      op: op,
+      sha: Math.uuid(),
+      parent: this.getRef(this.head)
+    };
 
-    this.model.document.operations[op.sha] = _.clone(op);
-    this.model.document.refs[this.head] = op.sha;
+    this.model.operations[commit.sha] = commit;
+    this.model.refs[this.head] = commit.sha;
   }
 });
-
-
-
 
 
 // Document
 // --------
 // 
-// Contains annotations and comments
+// Contains additions like annotations and comments
 
 var Document = _.inherits(RawDocument, {
   constructor: function(options) {
     var that = this;
-
-    // Remember annotation ops
-    this.annotationOps = options.annotations;
-
-    // Holds annotations state (em, str)
-    this.annotations = {};
-
-    // Holds comments state
-    this.comments = {};
+    this.reset();
     RawDocument.call(this, options);
   },
 
   getAnnotations: function(node) {
     var annotations = {};
-    _.each(this.annotations, function(a) {
+    _.each(this.content.annotations, function(a) {
       if (a.node === node) annotations[a.id] = a;
     });
     return annotations;
@@ -474,7 +469,7 @@ var Document = _.inherits(RawDocument, {
   // TODO: combine with getNodeComments, getDocumentComments
   getComments: function(node) {
     var comments = [];
-    _.each(this.comments, function(c) {
+    _.each(this.content.comments, function(c) {
       if (!node && !c.annotation) return comments.push(c);
       if (c.node === node) comments.push(c);
     }, this);
@@ -483,7 +478,7 @@ var Document = _.inherits(RawDocument, {
 
   getCommentsForAnnotation: function(annotation) {
     var comments = [];
-    _.each(this.comments, function(c) {
+    _.each(this.content.comments, function(c) {
       if (c.annotation === annotation) comments.push(c);
     }, this);
     return comments;
@@ -509,15 +504,15 @@ var Document = _.inherits(RawDocument, {
   // Store annotation op in the operation graph
   storeAnnotationOp: function(op, scope) {
     // Get latest sha
-    var sha = this.model.document.refs.master;
+    var sha = this.model.refs.master;
 
-    if (!this.model.annotations[sha]) {
-      this.model.annotations[sha] = {
+    if (!this.model.additions[sha]) {
+      this.model.additions[sha] = {
         "annotations": [],
         "comments": [],
       };
     }
-    this.model.annotations[sha][scope+'s'].push(op);
+    this.model.additions[sha][scope+'s'].push(op);
   },
 
   apply: function(op, options) {
@@ -537,16 +532,15 @@ var Document = _.inherits(RawDocument, {
   checkout: function(ref) {
     var ops = this.operations(ref);
 
-    // Reset annotations
-    this.annotations = {};
-    this.comments = {};
+    this.reset();
+    this.head = ref;
 
     // Checkout the document
     RawDocument.prototype.checkout.call(this, ref);
 
     // Checkout annotations
     _.each(ops, function(op, index) {
-      var additions = this.annotationOps[op.sha];
+      var additions = this.model.additions[op.sha];
 
       if (additions) {
         // console.log('additions found', additions);
@@ -567,23 +561,6 @@ var Document = _.inherits(RawDocument, {
     return this.model;
   }
 });
-
-
-// Create a new (empty) document
-// --------
-
-Document.create = function(schema) {
-  var doc = {
-    "id": Math.uuid(),
-    "created_at": "2012-04-10T15:17:28.946Z",
-    "updated_at": "2012-04-10T15:17:28.946Z",
-    "nodes": {},
-    "properties": {},
-    "rev": 0,
-  };
-  return doc;
-};
-
 
 
 
@@ -711,7 +688,7 @@ Document.methods = {
       // Use OT delta updates for text-based nodes
       node.content = createTextOperation(options.data).apply(node.content);
     } else {
-      var options = _.clone(options);
+      var options = _.clone(options.data);
       delete options.id;
       _.extend(node, options);
     }
@@ -795,15 +772,15 @@ var Annotation = {};
 
 Annotation.methods = {
   insert: function(doc, options) {
-    doc.annotations[options.id] = JSON.parse(JSON.stringify(options));
+    doc.content.annotations[options.id] = JSON.parse(JSON.stringify(options));
   },
 
   update: function(doc, options) {
-    _.extend(doc.annotations[options.id], JSON.parse(JSON.stringify(options)));
+    _.extend(doc.content.annotations[options.id], JSON.parse(JSON.stringify(options)));
   },
 
   delete: function(doc, options) {
-    delete doc.annotations[doc.id];
+    delete doc.content.annotations[doc.id];
   }
 };
 
@@ -815,15 +792,15 @@ var Comment = {};
 
 Comment.methods = {
   insert: function(doc, options) {
-    doc.comments[options.id] = JSON.parse(JSON.stringify(options));
+    doc.content.comments[options.id] = JSON.parse(JSON.stringify(options));
   },
 
   update: function(doc, options) {
-    _.extend(doc.comments[options.id], JSON.parse(JSON.stringify(options)));
+    _.extend(doc.content.comments[options.id], JSON.parse(JSON.stringify(options)));
   },
 
   delete: function(doc, options) {
-    delete doc.comments[doc.id];
+    delete doc.content.comments[doc.id];
   }
 };
 
