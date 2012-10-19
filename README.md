@@ -5,12 +5,15 @@ The Substance Document Model is a standard for representing and programmatically
 
 ## Design goals
 
-- A document consists of a sequence of content nodes of different types (section, text, image)
+- A document consists of a sequence of content nodes of different types (e.g. heading, text, image)
 - A document is maniupulated through atomic operations
-- The history is tracked, so we can reconstruct previous document states
+- The history is tracked, so users reconstruct previous document states at any time
 - Support for incremental text updates, using a protocol similar to [Google Wave](http://www.waveprotocol.org/whitepapers/operational-transform)
 - Support for text annotations that are not part of the content, but rather an overlay
-- Support for comments on three levels (document, 
+- Support for comments on three levels for having dicussions on three levels (document, node, and also on a particular text annotation)
+
+Without too much talking, just have a look at yourself. The Substance Console allows you to explore some examples and mess around with the document manipulation protocol yourself.
+
 
 ## Getting started
 
