@@ -171,7 +171,7 @@ Now this is the slightly more verbose output of the complete document history. I
 
 #### Time travel
 
-Keep in mind, we can always look back.
+Keep in mind, we can always look back. According to the commit graph shown above, we can checkout any reference in our d
 
 ```js
 doc.apply(opC, {"user": "michael"});
@@ -211,76 +211,17 @@ var op1 = {
 annotations.apply(op1);
 ```
 
-#### Update text
-
-Now things get a little tricky, since once we change the contents of the text node the position of the associated annotation will be wrong.
-
-```js
-var opC = {
-  "op": ["update", {id: "text:hello", "delta": [["ret", 2], ["ins", "l"], ["ret", 4], ["ins", "o"], ["ret", 3]]}],
-  "user": "michael"
-}
-
-doc.apply(opC);
-```
-
-So we need a mechanism to keep the annotations in sync with the plain text. Let's assume there is a neat helper that does that for us. And we could just use it like so:
-
-```js
-var transformer = new AnnotationTransformer(doc, annotations);
-```
-
-This piece just listens to completed document operations, checks if there are annotations affected and if that's the case, magically create operations on the annotations document to update the positions. 
-
-```js
-var op1 = {
-  "op": ["node:update", {"node": "annotation:1", "pos": [4, 13]}],
-  "user": "michael"
-};
-annotations.apply(op1);
-```
-
-By having delta updates on the anotation level allows us to walk back in time to a particular document state, and also see the annotations that existed at that same point in time. We'll show later how to do time travels based on the operations history.
-
-#### Victor adds a patch
-
-Now Victor is coming by. Since he is not authorized to change the documet directly, his operations will automatically go into a separate branch `victor-patch-1`. This works the same way as branches do in Git.
-
-```js
-var opD = {
-  "op": ["update", {"node": "text:a", "delta": [["ret", 30], ["ins", "evolutionary"], ["ret", 100]]}],
-  "user": "victor"
-};
-
-doc.apply(opD);
-```
-
-#### Michael is back
-
-Right after Victor has submitted his patch, Michael continutes to improve the document as well. He adds a conclusion.
-
-```js
-var opE = {
-  "op": ["insert", {"id": "text:e", "type": "text", "properties": {"content": "The end."}}],
-  "user": "michael"
-};
-doc.apply(opE);
-```
-
-After all these operations our graph describing everything that happened looks like this:
-
-![](https://raw.github.com/substance/document/master/assets/operations-graph-before-merge.png)
-
-
 ## Supported Operations
 
-### Insert Node
+### Document
+
+#### Insert Node
 
 Parameters:
 
 - `id` - Unique id of the element
 - `type` - Type of the new node
-- `properties` (optional) - 
+- `properties` (optional) - All properties that need to be stored on the node
 
 Inserting a text node.
 
@@ -288,7 +229,7 @@ Inserting a text node.
 ["insert", {"id": "text:e", "type": "text", "properties": {"content": "The end."}}]
 ```
 
-### Update Node
+#### Update Node
 
 Parameters:
 
@@ -309,7 +250,7 @@ Updating an image node.
 ["update", {id: "image:hello", {"properties": "caption": "Hello World"}}]
 ```
 
-### Move Node(s)
+#### Move Node(s)
 
 Parameters:
 
@@ -320,7 +261,7 @@ Parameters:
 ["move", {"nodes": ["section:hello", "text:hello"], "target": "text:hello"}]
 ```
 
-### Delete Node(s)
+#### Delete Node(s)
 
 Parameters:
 
