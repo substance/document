@@ -1,6 +1,6 @@
 # Substance Document Model
 
-The **Substance Document Model** is a standard for representing and programmatically manipulating *digital* documents. It doesn’t make any assumptions on a concrete type or structure. Instead it is supposed to be a foundation to create your own document model on top of it, tailored to your particular use-case. A Substance document model can range from loosly structured documents involving sections and text, such as reports or articles to things that you wouldn’t consider a document anymore but in fact are.
+The **Substance Document Model** is a standard for representing and programmatically manipulating *digital* documents. It doesn’t make any assumptions on a concrete type or structure. Instead it is supposed to be a foundation to create your own document model on top of it, tailored to your particular use-case. A Substance document model can range from loosly structured documents involving headings and text, such as reports or articles to things that you wouldn’t consider a document anymore but in fact are.
 
 We've put a lot of thoughts into the design of this module. This first release is a result of almost 6 months of research and development.
 
@@ -40,8 +40,8 @@ doc.apply(op, {"user": "michael"});
 
 ```js
 var opA = ["insert", {
-  "id": "section:1",
-  "type": "section",
+  "id": "heading:1",
+  "type": "heading",
   "target": "back",
   "data": { "content": "Hello" }
 }];
@@ -69,7 +69,7 @@ There's a special API for incrementally updating existing nodes. This works by s
 
 ```js
 var opC = ["update", {
-    "id": "section:1",
+    "id": "heading:1",
     "data": [["ret", 5], ["ins"," world!"]]
 }]
 
@@ -88,14 +88,14 @@ By accessing the `content` property you can always access that information.
 
 ```js
 {
-  "head": "section:1",
+  "head": "heading:1",
   "tail": "text:2"
   "properties": {"title": "The Substance Document Model"},
   "nodes": {
-    "section:1": {
+    "heading:1": {
       "content": "Hello world!",
-      "id": "section:1",
-      "type": "section",
+      "id": "heading:1",
+      "type": "heading",
       "prev": null,
       "next": "text:2"
     },
@@ -103,7 +103,7 @@ By accessing the `content` property you can always access that information.
       "content": "Hey there.",
       "id": "text:2",
       "type": "text",
-      "prev": "section:1",
+      "prev": "heading:1",
       "next": null
     }
   },
