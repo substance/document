@@ -2,7 +2,6 @@
 
 The Substance Document Model is a standard for representing and programmatically manipulating digital documents. It doesn’t make any assumptions on a concrete type or structure. Instead it is supposed to be a foundation to create your own document model on top of it, tailored to your particular use-case. A Substance document model can range from loosly structured documents involving sections and text, such as reports or articles to things that you wouldn’t consider a document anymore but in fact are.
 
-Let’s take the mess of filling out forms as an example. The reason why we are still filling them out by hand and manually transfer them into a database system is simply the lack of suitable generic document representations and form composition tools. In many cases we are dealing with a mixture of structured and unstructured parts. There might be a disclaimer, which is not editable in conjunction with a person’s contact info plus a list of purchased items.
 
 ## Design goals
 
@@ -26,13 +25,18 @@ var doc = new Substance.Document({ id: "document:substance" });
 Alternatively, you can pass in the history of an existing document, by providing all operations that happenend on that document, which are used to reconstruct the latest document state.
 
 ```js
-var doc = new Substance.Document(operations, substanceDocSchema);
+var doc = new Substance.Document(docSpec);
 ```
 
-#### Insert Section
+Let's add a first heading to our document.
 
 ```js
-var opA = ["insert", {"id": "section:a", "type": "section", "properties": {"name": "Substance Document Model"}}];
+var opA = ["insert", {
+  "id": "section:1",
+  "type": "section",
+  "target": "back",
+  "data": { "content": "Hello" }
+}];
 
 doc.apply(opA, {"user": "michael"});
 ```
