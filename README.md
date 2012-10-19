@@ -13,7 +13,11 @@ We've put a lot of thoughts into the design of this module. This first release i
 - Support for text **annotations** that are not part of the content, but rather an overlay
 - Support for **comments** to have dicussions on three levels (document, node, and also on a particular text annotation)
 
+## Play with the Console
+
 Without too much talking, just have a look at it yourself. The Substance Console allows you to explore some examples and mess around with the document manipulation protocol in a playful manner.
+
+<iframe src="http://interior.substance.io/document/"></iframe>
 
 
 ## Getting started
