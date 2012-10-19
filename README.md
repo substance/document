@@ -30,7 +30,7 @@ var doc = new Substance.Document({ id: "document:substance" });
 
 ```js
 var op = ["set", {
-  "title": "The Substance Document Model"
+  "title": "Substance"
 }];
 
 doc.apply(op, {"user": "michael"});
@@ -90,7 +90,7 @@ By accessing the `content` property you can always access that information.
 {
   "head": "heading:1",
   "tail": "text:2"
-  "properties": {"title": "The Substance Document Model"},
+  "properties": {"title": "Substance"},
   "nodes": {
     "heading:1": {
       "content": "Hello world!",
@@ -185,21 +185,28 @@ Alternatively, you can pass in the history of an existing document, by providing
 The document must come in this format.
 
 ```js
-{
+var docSpec = {
   "id": "DOCUMENT_ID",
-  "commits": {}, // Commit history containing all operations applied on that document
-  "additions": {} // Assigns to certain commits document additions, such as annotations and comments
+  "commits": {...}, // Commit history containing all operations applied on that document
+  "additions": {...} // Assigns to certain commits document additions, such as annotations and comments
 }
-```
 
-```js
 var doc = new Substance.Document(docSpec);
 ```
 
+### Annotations
 
-#### Annotations
+So far, we have a bare-metal digital document, containing two different types of content nodes. Now we'd also like to store additional contextual information, relevant to a particular portion of text within the document.
 
-Now we'd like to store additional contextual information, like a comment refering to a portion of text within the document. Let's add a comment explaining the word **Substance**. But first, we need to track an annotations object. The annotations object is just another Substance Document, using a different schema. They don't hold text nodes, sections etc. but `comments`, `links`, `ems`, and `strongs`.
+Unlike in other systems with Substance annotations are not part of the content itself. They're completely separated from the text. Most text editors offer the ability to emphasize portions of text using markup. E.g. in HTML it looks like this.
+
+```html
+<em>Emphasized term</em> in a text body.
+```
+
+
+
+like an annotation refering to a portion of text within the document. Let's add a comment explaining the word **Substance**. But first, we need to track an annotations object. The annotations object is just another Substance Document, using a different schema. They don't hold text nodes, sections etc. but `comments`, `links`, `ems`, and `strongs`.
 
 
 Now we're ready to apply our annotations operation.
