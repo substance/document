@@ -22,13 +22,9 @@ The Substance Document Model is essentially a Javascript framework that allows t
 var doc = new Substance.Document({ id: "document:substance" });
 ```
 
-Alternatively, you can pass in the history of an existing document, by providing all operations that happenend on that document, which are used to reconstruct the latest document state.
+#### Add a first heading to our document.
 
-```js
-var doc = new Substance.Document(docSpec);
-```
 
-Let's add a first heading to our document.
 
 ```js
 var opA = ["insert", {
@@ -67,6 +63,24 @@ Let's look at the state of our document, after those two operations have been ap
   "annotations": {},
   "comments": {}
 }
+```
+
+#### Construct an existing document
+
+Alternatively, you can pass in the history of an existing document, by providing all operations that happenend on that document, which are used to reconstruct the latest document state.
+
+The document must come in this format.
+
+```js
+{
+  "id": "DOCUMENT_ID",
+  "commits": {}, // Commit history containing all operations applied on that document
+  "additions": {} // Assigns to certain commits document additions, such as annotations and comments
+}
+```
+
+```js
+var doc = new Substance.Document(docSpec);
 ```
 
 
