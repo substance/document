@@ -41,10 +41,18 @@ var opA = ["insert", {
 doc.apply(opA, {"user": "michael"});
 ```
 
-#### Insert Text
+Great. But some text would be nice too.
+
 
 ```js
-var opB = ["insert", {"id": "text:a", "type": "text", "properties": {"content": "Substance Document Model is a generic format for representing documents including their history."}}];
+var opB = ["insert", {
+  "id": "text:2",
+  "type": "text",
+  "target": "back",
+  "data": {
+    "content": "Hey there."
+  }
+}];
 
 doc.apply(opB, {"user": "michael"});
 ```
