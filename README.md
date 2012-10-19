@@ -1,8 +1,17 @@
 # Substance Document Model
 
-The Substance Document Model aims to be a quasi-standard for representing arbitrary digital documents. It doesn’t make any assumptions on a concrete type or structure. Instead it is supposed to be a foundation to create your own document model on top of it, tailored to your particular use-case. A Substance document model can range from loosly structured documents involving sections and text, such as reports or articles to things that you wouldn’t consider a document anymore but in fact are.
+The Substance Document Model is a standard for representing and programmatically manipulating digital documents. It doesn’t make any assumptions on a concrete type or structure. Instead it is supposed to be a foundation to create your own document model on top of it, tailored to your particular use-case. A Substance document model can range from loosly structured documents involving sections and text, such as reports or articles to things that you wouldn’t consider a document anymore but in fact are.
 
 Let’s take the mess of filling out forms as an example. The reason why we are still filling them out by hand and manually transfer them into a database system is simply the lack of suitable generic document representations and form composition tools. In many cases we are dealing with a mixture of structured and unstructured parts. There might be a disclaimer, which is not editable in conjunction with a person’s contact info plus a list of purchased items.
+
+## Design goals
+
+- A document consists of a sequence of content nodes of different types (section, text, image)
+- A document is maniupulated through atomic operations
+- The history is tracked, so we can reconstruct previous document states
+- Support for incremental text updates, using a protocol similar to [Google Wave](http://www.waveprotocol.org/whitepapers/operational-transform)
+- Support for text annotations that are not part of the content, but rather an overlay
+- Support for comments on three levels (document, 
 
 ## Getting started
 
@@ -11,7 +20,7 @@ The Substance Document Model is essentially a Javascript framework that allows t
 #### Start tracking a new document.
 
 ```js
-var doc = new Substance.Document({ id: "document:substance" }, substanceDocSchema);
+var doc = new Substance.Document({ id: "document:substance" });
 ```
 
 Alternatively, you can pass in the history of an existing document, by providing all operations that happenend on that document, which are used to reconstruct the latest document state.
@@ -49,13 +58,10 @@ Let's look at the state of our document, after those two operations have been ap
 ```
 
 
-#### Add a new annotation
+#### Annotations
 
 Now we'd like to store additional contextual information, like a comment refering to a portion of text within the document. Let's add a comment explaining the word **Substance**. But first, we need to track an annotations object. The annotations object is just another Substance Document, using a different schema. They don't hold text nodes, sections etc. but `comments`, `links`, `ems`, and `strongs`.
 
-```js
-var annotations = new Document({ id: "annotations:substance" }, substanceAnnotationSchema);
-```
 
 Now we're ready to apply our annotations operation.
 
@@ -65,54 +71,6 @@ var op1 = {
   "user": "michael"
 }
 annotations.apply(op1);
-```
-
-Before we do that... Let's recap for a moment. We have a document containing two nodes (a section and a text element) and we have an annotations document holding a comment.
-
-Our document operations graph looks like this:
-
-```js
-{
-  "id": "document:substance",
-  "user": "michael",
-  "refs": {
-    "master": "commit-4",
-    "patch-1": "commit-3"
-  },
-  "operations": {
-    "op-a": {
-      "op": ["node:insert", {"id": "section:hello", "type": "section", "properties": {"name": "Hello?"}}],
-      "user": "michael",
-      "parent": null
-    },
-
-    "op-b": {
-      "op": ["node:insert", {"id": "text:hello", "type": "text", "target": "section:hello", "properties": {"content": "Hello there."}}],
-      "user": "michael",
-      "parent": "op-a"
-    }
-  }
-}
-```
-
-And our annotations graph looks like this:
-
-```js
-{
-  "id": "annotations:substance",
-  "user": "michael",
-  "refs": {
-    "master": "commit-4",
-    "patch-1": "commit-3"
-  },
-  "commits": {
-    "commit-1": {
-      "op": ["insert", {"id": "section:hello", "type": "section", "properties": {"name": "Hello?"}}],
-      "user": "michael",
-      "parent": null
-    }
-  }
-}
 ```
 
 #### Update text
@@ -163,7 +121,6 @@ doc.apply(opD);
 
 Right after Victor has submitted his patch, Michael continutes to improve the document as well. He adds a conclusion.
 
-
 ```js
 var opE = {
   "op": ["insert", {"id": "text:e", "type": "text", "properties": {"content": "The end."}}],
@@ -176,35 +133,6 @@ After all these operations our graph describing everything that happened looks l
 
 ![](https://raw.github.com/substance/document/master/assets/operations-graph-before-merge.png)
 
-#### Merge party
-
-Michael now realizes that there's a new pending patch. First, he can just checkout the branch `victor-patch-1` to preview the changes. 
-
-```js
-doc.checkout('victor-patch-1');
-```
-
-Since everything looks good, Michael just merges in the changes.
-
-```js
-doc.merge('victor-patch-1');
-```
-
-And we get this:
-
-![](https://raw.github.com/substance/document/master/assets/operations-graph-after-merge.png)
-
-Behind the scenes the following happens:
-
-1. Checkout of the version right before victor applied the patch.
-
-2. Apply Victors operation and let it point to the previous operation
-
-3. Apply Michael's operation (opE)
-
-4. Set the master pointer to the latest commit.
-
-Depending on the actual situation this merge operation might fail and require manual conflict resolution. We'll implement conflict resolution in a later version of the library. To move on fast we just added support for fast-forward merges. So even the shown resolvable usecase is not yet supported.
 
 ## Supported Operations
 
