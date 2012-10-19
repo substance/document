@@ -123,7 +123,7 @@ But we don't only have access to the current state, the document model keeps tra
 doc.toJSON();
 ```
 
-Now this is the slightly more verbose output of the complete document history. It wraps every operation in a commit object, which has a reference to the previous commit.
+Now this is the slightly more verbose output of the complete history of that same document. It wraps every operation in a commit object, each having a GUID as well as a reference to the previous commit.
 
 ```js
 {
