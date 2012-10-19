@@ -111,8 +111,71 @@ By accessing the `content` property you can always access that information.
 }
 ```
 
-As you can see there are two nodes registered, which can be directly accessed by their `id`. In order to reflect the order of our nodes each of them knows about its successor (next) and predecessor (prev) node. On the document level there's two additional properties `head` and `tail`, which point to the beginning and the end of the document. 
+As you can see there are two nodes registered, which can be directly accessed by their `id`. In order to reflect the order of our nodes each of them knows about its `next` and `prev` sibling. On the document level there's two additional properties `head` and `tail`, which point to the beginning and the end of the document.
 
+
+#### History
+
+But we don't only have access to the current state, the document model keeps track of all operations that have been executed.
+
+```js
+doc.toJSON();
+```
+
+Now this is the slightly more verbose output of the complete document history. It wraps every operation in a commit object, which has a reference to the previous commit.
+
+```js
+{
+  "refs": {
+    "master": "f7bd8120adb16d179c454ce57b57b50d"
+  },
+  "operations": {
+    "1b6544d5f9724c33aa8dbb5becc51c0d": {
+      "op": [
+        "insert",
+        {
+          "id": "section:1",
+          "type": "section",
+          "target": "back",
+          "data": {"content": "Hello"}
+        }
+      ],
+      "user": "michael",
+      "sha": "1b6544d5f9724c33aa8dbb5becc51c0d"
+    },
+    "b0595f2d3863db5ecd82d43e7ec05da0": {
+      "op": [
+        "insert",
+        {
+          "id": "text:2",
+          "type": "text",
+          "target": "back",
+          "data": {"content": "Hey there."}
+        }
+      ],
+      "user": "michael",
+      "sha": "b0595f2d3863db5ecd82d43e7ec05da0",
+      "parent": "1b6544d5f9724c33aa8dbb5becc51c0d"
+    },
+    "f7bd8120adb16d179c454ce57b57b50d": {
+      "op": ["update", {"id": "section:1", "data": [["ret",5],["ins"," world!"]]}],
+      "user": "foouser",
+      "sha": "f7bd8120adb16d179c454ce57b57b50d",
+      "parent": "b0595f2d3863db5ecd82d43e7ec05da0"
+    }
+  },
+  "additions": {},
+  "id": "doc:hello"
+}
+```
+
+#### Time travel
+
+Keep in mind, we can always look back.
+
+```js
+doc.apply(opC, {"user": "michael"});
+```
 
 #### Construct an existing document
 
