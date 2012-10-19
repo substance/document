@@ -25,9 +25,17 @@ The Substance Document Model is essentially a Javascript framework that allows t
 var doc = new Substance.Document({ id: "document:substance" });
 ```
 
+#### First off, let's specify a human readable title for our document
+
+```js
+var op = ["set", {
+  "title": "The Substance Document Model"
+}];
+
+doc.apply(op, {"user": "michael"});
+```
+
 #### Add a first heading to our document.
-
-
 
 ```js
 var opA = ["insert", {
@@ -40,33 +48,71 @@ var opA = ["insert", {
 doc.apply(opA, {"user": "michael"});
 ```
 
-Great. But some text would be nice too.
+#### Now let's add another node, this time a text node.
 
+This operation is pretty similar to the previous one, except this time we specify `text` as our type.
 
 ```js
 var opB = ["insert", {
   "id": "text:2",
   "type": "text",
-  "target": "back",
-  "data": {
-    "content": "Hey there."
-  }
+  "data": { "content": "Hey there." }
 }];
 
 doc.apply(opB, {"user": "michael"});
 ```
 
-Let's look at the state of our document, after those two operations have been applied.
+#### Update an existing node
+
+There's a special API for incrementally updating existing nodes. This works by specifying a delta operation describing only what's changed in the text.
+
+```js
+var opC = ["update", {
+    "id": "section:1",
+    "data": [["ret", 5], ["ins"," world!"]]
+}]
+
+doc.apply(opC, {"user": "michael"});
+```
+
+#### Inspect the document state
+
+Now after executing a bunch of operations, it is a good time to inspect the current state of our document.
+
+```js
+doc.content
+```
+
+By accessing the `content` property you can always access that information.
 
 ```js
 {
-  "id": "document:substance",
-  "nodes": {},
-  "properties": {},
+  "head": "section:1",
+  "tail": "text:2"
+  "properties": {"title": "The Substance Document Model"},
+  "nodes": {
+    "section:1": {
+      "content": "Hello world!",
+      "id": "section:1",
+      "type": "section",
+      "prev": null,
+      "next": "text:2"
+    },
+    "text:2": {
+      "content": "Hey there.",
+      "id": "text:2",
+      "type": "text",
+      "prev": "section:1",
+      "next": null
+    }
+  },
   "annotations": {},
   "comments": {}
 }
 ```
+
+As you can see there are two nodes registered, which can be directly accessed by their `id`. In order to reflect the order of our nodes each of them knows about its successor (next) and predecessor (prev) node. On the document level there's two additional properties `head` and `tail`, which point to the beginning and the end of the document. 
+
 
 #### Construct an existing document
 
