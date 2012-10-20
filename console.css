@@ -137,8 +137,9 @@ h2 { font-size: 160%; padding-bottom: 15px; }
 -------------------------------------------------------------------------------*/
 
 .operations {
+  background: white;
   margin-top: 10px;
-  height: 17px;
+  height: 16px;
   overflow: auto;
 }
 
@@ -190,14 +191,13 @@ textarea {
 
 .console textarea {
   padding: 10px;
-
   width: 370px;
   height: 450px;
   margin: 0;
 }
 
 .console textarea.inactive {
-  background: #ccc;
+  background: #DEDFDA;
 }
 
 .console .apply-operation {

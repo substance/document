@@ -243,9 +243,9 @@ $(function() {
       }));
 
       // Get current op
-      var op = this.model.model.operations[this.sha].op;
+      var op = this.model.model.operations[this.sha];
       
-      $('#command').val(JSON.stringify(op, null, '  '));
+      if (op) $('#command').val(JSON.stringify(op.op, null, '  '));
       this.renderScope();
     },
 
