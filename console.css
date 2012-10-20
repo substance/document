@@ -120,53 +120,32 @@ h2 { font-size: 160%; padding-bottom: 15px; }
 
 
 #container {
-  margin: 40px;
   position:relative;
   width: 800px;
-  /*border: 1px solid #ccc;*/
 }
 
 
 /* Testsuites
 -------------------------------------------------------------------------------*/
 
+
 .testsuites {
   position: relative;
-}
-
-.testsuites .current {
-  padding: 10px;
-  width: 300px;
-  background: rgba(0,0,0, 0.2);
-  border-radius: 3px;
-  font-weight: bold;
-}
-
-.testsuites .options {
-  position: absolute;
-  top: 41px;
-  display: none;
-  background: rgba(0,0,0, 0.2);
-  width: 300px;
-}
-
-.testsuites a {
-  padding: 10px;
-  display: block;
 }
 
 /* History
 -------------------------------------------------------------------------------*/
 
 .operations {
-  margin-top: 30px;
+  margin-top: 10px;
+  height: 17px;
   overflow: auto;
 }
 
 .operations .operation {
   display: block;
   width: 10px;
-  height: 40px;
+  height: 15px;
   float: left;
   margin-right: 1px;
   margin-bottom: 1px;
@@ -213,23 +192,34 @@ textarea {
   padding: 10px;
 
   width: 370px;
-  height: 400px;
+  height: 450px;
+  margin: 0;
+}
+
+.console textarea.inactive {
+  background: #ccc;
 }
 
 .console .apply-operation {
   display: block;
-  padding-left: 5px;
   width: 370px;
   border-radius: 3px;
-  line-height: 50px;
-  height: 50px;
+  line-height: 45px;
+  height: 45px;
   text-align: center;
   font-weight: bold;
   background: rgba(0,0,0, 0.1);
+  color: #aaa;
 }
 
-.console .apply-operation:hover {
-  background: #69CA14;
+.console .apply-operation.active {
+  cursor: pointer;
+  color: white;
+  background: #444;
+}
+
+.console .apply-operation.active:hover {
+  background: #333;
 }
 
 /* Select Output

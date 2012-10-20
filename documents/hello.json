@@ -2,8 +2,6 @@
   "refs": {
     "master": "f7bd8120adb16d179c454ce57b57b50d"
   },
-  "head": null,
-  "tail": null,
   "operations": {
     "1b6544d5f9724c33aa8dbb5becc51c0d": {
       "op": [
@@ -61,6 +59,6 @@
       "parent": "b0595f2d3863db5ecd82d43e7ec05da0"
     }
   },
-  "annotations": {},
+  "additions": {},
   "id": "doc:hello"
 }

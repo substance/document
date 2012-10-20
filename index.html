@@ -20,25 +20,28 @@
   </script>
 
   <script type="text/html" name="application">
-		<div class="testsuites">
-			<div class="current">Substance Test</div>
-			<div class="options">
-				<a href="#" class="load-testsuite" data-file="substance.json">Substance Test doc</a>
-				<a href="#" class="load-testsuite" data-file="empty.json">Empty doc</a>
-			</div>
-		</div>
+    <div class="testsuites">
+      Document: 
+      <select id="file" name="file">
+        <option value="hello.json">Hello World</option>
+        <option value="empty.json">Empty</option>
+        <option value="substance.json">Substance</option>
+      </select>
+    </div>
 		<div id="document"></div>
   </script>
 
   <script type="text/html" name="document">
+
 		<div class="operations">
 			<% applied = true %>
+      <% var width = parseInt((800 / operations.length) - 1, 10); %>
+      <% width = Math.min(width, 40); %>
 			<% _.each(operations, function(op) { %>
-				<a href="#" class="operation<%= applied ? ' applied' : '' %>" data-sha="<%= op.sha %>"></a>
+				<a style="width: <%= width %>px;" href="#" class="operation<%= applied ? ' applied' : '' %>" data-sha="<%= op.sha %>"></a>
 				<% if (op.sha === sha) applied = false; %>
 			<% }); %>
 		</div>
-
 
     <div class="console-wrapper">
       <div class="console">
@@ -46,8 +49,8 @@
 
         </div>
         <div class="action">
-          <textarea id="command" class="command"></textarea>
-          <a href="#" class="apply-operation disabled">Apply</a>
+          <textarea id="command" class="command inactive"></textarea>
+          <div class="apply-operation">Apply</div>
         </div>
       </div>
 
@@ -63,7 +66,6 @@
             <div class="node <%= node.type %>" data-id="<%= node.id %>">
               <%= node.content %>
               <% annotations = document.getAnnotations(node.id); %>
-
               <% _.each(annotations, function(a) { %>
                 <div class="annotation" data-id="<%= a.id %>"></div>
               <% }); %>

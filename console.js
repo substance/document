@@ -111,16 +111,12 @@ $(function() {
 
   var Application = Backbone.View.extend({
     events: {
-      'click .current': '_toggleOptions',
-      'click .load-testsuite': '_loadDocument'
-    },
-
-    _toggleOptions: function() {
-      this.$('.options').toggle();
+      'change #file': '_loadDocument'
     },
 
     _loadDocument: function(e) {
-      this.document($(e.currentTarget).attr('data-file'));
+      var file = $('#file').val();
+      this.document(file);
     },
 
     initialize: function (options) {
@@ -159,7 +155,13 @@ $(function() {
       'click .apply-operation': '_applyOperation',
       'change #select_scope': '_selectScope',
       'change #select_example': '_selectExample',
-      'click .toggle-output': '_toggleOutput'
+      'click .toggle-output': '_toggleOutput',
+      'focus .console textarea': '_makeEditable'
+    },
+
+    _makeEditable: function() {
+      this.$('#command').removeClass('inactive');
+      this.$('.apply-operation').addClass('active');
     },
 
     _toggleOutput: function(e) {
@@ -180,11 +182,12 @@ $(function() {
 
     _selectScope: function() {
       this.scope = $('#select_scope').val();
-      this.render(); // rerender it
+      this.render();
       return false;
     },
 
     _selectExample: function() {
+      this._makeEditable();
       var index = $('#select_example').val();
       if (index === "") {
         $('#command').val('');
@@ -196,7 +199,8 @@ $(function() {
       return false;
     },
 
-    _applyOperation: function() {
+    _applyOperation: function(e) {
+      if (!$(e.currentTarget).hasClass('active')) return;
       var op = JSON.parse(this.$('#command').val());
 
       this.model.apply(op, {
@@ -204,7 +208,7 @@ $(function() {
         scope: this.scope
       });
 
-      this.sha = 'master';
+      this.sha = this.model.model.refs['master'];
       this.render();
       return false;
     },
@@ -218,10 +222,9 @@ $(function() {
     },
 
     initialize: function (options) {
-      this.sha = 'master';
+      this.sha = this.model.model.refs['master'];
       this.scope = 'document';
     },
-
 
     // Toggle Start view
     start: function() {
@@ -230,13 +233,19 @@ $(function() {
 
     // Render application template
     render: function() {
+      var operations = this.model.operations('master');
+
       this.$el.html(_.tpl('document', {
         sha: this.sha,
-        operations: this.model.operations('master'),
+        operations: operations,
         nodes: this.model.nodes(),
         document: this.model
       }));
 
+      // Get current op
+      var op = this.model.model.operations[this.sha].op;
+      
+      $('#command').val(JSON.stringify(op, null, '  '));
       this.renderScope();
     },
 
@@ -251,7 +260,7 @@ $(function() {
   window.app = new Application({el: '#container'});
   app.render();
 
-  app.document('substance.json');
+  app.document('hello.json');
 
   // Start responding to routes
   window.router = new Router({});
