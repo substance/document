@@ -130,6 +130,8 @@ h2 { font-size: 160%; padding-bottom: 15px; }
 
 
 .testsuites {
+  background: rgba(0, 0, 0, 0.1);
+  padding-bottom: 5px;
   position: relative;
 }
 
@@ -137,8 +139,8 @@ h2 { font-size: 160%; padding-bottom: 15px; }
 -------------------------------------------------------------------------------*/
 
 .operations {
-  background: white;
-  margin-top: 10px;
+  margin-top: 1px;
+  background: rgba(0, 0, 0, 0.1);
   height: 16px;
   overflow: auto;
 }
@@ -165,7 +167,7 @@ h2 { font-size: 160%; padding-bottom: 15px; }
 }
 
 .console {
-  margin-top: 40px;
+  margin-top: 10px;
   float: left;
   width: 400px;
 }
@@ -264,7 +266,7 @@ textarea {
 
 .output {
   float: left;
-  margin-top: 40px;
+  margin-top: 10px;
   width: 400px;
 }
 
