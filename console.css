@@ -133,6 +133,11 @@ h2 { font-size: 160%; padding-bottom: 15px; }
   background: rgba(0, 0, 0, 0.1);
   padding-bottom: 5px;
   position: relative;
+  height: 30px;
+  line-height: 30px;
+  padding-left: 5px;
+  font-size: 11px;
+  font-weight: bold;
 }
 
 /* History
@@ -182,6 +187,8 @@ h2 { font-size: 160%; padding-bottom: 15px; }
   height: 30px;
   width: 370px;
   background: rgba(0,0,0, 0.1);
+  font-size: 11px;
+  font-weight: bold;
 }
 
 textarea {
