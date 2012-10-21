@@ -144,7 +144,7 @@ _.Events = {
       node.callback = callback;
       calls[event] = {tail: tail, next: list ? list.next : node};
     }
-
+    
     return this;
   },
 
@@ -461,27 +461,10 @@ var Document = _.inherits(RawDocument, {
     return annotations;
   },
 
-  // Returns all comments referring to a given node
-  // TODO: combine with getNodeComments, getDocumentComments
-  getComments: function(node) {
-    var comments = [];
-    _.each(this.content.comments, function(c) {
-      if (!node && !c.annotation) return comments.push(c);
-      if (c.node === node) comments.push(c);
-    }, this);
-    return comments;
-  },
-
-  getCommentsForAnnotation: function(annotation) {
-    var comments = [];
-    _.each(this.content.comments, function(c) {
-      if (c.annotation === annotation) comments.push(c);
-    }, this);
-    return comments;
-  },
-
   // Get comments directly attached to the node
-  getNodeComments: function(node) {
+  comments: function(node, annotation) {
+    if (!node) return this.documentComments();
+    if (annotation) return this.commentsForAnnotation(annotation);
     var comments = [];
     _.each(this.comments, function(c) {
       if (c.node === node && !c.annotation) comments.push(c);
@@ -489,10 +472,20 @@ var Document = _.inherits(RawDocument, {
     return comments;
   },
 
-  getDocumentComments: function() {
+  // TODO: Combine with comments()
+  documentComments: function() {
     var comments = [];
     _.each(this.comments, function(c) {
       if (!c.node) comments.push(c);
+    }, this);
+    return comments;
+  },
+
+  // TODO: Combine with comments()
+  commentsForAnnotation: function(annotation) {
+    var comments = [];
+    _.each(this.content.comments, function(c) {
+      if (c.annotation === annotation) comments.push(c);
     }, this);
     return comments;
   },
@@ -617,7 +610,7 @@ Document.methods = {
 
   insert: function(doc, options) {
     var id = options.id ? options.id : Math.uuid();
-    
+
     if (doc.nodes[id]) throw('id ' +options.id+ ' already exists.');
 
     // Construct a new document node
