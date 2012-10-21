@@ -315,10 +315,6 @@ var RawDocument = function(doc, schema) {
       annotations: {},
       comments: {}
     };
-
-    // Also reset annotations
-    this.annotations = {};
-    this.comments = {};
   },
 
   // TODO: error handling
@@ -457,7 +453,7 @@ var Document = _.inherits(RawDocument, {
     RawDocument.call(this, options);
   },
 
-  getAnnotations: function(node) {
+  annotations: function(node) {
     var annotations = {};
     _.each(this.content.annotations, function(a) {
       if (a.node === node) annotations[a.id] = a;
@@ -502,7 +498,7 @@ var Document = _.inherits(RawDocument, {
   },
 
   // Store annotation op in the operation graph
-  storeAnnotationOp: function(op, scope) {
+  storeAdditionOp: function(op, scope) {
     // Get latest sha
     var sha = this.model.refs.master;
 
@@ -525,7 +521,7 @@ var Document = _.inherits(RawDocument, {
     }
 
     if (_.include(['annotation', 'comment'], options.scope) && !options.silent) {
-      this.storeAnnotationOp(op, options.scope);
+      this.storeAdditionOp(op, options.scope);
     }
   },
 
@@ -541,9 +537,7 @@ var Document = _.inherits(RawDocument, {
     // Checkout annotations
     _.each(ops, function(op, index) {
       var additions = this.model.additions[op.sha];
-
       if (additions) {
-        // console.log('additions found', additions);
         // Applying annotation ops
         _.each(additions.annotations, function(op) {
           this.apply(op, {silent: true, scope: "annotation"});
@@ -623,6 +617,8 @@ Document.methods = {
 
   insert: function(doc, options) {
     var id = options.id ? options.id : Math.uuid();
+    
+    if (doc.nodes[id]) throw('id ' +options.id+ ' already exists.');
 
     // Construct a new document node
     var newNode = _.clone(options.data);
@@ -762,7 +758,6 @@ Document.methods = {
     if (_.include(options.nodes, doc.tail)) doc.tail = f.prev;
   }
 };
-
 
 
 // Annotation Methods

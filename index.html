@@ -64,11 +64,7 @@
         <div class="document">
           <% _.each(nodes, function(node) { %>
             <div class="node <%= node.type %>" data-id="<%= node.id %>">
-              <%= node.content %>
-              <% annotations = document.getAnnotations(node.id); %>
-              <% _.each(annotations, function(a) { %>
-                <div class="annotation" data-id="<%= a.id %>"></div>
-              <% }); %>
+              <% _.each(node.content, function(ch) { %><span><%= ch %></span><% }); %>
             </div>
           <% }); %>
         </div>

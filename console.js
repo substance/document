@@ -43,35 +43,31 @@ $(function() {
 
     "annotation": [
       {
-        "name": "Emphasize",
-        "op": ["insert", {"id": "em:1", "type": "em", "node": "section:1", "pos": [8, 10]}]
+        "name": "Insert Annotation",
+        "op": ["insert", {"id": "suggestion:1", "type": "suggestion", "node": "text:2", "pos": [4, 5]}]
       },
       {
-        "name": "Strong",
-        "op": ["insert", {"id": "em:1", "type": "str", "node": "text:2", "pos": [0, 3]}]
-      },
-      {
-        "name": "Suggestion",
-        "op": ["insert", {"id": "suggestion:1", "type": "suggestion", "node": "text:2", "pos": [5, 5]}]
+        "name": "Update Annotation",
+        "op": ["update", {"id": "suggestion:1", "type": "suggestion", "node": "text:2", "pos": [5, 10]}]
       }
     ],
 
     "comment": [
       {
-        "name": "Insert Comment (on document)",
+        "name": "Insert Comment (document)",
         "op": ["insert", {"id": "comment:a", "content": "I like this document!"}]
       },
       {
-        "name": "Insert Comment (on node)",
-        "op": ["insert", {"id": "comment:a", "content": "Good argumentation."}]
+        "name": "Insert Comment (node)",
+        "op": ["insert", {"id": "comment:a", "node": "text:2", "content": "Good argumentation."}]
       },
       {
-        "name": "Insert Comment (on annotation)",
-        "op": ["insert", {"id": "comment:a", "node": "text:2", "annotation": "suggestion:1", "content": "Better idea."}]
+        "name": "Insert Comment (annotation)",
+        "op": ["insert", {"id": "comment:a", "node": "text:2", "annotation": "suggestion:1", "content": "A way of saying helo."}]
       },
       {
         "name": "Update comment",
-        "op": ["update", {"id": "comment:a", "content": "Hello wrrld"}]
+        "op": ["insert", {"id": "comment:a", "content": "A way of saying hello."}]
       }
     ]
   };
@@ -246,7 +242,22 @@ $(function() {
       var op = this.model.model.operations[this.sha];
       
       if (op) $('#command').val(JSON.stringify(op.op, null, '  '));
+      this.renderAnnotations();
       this.renderScope();
+    },
+
+    renderAnnotations: function() {
+      var that = this;
+      _.each(this.model.nodes(), function(node) {
+        // console.log('rendering annotations for'+ node.id);
+        var annotations = that.model.annotations(node.id);
+        // console.log('annotations', annotations);
+        _.each(annotations, function(a) {
+          // console.log('ann', a.pos);
+          var elems = $('div[data-id="'+a.node+'"]').children().slice(a.pos[0], a.pos[0] + a.pos[1]);
+          elems.addClass(a.type);
+        });
+      });
     },
 
     renderScope: function() {
