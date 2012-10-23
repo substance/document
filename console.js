@@ -17,11 +17,11 @@ $(function() {
     "document": [
       {
         "name": "Insert Section",
-        "op": ["insert", {"id": "UNIQUE_ID", "type": "section", "target": "NODE_ID|front|back", "data": {"content": "SECTION_NAME"}}]
+        "op": ["insert", {"id": "UNIQUE_ID", "type": "section", "target": "back", "data": {"content": "SECTION_NAME"}}]
       },
       {
         "name": "Insert Text",
-        "op": ["insert", {"id": "UNIQUE_ID", "type": "text", "target": "NODE_ID|front|back", "data": {"content": "CONTENT"}}]
+        "op": ["insert", {"id": "UNIQUE_ID", "type": "text", "target": "back", "data": {"content": "CONTENT"}}]
       },
       {
         "name": "Update Text (Delta)",
@@ -249,11 +249,8 @@ $(function() {
     renderAnnotations: function() {
       var that = this;
       _.each(this.model.nodes(), function(node) {
-        // console.log('rendering annotations for'+ node.id);
         var annotations = that.model.annotations(node.id);
-        // console.log('annotations', annotations);
         _.each(annotations, function(a) {
-          // console.log('ann', a.pos);
           var elems = $('div[data-id="'+a.node+'"]').children().slice(a.pos[0], a.pos[0] + a.pos[1]);
           elems.addClass(a.type);
         });
