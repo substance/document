@@ -6,18 +6,18 @@ $(function() {
   // Render Underscore templates
   _.tpl = function (tpl, ctx) {
     var source = $('script[name='+tpl+']').html();
+
     return _.template(source, ctx);
   };
-
 
   // Commands
   // ---------------
 
-  var SUBSTANCE_COMMANDS = {
+  var SUBSTANCE_COMMANDS = {
     "document": [
       {
-        "name": "Insert Section",
-        "op": ["insert", {"id": "UNIQUE_ID", "type": "section", "target": "back", "data": {"content": "SECTION_NAME"}}]
+        "name": "Insert Heading",
+        "op": ["insert", {"id": "UNIQUE_ID", "type": "heading", "target": "back", "data": {"content": "HEADING_NAME"}}]
       },
       {
         "name": "Insert Text",
@@ -28,7 +28,7 @@ $(function() {
         "op": ["update", {"id": "NODE_ID", "data": [["ret", 5], ["ins", " world!"]]}]
       },
       {
-        "name": "Update Section (Properties)",
+        "name": "Update Heading (Properties)",
         "op": ["update", {"id": "NODE_ID", "data": {"content": "NEW_CONTENT"}}]
       },
       {
@@ -44,34 +44,33 @@ $(function() {
     "annotation": [
       {
         "name": "Insert Annotation",
-        "op": ["insert", {"id": "suggestion:1", "type": "suggestion", "node": "text:2", "pos": [4, 5]}]
+        "op": ["insert_annotation", {"id": "suggestion:1", "type": "suggestion", "node": "text:2", "pos": [4, 5]}]
       },
       {
         "name": "Update Annotation",
-        "op": ["update", {"id": "suggestion:1", "type": "suggestion", "node": "text:2", "pos": [5, 10]}]
+        "op": ["update_annotation", {"id": "suggestion:1", "type": "suggestion", "node": "text:2", "pos": [5, 10]}]
       }
     ],
 
     "comment": [
       {
         "name": "Insert Comment (document)",
-        "op": ["insert", {"id": "comment:a", "content": "I like this document!"}]
+        "op": ["insert_comment", {"id": "comment:a", "content": "I like this document!"}]
       },
       {
         "name": "Insert Comment (node)",
-        "op": ["insert", {"id": "comment:a", "node": "text:2", "content": "Good argumentation."}]
+        "op": ["insert_comment", {"id": "comment:a", "node": "text:2", "content": "Good argumentation."}]
       },
       {
         "name": "Insert Comment (annotation)",
-        "op": ["insert", {"id": "comment:a", "node": "text:2", "annotation": "suggestion:1", "content": "A way of saying helo."}]
+        "op": ["insert_comment", {"id": "comment:a", "node": "text:2", "annotation": "suggestion:1", "content": "A way of saying helo."}]
       },
       {
         "name": "Update comment",
-        "op": ["insert", {"id": "comment:a", "content": "A way of saying hello."}]
+        "op": ["update_comment", {"id": "comment:a", "content": "A way of saying hello."}]
       }
     ]
   };
-
 
 
   var Router = Backbone.Router.extend({
@@ -79,7 +78,7 @@ $(function() {
       // Using this.route, because order matters
       this.route(':document', 'loadDocument', this.loadDocument);
       this.route('new', 'newDocument', this.newDocument);
-      this.route('', 'start', app.start);
+      this.route('', 'start', this.loadDocument);
     },
 
     newDocument: function() {
@@ -87,7 +86,7 @@ $(function() {
     },
 
     loadDocument: function(id) {
-      app.document(id);
+      app.document(id || "empty.json");
     }
   });
 
@@ -107,24 +106,39 @@ $(function() {
 
   var Application = Backbone.View.extend({
     events: {
-      'change #file': '_loadDocument'
+      'change #document_id': '_loadDocument'
     },
 
     _loadDocument: function(e) {
-      var file = $('#file').val();
-      this.document(file);
+      var id = $('#document_id').val();
+      // console.log('loading doc', id);
+
+      this.document(id);
+      return false;
     },
 
     initialize: function (options) {
       // Load some data
-      // this.document = new Document();
+      this.model = {
+        documents: [
+          { meta: { title: "Empty Document" }, id: "empty.json"},
+          { meta: { title: "Hello" }, id: "hello.json"},
+          { meta: { title: "Substance" }, id: "substance.json"}
+        ]
+      };
     },
 
     // Toggle document view
-    document: function(file) {
+    document: function(id) {
       var that = this;
-      loadDocument(file, function(err, rawDoc) {
+      loadDocument(id, function(err, rawDoc) {
         var doc = new Substance.Document(rawDoc);
+
+        // Add global ref for convenience
+        window.doc = doc;
+
+        // that.render();
+
         that.view = new Document({el: '#document', model: doc });
         that.view.render();
       });
@@ -137,7 +151,9 @@ $(function() {
 
     // Render application template
     render: function() {
-      this.$el.html(_.tpl('application'));
+      this.$el.html(_.tpl('application', {
+        documents: this.model.documents
+      }));
     }
   });
 
@@ -171,7 +187,7 @@ $(function() {
       } else if (view === "content") {
         this.$('.output .document').html('<textarea class="json">'+JSON.stringify(this.model.content, null, '  ')+'</textarea>');
       } else {
-        this.$('.output .document').html('<textarea class="json">'+JSON.stringify(this.model.model, null, '  ')+'</textarea>');
+        this.$('.output .document').html('<textarea class="json">'+JSON.stringify(this.model.toJSON(), null, '  ')+'</textarea>');
       }
       return false;
     },
@@ -182,15 +198,13 @@ $(function() {
       return false;
     },
 
-    _selectExample: function() {
+    _selectExample: function() {
       this._makeEditable();
-      var index = $('#select_example').val();
-      if (index === "") {
-        $('#command').val('');
-        return;
-      }
-
-      var op = SUBSTANCE_COMMANDS[this.scope][index];
+      var option = $('#select_example').val().split(':');
+      var scope = option[0];
+      var index = option[1];
+      
+      var op = SUBSTANCE_COMMANDS[scope][index];
       $('#command').val(JSON.stringify(op.op, null, '  '));
       return false;
     },
@@ -200,11 +214,11 @@ $(function() {
       var op = JSON.parse(this.$('#command').val());
 
       this.model.apply(op, {
-        user: "demo",
-        scope: this.scope
+        user: "demo"
       });
 
       this.sha = this.model.model.refs['master'];
+
       this.render();
       return false;
     },
@@ -213,8 +227,13 @@ $(function() {
       var sha = $(e.currentTarget).attr('data-sha');
       // Checkout previous version
       this.model.checkout(sha);
+
+      // TODO: setRef
+      this.model.setRef('master', sha);
+
       this.sha = sha;
       this.render(); // Re-render it
+      return false;
     },
 
     initialize: function (options) {
@@ -229,17 +248,18 @@ $(function() {
 
     // Render application template
     render: function() {
-      var operations = this.model.operations('master');
+      var tail = this.model.getRef('tail') || this.model.getRef('master');
+      var commits = this.model.commits(tail);
 
       this.$el.html(_.tpl('document', {
         sha: this.sha,
-        operations: operations,
+        operations: commits,
         nodes: this.model.nodes(),
         document: this.model
       }));
 
       // Get current op
-      var op = this.model.model.operations[this.sha];
+      var op = this.model.model.commits[this.sha];
       
       if (op) $('#command').val(JSON.stringify(op.op, null, '  '));
       this.renderAnnotations();
@@ -266,9 +286,7 @@ $(function() {
   });
 
   window.app = new Application({el: '#container'});
-  app.render();
-
-  app.document('hello.json');
+  window.app.render();
 
   // Start responding to routes
   window.router = new Router({});
@@ -276,11 +294,12 @@ $(function() {
   Backbone.history.start();
 });
 
-// Global helpers
+
+// Global stuff
 // ---------------
 
-function loadDocument(file, cb) {
-  $.getJSON('documents/' + file, function(doc) {
-    cb(null, doc);
+function loadDocument(doc, cb) {
+  $.getJSON('../data/' + doc, function(rawDoc) {
+    cb(null, rawDoc);
   });
 }

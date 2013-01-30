@@ -15,11 +15,11 @@ Copyright (c) 2010 Robert Kieffer
 Dual licensed under the MIT and GPL licenses.
 */
 
-Math.uuid = function (prefix) {
+Math.uuid = function (prefix, len) {
   var chars = '0123456789abcdefghijklmnopqrstuvwxyz'.split(''),
       uuid = [],
       radix = 16,
-      len = 32;
+      len = len || 32;
 
   if (len) {
     // Compact form
@@ -42,68 +42,6 @@ Math.uuid = function (prefix) {
     }
   }
   return (prefix ? prefix : "") + uuid.join('');
-};
-
-
-// Shared empty constructor function to aid in prototype-chain creation.
-var ctor = function(){};
-
-// Helper function to correctly set up the prototype chain, for subclasses.
-// Similar to `goog.inherits`, but uses a hash of prototype properties and
-// class properties to be extended.
-// Taken from Underscore.js (c) Jeremy Ashkenas
-_.inherits = function(parent, protoProps, staticProps) {
-  var child;
-
-  // The constructor function for the new subclass is either defined by you
-  // (the "constructor" property in your `extend` definition), or defaulted
-  // by us to simply call `super()`.
-  if (protoProps && protoProps.hasOwnProperty('constructor')) {
-    child = protoProps.constructor;
-  } else {
-    child = function(){ return parent.apply(this, arguments); };
-  }
-
-  // Set the prototype chain to inherit from `parent`, without calling
-  // `parent`'s constructor function.
-  ctor.prototype = parent.prototype;
-  child.prototype = new ctor();
-
-  // Add prototype properties (instance properties) to the subclass,
-  // if supplied.
-  if (protoProps) _.extend(child.prototype, protoProps);
-
-  // Add static properties to the constructor function, if supplied.
-  if (staticProps) _.extend(child, staticProps);
-
-  // Correctly set child's `prototype.constructor`, for `instanceof`.
-  child.prototype.constructor = child;
-
-  // Set a convenience property in case the parent's prototype is needed later.
-  child.__super__ = parent.prototype;
-
-  return child;
-};
-
-
-// createTextOperation
-// -----------------
-// 
-// Creates a TextOperation based on an array-based serialization
-
-function createTextOperation(ops) {
-  var operation = new ot.Operation(0)
-
-  function map(method) {
-    if (method === "ret") return "retain";
-    if (method === "del") return "delete";
-    if (method === "ins") return "insert";
-  }
-
-  _.each(ops, function(op) {
-    operation[map(op[0])](op[1]);
-  });
-  return operation;
 };
 
 
@@ -178,7 +116,6 @@ _.Events = {
         }
       }
     }
-
     return this;
   },
 
@@ -285,27 +222,38 @@ function verifyState(doc, operation, oldDoc) {
 }
 
 
-// RawDocument
+// Document
 // --------
 // 
 // A generic model for representing and transforming digital documents
 
-var RawDocument = function(doc, schema) {
+var Document = function(doc, schema) {
   this.id = doc.id;
 
   var defaults = {
     refs: {},
-    operations: {},
-    additions: {}
+    commits: {}
   };
 
+  this.meta = doc.meta || {};
   this.model = _.extend(defaults, doc);
 
   // Checkout master branch
   this.checkout('master');
 };
 
- _.extend(RawDocument.prototype, _.Events, {
+ _.extend(Document.prototype, _.Events, {
+
+  toJSON: function() {
+    return _.extend({
+      id: this.id,
+      meta: this.meta
+    }, this.model);
+  },
+
+  get: function(property) {
+    return this.content.properties[property];
+  },
 
   reset: function() {
     // Reset content
@@ -318,36 +266,55 @@ var RawDocument = function(doc, schema) {
   },
 
   // TODO: error handling
+  // Allow both refs and sha's to be passed
   checkout: function(ref) {
+    var sha;
+    if (this.model.refs[ref]) {
+      sha = this.getRef(ref);
+    } else {
+      if (this.model.commits[ref]) {
+        sha = ref;
+      } else {
+        sha = null;
+      }
+    }
+
     this.reset();
-    _.each(this.operations(ref), function(op) {
+    _.each(this.commits(sha), function(op) {
       this.apply(op.op, {silent: true});
     }, this);
-    this.head = ref;
+    this.head = sha;
   },
 
-  // List operations 
+  // List commits 
   // --------
 
-  operations: function(ref) {
+  commits: function(ref, ref2) {
     // Current commit (=head)
     var commit = this.getRef(ref) || ref;
+    var commit2 = this.getRef(ref2) || ref2;
+    var skip = false;
     
-    var op = this.model.operations[commit];
+    if (commit === commit2) return [];
+    var op = this.model.commits[commit];
 
     if (!op) return [];
     op.sha = commit;
 
-    var operations = [op];
+    var commits = [op];
     var prev = op;
 
-    while (op = this.model.operations[op.parent]) {
-      op.sha = prev.parent;
-      operations.push(op);
-      prev = op;
+    while (!skip && (op = this.model.commits[op.parent])) {
+      if (commit2 && op.sha === commit2) {
+        skip = true;
+      } else {
+        op.sha = prev.parent;
+        commits.push(op);
+        prev = op;
+      }
     }
 
-    return operations.reverse();
+    return commits.reverse();
   },
 
   // Get sha the given ref points to
@@ -359,14 +326,35 @@ var RawDocument = function(doc, schema) {
   // --------
 
   undo: function() {
-    // TODO: implement
+    var ref = this.getRef(this.head) || this.head;
+    var commit = this.model.commits[ref];
+
+    if (commit && commit.parent) {
+      this.checkout(commit.parent);
+      this.setRef('master', commit.parent);
+    } else {
+      // No more commits available
+      this.reset();
+      this.head = null;
+      this.setRef('master', null);
+    }
   },
 
-  // If there are any undone operations
+  // If there are any undone commits
   // --------
 
   redo: function() {
-    // TODO: implement
+    // var commit = this.commits('tail', this.head)[0];
+    var commits = this.commits('tail');
+    var that = this;
+    
+    // Find the right commit
+    var commit = _.find(commits, function(c){ return c.parent === that.head; });
+
+    if (commit) {
+      this.checkout(commit.sha);
+      this.setRef('master', commit.sha);
+    }
   },
 
   // List all nodes in a document
@@ -401,18 +389,10 @@ var RawDocument = function(doc, schema) {
     return result;
   },
 
-  toJSON: function() {
-    return this.content;
-  },
 
   // Apply a given operation on the current document state
   apply: function(operation, options) {
-    // We're somewhere in the history
-    // TODO: this doesn't work with branches!
-    if (!options.silent && this.head !== 'master') {
-      this.model.refs['master'] = this.head;
-      this.head = 'master';
-    }
+    options = options ? options : {};
 
     // TODO: this might slow things down, it's for debug purposes
     var prevState = JSON.parse(JSON.stringify(this.content));
@@ -422,9 +402,23 @@ var RawDocument = function(doc, schema) {
     verifyState(this.content, operation, prevState);
 
     if (!options.silent) {
-      this.commit(operation);
-      this.trigger('operation:applied', operation);
+      var commit = this.commit(operation);
+      this.head = commit.sha; // head points to new sha
+
+      // First trigger commit applied, which stores it
+      this.trigger('commit:applied', commit);
     }
+  },
+
+  // Get ref
+  getRef: function(ref) {
+    return this.model.refs[ref];
+  },
+
+  // Set ref to a particular commit
+  setRef: function(ref, sha, silent) {
+    this.model.refs[ref] = sha;
+    if (!silent) this.trigger('ref:updated', ref, sha);
   },
   
   // Create a commit for a certain operation
@@ -432,27 +426,21 @@ var RawDocument = function(doc, schema) {
     var commit = {
       op: op,
       sha: Math.uuid(),
-      parent: this.getRef(this.head)
+      parent: this.head
     };
 
-    this.model.operations[commit.sha] = commit;
-    this.model.refs[this.head] = commit.sha;
+    this.model.commits[commit.sha] = commit;
+    this.setRef('master', commit.sha, true);
+    this.setRef('tail', commit.sha, true);
+    return commit;
   }
 });
 
 
-// Document
+// Helper Dudes
 // --------
-// 
-// Contains additions like annotations and comments
 
-var Document = _.inherits(RawDocument, {
-  constructor: function(options) {
-    var that = this;
-    this.reset();
-    RawDocument.call(this, options);
-  },
-
+Document.helpers = {
   annotations: function(node) {
     var annotations = {};
     _.each(this.content.annotations, function(a) {
@@ -466,16 +454,23 @@ var Document = _.inherits(RawDocument, {
     if (!node) return this.documentComments();
     if (annotation) return this.commentsForAnnotation(annotation);
     var comments = [];
-    _.each(this.comments, function(c) {
+    _.each(this.content.comments, function(c) {
       if (c.node === node && !c.annotation) comments.push(c);
     }, this);
     return comments;
   },
 
+  // Get total comment count per node
+  commentCount: function(node) {
+    return _.select(this.content.comments, function(c) {
+      return (c.node === node);
+    }, this).length;
+  },
+
   // TODO: Combine with comments()
   documentComments: function() {
     var comments = [];
-    _.each(this.comments, function(c) {
+    _.each(this.content.comments, function(c) {
       if (!c.node) comments.push(c);
     }, this);
     return comments;
@@ -488,120 +483,23 @@ var Document = _.inherits(RawDocument, {
       if (c.annotation === annotation) comments.push(c);
     }, this);
     return comments;
-  },
-
-  // Store annotation op in the operation graph
-  storeAdditionOp: function(op, scope) {
-    // Get latest sha
-    var sha = this.model.refs.master;
-
-    if (!this.model.additions[sha]) {
-      this.model.additions[sha] = {
-        "annotations": [],
-        "comments": [],
-      };
-    }
-    this.model.additions[sha][scope+'s'].push(op);
-  },
-
-  apply: function(op, options) {
-    options = options ? options : {};
-
-    switch (options.scope) {
-      case "annotation": Annotation.methods[op[0]](this, op[1]); break;
-      case "comment": Comment.methods[op[0]](this, op[1]); break;
-      default: RawDocument.prototype.apply.call(this, op, options);
-    }
-
-    if (_.include(['annotation', 'comment'], options.scope) && !options.silent) {
-      this.storeAdditionOp(op, options.scope);
-    }
-  },
-
-  checkout: function(ref) {
-    var ops = this.operations(ref);
-
-    this.reset();
-    this.head = ref;
-
-    // Checkout the document
-    RawDocument.prototype.checkout.call(this, ref);
-
-    // Checkout annotations
-    _.each(ops, function(op, index) {
-      var additions = this.model.additions[op.sha];
-      if (additions) {
-        // Applying annotation ops
-        _.each(additions.annotations, function(op) {
-          this.apply(op, {silent: true, scope: "annotation"});
-        }, this);
-
-        // Applying comment ops
-        _.each(additions.comments, function(op) {
-          this.apply(op, {silent: true, scope: "comment"});
-        }, this);
-      }
-    }, this);
-  },
-
-  toJSON: function() {
-    return this.model;
   }
-});
+}
 
-
-
-// Merge Strategies
-// --------
-
-Document.merges = {
-
-  // Teh good old fast-forward merge
-  "fast-forward": function(doc, ref) {
-    // For the merge, operate on a temporary doc
-    var mergedDoc = new Document(doc.model);
-    var sha = mergedDoc.getRef(ref);
-    
-    // Checkout master
-    mergedDoc.checkout('master');
-
-    function commit(sha) {
-      return mergedDoc.model.operations[sha];
-    }
-
-    // Find operations between ref and master
-    var operations = [];
-
-    while (sha && sha !== mergedDoc.getRef('master')) {
-      var c = commit(sha);
-      operations.push(c);
-      sha = c.parent;
-    }
-
-    operations.reverse();
-
-    // Apply those guys
-    _.each(operations, function(op) {
-      mergedDoc.apply(op);
-    });
-    
-    doc.model = mergedDoc.model;
-    doc.checkout('master');
-    return true;
-  }
-};
-
-
-
+_.extend(Document.prototype, Document.helpers);
 
 // Document Methods
 // --------
 
 Document.methods = {
+
+  // Document Level
+  // --------
+
   set: function(doc, options) {
     _.each(options, function(val, key) {
       if (_.isArray(val)) {
-        doc.properties[key] = createTextOperation(val).apply(doc.properties[key] || "");
+        doc.properties[key] = ot.TextOperation.fromJSON(val).apply(doc.properties[key] || "");
       } else {
         doc.properties[key] = val;
       }
@@ -675,7 +573,7 @@ Document.methods = {
     if (!node) throw('node ' +options.id+ ' not found.');
     if (_.isArray(options.data)) {
       // Use OT delta updates for text-based nodes
-      node.content = createTextOperation(options.data).apply(node.content);
+      node.content = ot.TextOperation.fromJSON(options.data).apply(node.content);
     } else {
       var options = _.clone(options.data);
       delete options.id;
@@ -730,7 +628,6 @@ Document.methods = {
     } else if (t && t.id === doc.tail) { // Special case: target is tail node
       doc.tail = l.id;
     }
-
   },
 
   delete: function(doc, options) {
@@ -749,46 +646,50 @@ Document.methods = {
     // Update head/tail if needed
     if (_.include(options.nodes, doc.head)) doc.head = l.next;
     if (_.include(options.nodes, doc.tail)) doc.tail = f.prev;
-  }
-};
-
-
-// Annotation Methods
-// --------
-
-var Annotation = {};
-
-Annotation.methods = {
-  insert: function(doc, options) {
-    doc.content.annotations[options.id] = JSON.parse(JSON.stringify(options));
   },
 
-  update: function(doc, options) {
-    _.extend(doc.content.annotations[options.id], JSON.parse(JSON.stringify(options)));
+  // Annotation Level
+  // --------
+
+  insert_annotation: function(doc, options) {
+    doc.annotations[options.id] = JSON.parse(JSON.stringify(options));
   },
 
-  delete: function(doc, options) {
-    delete doc.content.annotations[doc.id];
-  }
-};
-
-
-// Comment Methods
-// --------
-
-var Comment = {};
-
-Comment.methods = {
-  insert: function(doc, options) {
-    doc.content.comments[options.id] = JSON.parse(JSON.stringify(options));
+  update_annotation: function(doc, options) {
+    _.extend(doc.annotations[options.id], JSON.parse(JSON.stringify(options)));
   },
 
-  update: function(doc, options) {
-    _.extend(doc.content.comments[options.id], JSON.parse(JSON.stringify(options)));
+  delete_annotation: function(doc, options) {
+    delete doc.annotations[options.id];
+
+    // Multi delete
+    if (options.nodes) {
+      _.each(options.nodes, function(n) {
+        delete doc.annotations[n];
+      });
+    }
   },
 
-  delete: function(doc, options) {
-    delete doc.content.comments[doc.id];
+  // Comment Level
+  // --------
+
+  insert_comment: function(doc, options) {
+    doc.comments[options.id] = JSON.parse(JSON.stringify(options));
+  },
+
+  update_comment: function(doc, options) {
+    _.extend(doc.comments[options.id], JSON.parse(JSON.stringify(options)));
+  },
+
+  delete_comment: function(doc, options) {
+    delete doc.comments[options.id];
+
+    // Multi delete
+    if (options.nodes) {
+      _.each(options.nodes, function(n) {
+        delete doc.comments[n];
+      });
+    }
   }
 };
 
@@ -798,11 +699,9 @@ Comment.methods = {
 
 if (typeof exports !== 'undefined') {
   module.exports = {
-    RawDocument: RawDocument,
     Document: Document
   };
 } else {
   if (!window.Substance) window.Substance = {};
-  Substance.RawDocument = RawDocument;
   Substance.Document = Document;
 }

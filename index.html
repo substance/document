@@ -26,26 +26,25 @@
   <script type="text/html" name="application">
     <div class="testsuites">
       DOCUMENT: 
-      <select id="file" name="file">
-        <option value="hello.json">Hello World</option>
-        <option value="empty.json">Empty</option>
-        <option value="substance.json">Substance</option>
+      <select id="document_id" name="document">
+        <% _.each(documents, function(doc) { %>
+          <option value="<%= doc.id %>"><%= doc.meta.title %> <%= doc.id %></option>
+        <% }); %>
       </select>
     </div>
-		<div id="document"></div>
+    <div id="document"></div>
   </script>
 
   <script type="text/html" name="document">
-
-		<div class="operations">
-			<% applied = true %>
+    <div class="operations">
+      <% applied = true %>
       <% var width = parseInt((800 / operations.length) - 1, 10); %>
       <% width = Math.min(width, 40); %>
-			<% _.each(operations, function(op) { %>
-				<a style="width: <%= width %>px;" href="#" class="operation<%= applied ? ' applied' : '' %>" data-sha="<%= op.sha %>"></a>
-				<% if (op.sha === sha) applied = false; %>
-			<% }); %>
-		</div>
+      <% _.each(operations, function(op) { %>
+        <a style="width: <%= width %>px;" href="#" class="operation<%= applied ? ' applied' : '' %>" data-sha="<%= op.sha %>"></a>
+        <% if (op.sha === sha) applied = false; %>
+      <% }); %>
+    </div>
 
     <div class="console-wrapper">
       <div class="console">
@@ -68,7 +67,7 @@
         <div class="document">
           <% _.each(nodes, function(node) { %>
             <div class="node <%= node.type %>" data-id="<%= node.id %>">
-              <% _.each(node.content, function(ch) { %><span><%= ch %></span><% }); %>
+              <% _.each(node.content.split(''), function(ch) { %><span><%= ch %></span><% }); %>
             </div>
           <% }); %>
         </div>
@@ -78,15 +77,15 @@
 
   <script type="text/html" name="scope">
     OPERATION:
-    <select name="scope" id="select_scope">
-      <option value="document"<%= scope === "document" ? " selected" : "" %>>Document</option>
-      <option value="annotation"<%= scope === "annotation" ? " selected" : "" %>>Annotation</option>
-      <option value="comment"<%= scope === "comment" ? " selected" : "" %>>Comment</option>
-    </select>
     <select name="examples" id="select_example">
       <option value="">Choose Example</option>
-      <% _.each(commands[scope], function(c, index) { %>
-        <option value="<%= index %>"><%= c.name %></option>
+
+      <% _.each(["document", "annotation", "comment"], function(scope) { %>
+        <option value="">------------------</option>
+
+        <% _.each(commands[scope], function(c, index) { %>
+          <option value="<%= scope %>:<%= index %>"><%= c.name %></option>
+        <% }); %>
       <% }); %>
     </select>
   </script>
