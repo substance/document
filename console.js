@@ -299,7 +299,7 @@ $(function() {
 // ---------------
 
 function loadDocument(doc, cb) {
-  $.getJSON('../data/' + doc, function(rawDoc) {
+  $.getJSON('./data/' + doc, function(rawDoc) {
     cb(null, rawDoc);
   });
 }
