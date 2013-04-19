@@ -231,15 +231,19 @@ var Document = function(doc, schema) {
   this.id = doc.id;
 
   var defaults = {
-    refs: {},
+    refs: {
+      "master" : {
+        "head" : ""
+      }
+    },
     commits: {}
   };
 
   this.meta = doc.meta || {};
   this.model = _.extend(defaults, doc);
 
-  // Checkout master branch
-  this.checkout('master');
+  // Checkout head (of master branch)
+  this.checkout('master', 'head');
 };
 
  _.extend(Document.prototype, _.Events, {
@@ -267,9 +271,9 @@ var Document = function(doc, schema) {
 
   // TODO: error handling
   // Allow both refs and sha's to be passed
-  checkout: function(ref) {
+  checkout: function(branch, ref) {
     var sha;
-    if (this.model.refs[ref]) {
+    if (this.model.refs[branch] && this.model.refs[branch][ref]) {
       sha = this.getRef(ref);
     } else {
       if (this.model.commits[ref]) {
@@ -319,24 +323,24 @@ var Document = function(doc, schema) {
 
   // Get sha the given ref points to
   getRef: function(ref) {
-    return this.model.refs[ref];
+    return this.model.refs['master'][ref];
   },
 
   // Go back in document history
   // --------
 
   undo: function() {
-    var ref = this.getRef(this.head) || this.head;
-    var commit = this.model.commits[ref];
+    var headRef = this.getRef(this.head) || this.head;
+    var commit = this.model.commits[headRef];
 
     if (commit && commit.parent) {
       this.checkout(commit.parent);
-      this.setRef('master', commit.parent);
+      this.setRef('head', commit.parent);
     } else {
       // No more commits available
       this.reset();
       this.head = null;
-      this.setRef('master', null);
+      this.setRef('head', null);
     }
   },
 
@@ -345,7 +349,7 @@ var Document = function(doc, schema) {
 
   redo: function() {
     // var commit = this.commits('tail', this.head)[0];
-    var commits = this.commits('tail');
+    var commits = this.commits('last');
     var that = this;
     
     // Find the right commit
@@ -353,7 +357,7 @@ var Document = function(doc, schema) {
 
     if (commit) {
       this.checkout(commit.sha);
-      this.setRef('master', commit.sha);
+      this.setRef('head', commit.sha);
     }
   },
 
@@ -412,12 +416,12 @@ var Document = function(doc, schema) {
 
   // Get ref
   getRef: function(ref) {
-    return this.model.refs[ref];
+    return this.model.refs['master'][ref];
   },
 
   // Set ref to a particular commit
   setRef: function(ref, sha, silent) {
-    this.model.refs[ref] = sha;
+    this.model.refs['master'][ref] = sha;
     if (!silent) this.trigger('ref:updated', ref, sha);
   },
   
@@ -430,8 +434,8 @@ var Document = function(doc, schema) {
     };
 
     this.model.commits[commit.sha] = commit;
-    this.setRef('master', commit.sha, true);
-    this.setRef('tail', commit.sha, true);
+    this.setRef('head', commit.sha, true);
+    this.setRef('last', commit.sha, true);
     return commit;
   }
 });
@@ -542,8 +546,8 @@ Document.methods = {
       var tailNode = doc.nodes[doc.tail];
 
       if (tailNode) {
-        tailNode.next = newNode.id;  
-        newNode.prev = tailNode.id;  
+        tailNode.next = newNode.id;
+        newNode.prev = tailNode.id;
       } else { // Empty doc
         doc.head = newNode.id;
         newNode.prev = null;
