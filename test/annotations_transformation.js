@@ -65,10 +65,10 @@ Bookkeeper.transform = function(operation, annotations) {
 
 
 var doc = new Document(helloWorld, schema);
-doc.checkout('master');
+doc.checkout('master', 'head');
 
 var annotations = new Document(helloWorldAnnotations, schema);
-annotations.checkout('master');
+annotations.checkout('master', 'head');
 
 
 

@@ -217,7 +217,7 @@ $(function() {
         user: "demo"
       });
 
-      this.sha = this.model.model.refs['master'];
+      this.sha = this.model.getRef('head');
 
       this.render();
       return false;
@@ -228,8 +228,7 @@ $(function() {
       // Checkout previous version
       this.model.checkout(sha);
 
-      // TODO: setRef
-      this.model.setRef('master', sha);
+      this.model.setRef('head', sha);
 
       this.sha = sha;
       this.render(); // Re-render it
@@ -237,7 +236,7 @@ $(function() {
     },
 
     initialize: function (options) {
-      this.sha = this.model.model.refs['master'];
+      this.sha = this.model.getRef('head');
       this.scope = 'document';
     },
 
@@ -248,7 +247,7 @@ $(function() {
 
     // Render application template
     render: function() {
-      var tail = this.model.getRef('tail') || this.model.getRef('master');
+      var last = this.model.getRef('last') || this.model.getRef('head');
       var commits = this.model.commits(tail);
 
       this.$el.html(_.tpl('document', {

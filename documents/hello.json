@@ -1,6 +1,8 @@
 {
   "refs": {
-    "master": "f7bd8120adb16d179c454ce57b57b50d"
+    "master": {
+      "head": "f7bd8120adb16d179c454ce57b57b50d"
+    }
   },
   "operations": {
     "1b6544d5f9724c33aa8dbb5becc51c0d": {
