@@ -170,21 +170,20 @@ var Document = function(doc, schema) {
   // --------
 
   var methods = {
-    set: function(doc, options) {
+    set: function(options) {
       _.each(options, function(val, key) {
         if (_.isArray(val)) {
-          doc.properties[key] = ot.TextOperation.fromJSON(val).apply(doc.properties[key] || "");
+          self.properties[key] = ot.TextOperation.fromJSON(val).apply(self.properties[key] || "");
         } else {
-          doc.properties[key] = val;
+          self.properties[key] = val;
         }
       });
     },
 
-    insert: function(doc, options) {
+    insert: function(options) {
       var id = options.id ? options.id : util.uuid();
 
-      var that = this;
-      if (doc.nodes[id]) throw('id ' +options.id+ ' already exists.');
+      if (self.nodes[id]) throw('id ' +options.id+ ' already exists.');
 
       // Construct a new document node
       var newNode = _.clone(options.data);
@@ -196,7 +195,7 @@ var Document = function(doc, schema) {
 
       // Insert element to provided list at given pos
       function insertAt(list, nodeId, pos) {
-        var nodes = doc.lists[list];
+        var nodes = self.lists[list];
         nodes.splice(pos, 0, nodeId);
       }
 
@@ -204,9 +203,9 @@ var Document = function(doc, schema) {
       // validate(newNode);
 
       // Register new node
-      doc.nodes[newNode.id] = newNode;
+      self.nodes[newNode.id] = newNode;
 
-      this.addToIndex(newNode);
+      self.addToIndex(newNode);
 
       var types = getTypes(options.type);
 
@@ -215,16 +214,16 @@ var Document = function(doc, schema) {
         if (options.target === "front") {
           var pos = 0;
         } else if (!options.target || options.target === "back") {
-          var pos = doc.lists["content"].length;
+          var pos = self.lists["content"].length;
         } else {
-          var pos = doc.lists["content"].indexOf(options.target)+1;
+          var pos = self.lists["content"].indexOf(options.target)+1;
         }
         insertAt("content", id, pos);
       }
     },
 
-    update: function(doc, options) {
-      var node = doc.nodes[options.id];
+    update: function(options) {
+      var node = self.nodes[options.id];
 
       if (!node) throw('node ' +options.id+ ' not found.');
 
@@ -246,14 +245,14 @@ var Document = function(doc, schema) {
           node[prop] = val;
         }
       });
-      this.updateIndex(node, oldNode);
+      self.updateIndex(node, oldNode);
     },
 
-    move: function(doc, options) {
-      var nodes = doc.lists["content"];
+    move: function(options) {
+      var nodes = self.lists["content"];
 
       // TODO: Rather manipulate array directly?
-      nodes = doc.lists["content"] = _.difference(nodes, options.nodes);
+      nodes = self.lists["content"] = _.difference(nodes, options.nodes);
 
       if (options.target === "front") var pos = 0;
       else if (options.target === "back") var pos = nodes.length;
@@ -262,11 +261,11 @@ var Document = function(doc, schema) {
       nodes.splice.apply(nodes, [pos, 0].concat(options.nodes));
     },
 
-    delete: function(doc, options) {
-      doc.lists["content"] = _.difference(doc.lists["content"], options.nodes);
+    delete: function(options) {
+      self.lists["content"] = _.difference(self.lists["content"], options.nodes);
       _.each(options.nodes, function(nodeId) {
-        self.removeFromIndex(doc.nodes[nodeId]);
-        delete doc.nodes[nodeId];
+        self.removeFromIndex(self.nodes[nodeId]);
+        delete self.nodes[nodeId];
       });
     }
   };
@@ -280,10 +279,10 @@ var Document = function(doc, schema) {
   // Allow both refs and sha's to be passed
   this.checkout = function(branch, ref) {
     var sha;
-    if (this.model.refs[branch] && this.model.refs[branch][ref]) {
+    if (this.refs[branch] && this.refs[branch][ref]) {
       sha = this.getRef(ref);
     } else {
-      if (this.model.commits[ref]) {
+      if (this.commits[ref]) {
         sha = ref;
       } else {
         sha = null;
@@ -291,7 +290,7 @@ var Document = function(doc, schema) {
     }
 
     this.reset();
-    _.each(this.commits(sha), function(op) {
+    _.each(this.getCommits(sha), function(op) {
       this.apply(op.op, {silent: true});
     }, this);
     this.head = sha;
@@ -299,27 +298,41 @@ var Document = function(doc, schema) {
 
   // Serialize as JSON
   this.toJSON = function() {
-    return _.extend({
+    return {
+      properties: this.properties,
+      meta: this.meta,
       id: this.id,
-      meta: this.meta
-    }, this.model);
+      nodes: this.nodes,
+      lists: this.lists
+    };
+  };
+
+
+  // Export operation history
+  this.export = function() {
+    return {
+      id: this.id,
+      meta: this.meta,
+      refs: this.refs,
+      commits: this.commits
+    }
   };
 
   // For a given node return the position in the document
   this.position = function(nodeId) {
-    var elements = this.content.lists["content"];
+    var elements = this.lists["content"];
     return elements.indexOf(nodeId);
   };
 
   this.getSuccessor = function(nodeId) {
-    var elements = this.content.lists["content"];
+    var elements = this.lists["content"];
     var index = elements.indexOf(nodeId);
     var successor = index >= 0 ? elements[index+1] : null;
     return successor;
   };
 
   this.getPredecessor = function(nodeId) {
-    var elements = this.content.lists["content"];
+    var elements = this.lists["content"];
     var index = elements.indexOf(nodeId);
     var pred = index >= 0 ? elements[index-1] : null;
     return pred;
@@ -327,38 +340,31 @@ var Document = function(doc, schema) {
 
   // Get property value
   this.get = function(property) {
-    return this.content.properties[property];
+    return this.properties[property];
   };
 
   this.reset = function() {
     // Reset content
-    this.content = {
-      properties: {},
-      nodes: {},
-      // annotations: {},
-      // comments: {},
-      lists: {
-        "content": []
-      },
-      // Those are build dynamically
-      indexes: {
-        "comments": {},
-        "annotations": {}
-      },
+    this.properties = {};
+    this.nodes = {};
+    this.lists = {"content": []};
+    this.indexes = {
+      "comments": {},
+      "annotations": {}
     };
   };
 
   // List commits 
   // --------
 
-  this.commits = function(ref, ref2) {
+  this.getCommits = function(ref, ref2) {
     // Current commit (=head)
     var commit = this.getRef(ref) || ref;
     var commit2 = this.getRef(ref2) || ref2;
     var skip = false;
     
     if (commit === commit2) return [];
-    var op = this.model.commits[commit];
+    var op = this.commits[commit];
 
     if (!op) return [];
     op.sha = commit;
@@ -366,7 +372,7 @@ var Document = function(doc, schema) {
     var commits = [op];
     var prev = op;
 
-    while (!skip && (op = this.model.commits[op.parent])) {
+    while (!skip && (op = this.commits[op.parent])) {
       if (commit2 && op.sha === commit2) {
         skip = true;
       } else {
@@ -383,7 +389,7 @@ var Document = function(doc, schema) {
   // --------
   
   this.getRef = function(ref) {
-    return this.model.refs['master'][ref];
+    return this.refs['master'][ref];
   };
 
   // Go back in document history
@@ -391,7 +397,7 @@ var Document = function(doc, schema) {
 
   this.undo = function() {
     var headRef = this.getRef(this.head) || this.head;
-    var commit = this.model.commits[headRef];
+    var commit = this.commits[headRef];
 
     if (commit && commit.parent) {
       this.checkout(commit.parent);
@@ -408,7 +414,7 @@ var Document = function(doc, schema) {
   // --------
 
   this.redo = function() {
-    var commits = this.commits('last');
+    var commits = this.getCommits('last');
     var that = this;
     
     // Find the right commit
@@ -424,8 +430,8 @@ var Document = function(doc, schema) {
   // --------
 
   this.each = function(fn, ctx) {
-    _.each(this.content.lists["content"], function(n, index) {
-      var node = self.content.nodes[n];
+    _.each(this.lists["content"], function(n, index) {
+      var node = self.nodes[n];
       fn.call(ctx || this, node, index);
     });
   };
@@ -434,8 +440,8 @@ var Document = function(doc, schema) {
   // --------
 
   this.find = function(index, scope) {
-    var indexes = this.content.indexes;
-    var nodes = this.content.nodes;
+    var indexes = this.indexes;
+    var nodes = this.nodes;
 
     if (!indexes[index]) return []; // throw index-not-found error instead?
     if (!indexes[index][scope]) return [];
@@ -458,7 +464,7 @@ var Document = function(doc, schema) {
     // TODO: this might slow things down, it's for debug purposes
     // var prevState = JSON.parse(JSON.stringify(this.content));
 
-    methods[operation[0]].call(this, this.content, operation[1]);
+    methods[operation[0]].call(this, operation[1]);
 
     // This is a checker for state verification
     // verifyState(this.content, operation, prevState);
@@ -476,7 +482,7 @@ var Document = function(doc, schema) {
   // --------
 
   this.getRef = function(ref) {
-    return this.model.refs['master'][ref];
+    return this.refs['master'][ref];
   };
 
   // Add node to index
@@ -486,7 +492,7 @@ var Document = function(doc, schema) {
 
     function add(index) {
       var indexSpec = self.schema.indexes[index];
-      var indexes = self.content.indexes;
+      var indexes = self.indexes;
 
       var idx = indexes[index];
       if (!_.include(getTypes(node.type), indexSpec.type)) return;
@@ -513,7 +519,7 @@ var Document = function(doc, schema) {
 
     function update(index) {
       var indexSpec = self.schema.indexes[index];
-      var indexes = self.content.indexes;
+      var indexes = self.indexes;
 
       var scopes = indexes[index];
 
@@ -550,14 +556,13 @@ var Document = function(doc, schema) {
 
     function remove(index) {
       var indexSpec = self.schema.indexes[index];
-      var indexes = self.content.indexes;
+      var indexes = self.indexes;
 
       var scopes = indexes[index];
 
       // Remove when source
       if (scopes[node.id]) {
         delete scopes[node.id];
-        // console.log('removed when source', node.id);
       }
 
       if (!_.include(getTypes(node.type), indexSpec.type)) return;
@@ -568,7 +573,6 @@ var Document = function(doc, schema) {
       var nodes = scopes[node[prop]];
       if (nodes) {
         scopes[node[prop]] = _.without(nodes, node.id); 
-        // console.log('removed '+node.id+' from index');        
       }
     }
 
@@ -581,9 +585,9 @@ var Document = function(doc, schema) {
   // --------
   
   this.buildIndexes =  function() {
-    this.content.indexes = {};
+    this.indexes = {};
     var that = this;
-    _.each(this.content.nodes, function(node) {
+    _.each(this.nodes, function(node) {
       _.each(that.schema.indexes, function(index, key) {
         that.addToIndex(key, node);
       });
@@ -594,7 +598,7 @@ var Document = function(doc, schema) {
   // --------
   
   this.setRef = function(ref, sha, silent) {
-    this.model.refs['master'][ref] = sha;
+    this.refs['master'][ref] = sha;
     if (!silent) this.trigger('ref:updated', ref, sha);
   };
   
@@ -608,7 +612,7 @@ var Document = function(doc, schema) {
       parent: this.head
     };
 
-    this.model.commits[commit.sha] = commit;
+    this.commits[commit.sha] = commit;
     this.setRef('head', commit.sha, true);
     this.setRef('last', commit.sha, true);
     return commit;
@@ -619,19 +623,17 @@ var Document = function(doc, schema) {
 
   var defaults = {
     refs: {
-      "master" : {
-        "head" : ""
-      }
+      "master" : {"head" : ""}
     },
     commits: {}
   };
-
   
   // Set public properties
   this.id = doc.id;
-
   this.meta = doc.meta || {};
-  this.model = _.extend(defaults, doc);
+
+  this.refs = doc.refs || {"master" : {"head" : ""}};
+  this.commits = doc.commits || {};
 
   this.schema = schema || SCHEMA;
 
