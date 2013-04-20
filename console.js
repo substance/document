@@ -82,7 +82,7 @@ $(function() {
     },
 
     newDocument: function() {
-      app.document(Math.uuid());
+      app.document(Substance.util.uuid());
     },
 
     loadDocument: function(id) {

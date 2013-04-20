@@ -1,3 +1,9 @@
+// Substance.Document 0.3.0
+// (c) 2010-2013 Michael Aufreiter
+// Substance.Document may be freely distributed under the MIT license.
+// For all details and documentation:
+// http://interior.substance.io/modules/document.html
+
 (function() {
 
 var root = this;
@@ -7,164 +13,11 @@ if (typeof exports !== 'undefined') {
 } else {
   var _ = root._;
   var ot = root.ot;
+  var util = root.Substance.util;
 }
 
-
-// UUID
-// -----------------
-
-/*!
-Math.uuid.js (v1.4)
-http://www.broofa.com
-mailto:robert@broofa.com
-
-Copyright (c) 2010 Robert Kieffer
-Dual licensed under the MIT and GPL licenses.
-*/
-
-Math.uuid = function (prefix, len) {
-  var chars = '0123456789abcdefghijklmnopqrstuvwxyz'.split(''),
-      uuid = [],
-      radix = 16,
-      len = len || 32;
-
-  if (len) {
-    // Compact form
-    for (var i = 0; i < len; i++) uuid[i] = chars[0 | Math.random()*radix];
-  } else {
-    // rfc4122, version 4 form
-    var r;
-
-    // rfc4122 requires these characters
-    uuid[8] = uuid[13] = uuid[18] = uuid[23] = '-';
-    uuid[14] = '4';
-
-    // Fill in random data.  At i==19 set the high bits of clock sequence as
-    // per rfc4122, sec. 4.1.5
-    for (var i = 0; i < 36; i++) {
-      if (!uuid[i]) {
-        r = 0 | Math.random()*16;
-        uuid[i] = chars[(i == 19) ? (r & 0x3) | 0x8 : r];
-      }
-    }
-  }
-  return (prefix ? prefix : "") + uuid.join('');
-};
-
-
-// _.Events
-// -----------------
-// TODO: Move to Substance.util
-
-// Regular expression used to split event strings
-var eventSplitter = /\s+/;
-
-// A module that can be mixed in to *any object* in order to provide it with
-// custom events. You may bind with `on` or remove with `off` callback functions
-// to an event; trigger`-ing an event fires all callbacks in succession.
-//
-//     var object = {};
-//     _.extend(object, Backbone.Events);
-//     object.on('expand', function(){ alert('expanded'); });
-//     object.trigger('expand');
-//
-_.Events = {
-
-  // Bind one or more space separated events, `events`, to a `callback`
-  // function. Passing `"all"` will bind the callback to all events fired.
-  on: function(events, callback, context) {
-
-    var calls, event, node, tail, list;
-    if (!callback) return this;
-    events = events.split(eventSplitter);
-    calls = this._callbacks || (this._callbacks = {});
-
-    // Create an immutable callback list, allowing traversal during
-    // modification.  The tail is an empty object that will always be used
-    // as the next node.
-    while (event = events.shift()) {
-      list = calls[event];
-      node = list ? list.tail : {};
-      node.next = tail = {};
-      node.context = context;
-      node.callback = callback;
-      calls[event] = {tail: tail, next: list ? list.next : node};
-    }
-    
-    return this;
-  },
-
-  // Remove one or many callbacks. If `context` is null, removes all callbacks
-  // with that function. If `callback` is null, removes all callbacks for the
-  // event. If `events` is null, removes all bound callbacks for all events.
-  off: function(events, callback, context) {
-    var event, calls, node, tail, cb, ctx;
-
-    // No events, or removing *all* events.
-    if (!(calls = this._callbacks)) return;
-    if (!(events || callback || context)) {
-      delete this._callbacks;
-      return this;
-    }
-
-    // Loop through the listed events and contexts, splicing them out of the
-    // linked list of callbacks if appropriate.
-    events = events ? events.split(eventSplitter) : _.keys(calls);
-    while (event = events.shift()) {
-      node = calls[event];
-      delete calls[event];
-      if (!node || !(callback || context)) continue;
-      // Create a new list, omitting the indicated callbacks.
-      tail = node.tail;
-      while ((node = node.next) !== tail) {
-        cb = node.callback;
-        ctx = node.context;
-        if ((callback && cb !== callback) || (context && ctx !== context)) {
-          this.on(event, cb, ctx);
-        }
-      }
-    }
-    return this;
-  },
-
-  // Trigger one or many events, firing all bound callbacks. Callbacks are
-  // passed the same arguments as `trigger` is, apart from the event name
-  // (unless you're listening on `"all"`, which will cause your callback to
-  // receive the true name of the event as the first argument).
-  trigger: function(events) {
-    var event, node, calls, tail, args, all, rest;
-    if (!(calls = this._callbacks)) return this;
-    all = calls.all;
-    events = events.split(eventSplitter);
-    rest = Array.prototype.slice.call(arguments, 1);
-
-    // For each event, walk through the linked list of callbacks twice,
-    // first to trigger the event, then to trigger any `"all"` callbacks.
-    while (event = events.shift()) {
-      if (node = calls[event]) {
-        tail = node.tail;
-        while ((node = node.next) !== tail) {
-          node.callback.apply(node.context || this, rest);
-        }
-      }
-      if (node = all) {
-        tail = node.tail;
-        args = [event].concat(rest);
-        while ((node = node.next) !== tail) {
-          node.callback.apply(node.context || this, args);
-        }
-      }
-    }
-    return this;
-  }
-};
-
-// Aliases for backwards compatibility.
-_.Events.bind   = _.Events.on;
-_.Events.unbind = _.Events.off;
-
-
-// Default Substance Schema
+// Default Document Schema
+// --------
 
 var SCHEMA = {
   // List keeping
@@ -328,7 +181,7 @@ var Document = function(doc, schema) {
     },
 
     insert: function(doc, options) {
-      var id = options.id ? options.id : Math.uuid();
+      var id = options.id ? options.id : util.uuid();
 
       var that = this;
       if (doc.nodes[id]) throw('id ' +options.id+ ' already exists.');
@@ -422,7 +275,8 @@ var Document = function(doc, schema) {
   // Public Interface
   // --------
 
-  // TODO: error handling
+  // TODO: proper error handling
+
   // Allow both refs and sha's to be passed
   this.checkout = function(branch, ref) {
     var sha;
@@ -750,7 +604,7 @@ var Document = function(doc, schema) {
   this.commit = function(op) {
     var commit = {
       op: op,
-      sha: Math.uuid(),
+      sha: util.uuid(),
       parent: this.head
     };
 
@@ -788,7 +642,7 @@ var Document = function(doc, schema) {
   this.checkout('master', 'head');
 };
 
-_.extend(Document.prototype, _.Events);
+_.extend(Document.prototype, util.Events);
 
 // Export Module
 // --------
