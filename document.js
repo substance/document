@@ -410,8 +410,8 @@ var Document = function(doc, schema) {
   
   this.getRef = function(branch, ref) {
     if (arguments.length === 1) {
-      branch = 'master';
       ref = branch;
+      branch = 'master';
     }
 
     return this.refs[branch][ref];
