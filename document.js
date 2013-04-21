@@ -302,14 +302,16 @@ var Document = function(doc, schema) {
   };
 
   // Serialize as JSON
-  this.toJSON = function() {
-    return {
+  this.toJSON = function(includeIndexes) {
+    var result = {
       properties: this.properties,
       meta: this.meta,
       id: this.id,
       nodes: this.nodes,
       lists: this.lists
     };
+    if (includeIndexes) result.indexes = this.indexes;
+    return result;
   };
 
 
