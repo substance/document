@@ -45,7 +45,7 @@ var SCHEMA = {
     // Specific type for substance documents, holding all content elements
     "content": {
       "properties": {
-
+        
       }
     },
     "text": {
@@ -63,7 +63,9 @@ var SCHEMA = {
     "image": {
       "parent": "content",
       "properties": {
-        "content": "string"
+        "large": "string",
+        "medium": "string",
+        "caption": "string"
       }
     },
     "heading": {
@@ -156,15 +158,7 @@ var Document = function(doc, schema) {
   // Private Methods
   // --------
 
-  // Get type chain
-  function getTypes(typeId) {
-    var type = self.schema.types[typeId];
-    if (type.parent) {
-      return [type.parent, typeId];
-    } else {
-      return [typeId];
-    }
-  }
+
 
   // Methods for document manipulation
   // --------
@@ -207,7 +201,7 @@ var Document = function(doc, schema) {
 
       self.addToIndex(newNode);
 
-      var types = getTypes(options.type);
+      var types = self.getTypes(options.type);
 
       // Only register content nodes
       if (_.include(types, "content")) {
@@ -275,6 +269,16 @@ var Document = function(doc, schema) {
   // --------
 
   // TODO: proper error handling
+
+  // Get type chain
+  this.getTypes = function(typeId) {
+    var type = self.schema.types[typeId];
+    if (type.parent) {
+      return [type.parent, typeId];
+    } else {
+      return [typeId];
+    }
+  }
 
   // Allow both refs and sha's to be passed
   this.checkout = function(branch, ref) {
@@ -385,11 +389,32 @@ var Document = function(doc, schema) {
     return commits.reverse();
   };
 
+
+  // Set ref to a particular commit
+  // --------
+  
+  this.setRef = function(branch, ref, sha, silent) {
+    // When called without branch
+    if (arguments.length === 3) {
+      branch = 'master';
+      ref = branch;
+      sha = ref;
+      silent = sha;
+    }
+    this.refs[branch][ref] = sha;
+    if (!silent) this.trigger('ref:updated', ref, sha);
+  };
+
   // Get sha the given ref points to
   // --------
   
-  this.getRef = function(ref) {
-    return this.refs['master'][ref];
+  this.getRef = function(branch, ref) {
+    if (arguments.length === 1) {
+      branch = 'master';
+      ref = branch;
+    }
+
+    return this.refs[branch][ref];
   };
 
   // Go back in document history
@@ -401,12 +426,12 @@ var Document = function(doc, schema) {
 
     if (commit && commit.parent) {
       this.checkout(commit.parent);
-      this.setRef('head', commit.parent);
+      this.setRef('master', 'head', commit.parent);
     } else {
       // No more commits available
       this.reset();
       this.head = null;
-      this.setRef('head', null);
+      this.setRef('master', 'head', null);
     }
   };
 
@@ -422,7 +447,7 @@ var Document = function(doc, schema) {
 
     if (commit) {
       this.checkout(commit.sha);
-      this.setRef('head', commit.sha);
+      this.setRef('master', 'head', commit.sha);
     }
   };
 
@@ -459,8 +484,6 @@ var Document = function(doc, schema) {
   this.apply = function(operation, options) {
     options = options ? options : {};
 
-    // console.log('applying op...', operation);
-    
     // TODO: this might slow things down, it's for debug purposes
     // var prevState = JSON.parse(JSON.stringify(this.content));
 
@@ -478,13 +501,6 @@ var Document = function(doc, schema) {
     }
   };
 
-  // Access registered refs
-  // --------
-
-  this.getRef = function(ref) {
-    return this.refs['master'][ref];
-  };
-
   // Add node to index
   // --------
 
@@ -495,7 +511,7 @@ var Document = function(doc, schema) {
       var indexes = self.indexes;
 
       var idx = indexes[index];
-      if (!_.include(getTypes(node.type), indexSpec.type)) return;
+      if (!_.include(self.getTypes(node.type), indexSpec.type)) return;
 
       // Create index if it doesn't exist
       if (!idx) idx = indexes[index] = {};
@@ -523,7 +539,7 @@ var Document = function(doc, schema) {
 
       var scopes = indexes[index];
 
-      if (!_.include(getTypes(node.type), indexSpec.type)) return;
+      if (!_.include(self.getTypes(node.type), indexSpec.type)) return;
 
       // Remove when target
       var prop = indexSpec.properties[0];
@@ -565,7 +581,7 @@ var Document = function(doc, schema) {
         delete scopes[node.id];
       }
 
-      if (!_.include(getTypes(node.type), indexSpec.type)) return;
+      if (!_.include(self.getTypes(node.type), indexSpec.type)) return;
 
       // Remove when target
       var prop = indexSpec.properties[0];
@@ -594,16 +610,12 @@ var Document = function(doc, schema) {
     });
   };
 
-  // Set ref to a particular commit
-  // --------
-  
-  this.setRef = function(ref, sha, silent) {
-    this.refs['master'][ref] = sha;
-    if (!silent) this.trigger('ref:updated', ref, sha);
-  };
+
   
   // Create a commit for given operation
   // --------
+  // 
+  // op: A Substance document operation as JSON
 
   this.commit = function(op) {
     var commit = {
@@ -613,8 +625,8 @@ var Document = function(doc, schema) {
     };
 
     this.commits[commit.sha] = commit;
-    this.setRef('head', commit.sha, true);
-    this.setRef('last', commit.sha, true);
+    this.setRef('master', 'head', commit.sha, true);
+    this.setRef('master', 'last', commit.sha, true);
     return commit;
   };
 
@@ -636,9 +648,6 @@ var Document = function(doc, schema) {
   this.commits = doc.commits || {};
 
   this.schema = schema || SCHEMA;
-
-  // Get type chain
-  this.getTypes = getTypes;
 
   // Checkout master branch
   this.checkout('master', 'head');
