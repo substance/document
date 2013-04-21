@@ -10,6 +10,7 @@ var root = this;
 if (typeof exports !== 'undefined') {
   var _    = require('underscore');
   var ot   = require('operational-transformation');
+  var util   = require('./lib/util/util');
 } else {
   var _ = root._;
   var ot = root.ot;
