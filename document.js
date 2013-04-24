@@ -395,7 +395,7 @@ var Document = function(doc, schema) {
 
   // Set ref to a particular commit
   // --------
-  
+
   this.setRef = function(branch, ref, sha, silent) {
     // When called without branch
     if (arguments.length === 3) {
@@ -404,20 +404,23 @@ var Document = function(doc, schema) {
       sha = ref;
       silent = sha;
     }
+    if (!this.refs[branch]) this.refs[branch] = {};
     this.refs[branch][ref] = sha;
+
     if (!silent) this.trigger('ref:updated', ref, sha);
   };
 
   // Get sha the given ref points to
   // --------
-  
+
   this.getRef = function(branch, ref) {
+
     if (arguments.length === 1) {
       ref = branch;
       branch = 'master';
     }
 
-    return this.refs[branch][ref];
+    return (this.refs[branch]) ? this.refs[branch][ref] : null;
   };
 
   // Go back in document history
