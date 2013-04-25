@@ -24,8 +24,7 @@ if (typeof exports !== 'undefined') {
 // --------
 
 var SCHEMA = {
-  // List keeping
-  "lists": {
+  "views": {
     // Stores order for content nodes
     "content": {
       "types": ["node"]
@@ -192,8 +191,8 @@ var Document = function(doc, schema) {
       });
 
       // Insert element to provided list at given pos
-      function insertAt(list, nodeId, pos) {
-        var nodes = self.lists[list];
+      function insertAt(view, nodeId, pos) {
+        var nodes = self.views[view];
         nodes.splice(pos, 0, nodeId);
       }
 
@@ -212,9 +211,9 @@ var Document = function(doc, schema) {
         if (options.target === "front") {
           var pos = 0;
         } else if (!options.target || options.target === "back") {
-          var pos = self.lists["content"].length;
+          var pos = self.views["content"].length;
         } else {
-          var pos = self.lists["content"].indexOf(options.target)+1;
+          var pos = self.views["content"].indexOf(options.target)+1;
         }
         insertAt("content", id, pos);
       }
@@ -247,10 +246,10 @@ var Document = function(doc, schema) {
     },
 
     move: function(options) {
-      var nodes = self.lists["content"];
+      var nodes = self.views["content"];
 
       // TODO: Rather manipulate array directly?
-      nodes = self.lists["content"] = _.difference(nodes, options.nodes);
+      nodes = self.views["content"] = _.difference(nodes, options.nodes);
 
       if (options.target === "front") var pos = 0;
       else if (options.target === "back") var pos = nodes.length;
@@ -260,7 +259,7 @@ var Document = function(doc, schema) {
     },
 
     delete: function(options) {
-      self.lists["content"] = _.difference(self.lists["content"], options.nodes);
+      self.views["content"] = _.difference(self.views["content"], options.nodes);
       _.each(options.nodes, function(nodeId) {
         self.removeFromIndex(self.nodes[nodeId]);
         delete self.nodes[nodeId];
@@ -311,7 +310,7 @@ var Document = function(doc, schema) {
       meta: this.meta,
       id: this.id,
       nodes: this.nodes,
-      lists: this.lists
+      views: this.views
     };
     if (includeIndexes) result.indexes = this.indexes;
     return result;
@@ -330,19 +329,19 @@ var Document = function(doc, schema) {
 
   // For a given node return the position in the document
   this.position = function(nodeId) {
-    var elements = this.lists["content"];
+    var elements = this.views["content"];
     return elements.indexOf(nodeId);
   };
 
   this.getSuccessor = function(nodeId) {
-    var elements = this.lists["content"];
+    var elements = this.views["content"];
     var index = elements.indexOf(nodeId);
     var successor = index >= 0 ? elements[index+1] : null;
     return successor;
   };
 
   this.getPredecessor = function(nodeId) {
-    var elements = this.lists["content"];
+    var elements = this.views["content"];
     var index = elements.indexOf(nodeId);
     var pred = index >= 0 ? elements[index-1] : null;
     return pred;
@@ -357,7 +356,7 @@ var Document = function(doc, schema) {
     // Reset content
     this.properties = {};
     this.nodes = {};
-    this.lists = {"content": []};
+    this.views = {"content": []};
     this.indexes = {
       "comments": {},
       "annotations": {}
@@ -466,7 +465,7 @@ var Document = function(doc, schema) {
   // --------
 
   this.each = function(fn, ctx) {
-    _.each(this.lists["content"], function(n, index) {
+    _.each(this.views["content"], function(n, index) {
       var node = self.nodes[n];
       fn.call(ctx || this, node, index);
     });
