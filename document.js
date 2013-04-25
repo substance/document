@@ -10,12 +10,15 @@ var root = this;
 if (typeof exports !== 'undefined') {
   var _    = require('underscore');
   var ot   = require('operational-transformation');
+  
+  // Should be require('substance-util') in the future
   var util   = require('./lib/util/util');
 } else {
   var _ = root._;
   var ot = root.ot;
   var util = root.Substance.util;
 }
+
 
 // Default Document Schema
 // --------
@@ -398,16 +401,16 @@ var Document = function(doc, schema) {
 
   this.setRef = function(branch, ref, sha, silent) {
     // When called without branch
-    if (arguments.length === 3) {
-      branch = 'master';
-      ref = branch;
-      sha = ref;
+    if (arguments.length === 2 || arguments.length === 3) {
       silent = sha;
+      sha = ref;
+      ref = branch;
+      branch = 'master';
     }
     if (!this.refs[branch]) this.refs[branch] = {};
     this.refs[branch][ref] = sha;
 
-    if (!silent) this.trigger('ref:updated', ref, sha);
+    if (!silent) this.trigger('ref:updated', branch, ref, sha);
   };
 
   // Get sha the given ref points to
@@ -449,7 +452,9 @@ var Document = function(doc, schema) {
     var that = this;
     
     // Find the right commit
-    var commit = _.find(commits, function(c){ return c.parent === that.head; });
+    var commit = _.find(commits, function(c) {
+      return c.parent === that.head;
+    });
 
     if (commit) {
       this.checkout(commit.sha);
@@ -579,7 +584,6 @@ var Document = function(doc, schema) {
     function remove(index) {
       var indexSpec = self.schema.indexes[index];
       var indexes = self.indexes;
-
       var scopes = indexes[index];
 
       // Remove when source
@@ -615,7 +619,6 @@ var Document = function(doc, schema) {
       });
     });
   };
-
 
   
   // Create a commit for given operation

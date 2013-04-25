@@ -7,11 +7,142 @@
   <link href='http://fonts.googleapis.com/css?family=Open+Sans:400,700,300' rel='stylesheet' type='text/css'>
   <link href='http://fonts.googleapis.com/css?family=Source+Code+Pro' rel='stylesheet' type='text/css'/>
 
+  <style>
+
+    /* Reset
+    -------------------------------------------------------------------------------*/
+
+    html, body, div, span, applet, object, iframe,
+    h1, h2, h3, h4, h5, h6, p, blockquote, pre,
+    a, abbr, acronym, address, big, cite, code,
+    del, dfn, em, font, img, ins, kbd, q, s, samp,
+    small, strike, strong, sub, sup, tt, var,
+    dl, dt, dd, ol, ul, li,
+    fieldset, form, label, legend,
+    table, caption, tbody, tfoot, thead, tr, th, td {
+      margin: 0;
+      padding: 0;
+      border: 0;
+      outline: 0;
+      font-weight: inherit;
+      font-style: inherit;
+      font-size: 100%;
+      font-family: inherit;
+      vertical-align: baseline;
+    }
+
+    :focus {
+      outline: 0;
+    }
+
+    body {
+      line-height: 1;
+      color: black;
+      background: white;
+    }
+
+    /*ol, ul {
+      list-style: none;
+    }*/
+
+    table {
+      border-collapse: separate;
+      border-spacing: 0;
+    }
+    caption, th, td {
+      text-align: left;
+      font-weight: normal;
+    }
+    blockquote:before, blockquote:after,
+    q:before, q:after {
+      content: "";
+    }
+    blockquote, q {
+      quotes: "" "";
+    }
+
+    /* Helpers
+    -------------------------------------------------------------------------------*/
+
+    * {
+      box-sizing:border-box;
+      -webkit-box-sizing:border-box;
+      -moz-box-sizing:border-box;
+    }
+
+    .clear { clear: both; }
+    .hidden { display: none; }
+    .invisible { opacity: 0; }
+    .right { float: right; }
+    .left { float: left; }
+    .nobr {white-space: nowrap} 
+    .right-align {text-align: right; }
+
+
+    /* Layout
+    -------------------------------------------------------------------------------*/
+
+    html, body {
+      
+    }
+
+    body, input, textarea {
+      font: normal 14px/20px 'Open Sans',Arial,sans-serif;
+      font-weight: 400;
+      color: #444;
+    }
+
+    html {
+      margin: 0; padding: 0; 
+      -webkit-font-smoothing: antialiased;
+    }
+
+    img { border: none; }
+
+    body {
+      min-width: 1200px;
+      font-size: 14px;
+      margin: 0; padding: 0;
+      background: #F0F1EB;
+      color:#444;
+      line-height:1.5em;
+    }
+
+    a {
+      text-decoration:none;
+      color: #51483D;
+      padding: 0 0 1px 0;
+    }
+
+    a:hover {
+      color: #000;
+    }
+
+    p { margin: 0 0 10px 0; }
+
+    p.info {
+      font-style: italic;
+      color: rgba(0, 0, 0, 0.7);
+    }
+
+    h1, h2, h3, h4, h5, h6 { padding: 10px 0 5px 0; }
+    h3, h4, h5, h6 { padding-top: 20px; }
+    h2 { font-size: 160%; padding-bottom: 15px; }
+
+
+    #container {
+      position:relative;
+      width: 800px;
+    }
+  </style>
+
   <link rel='stylesheet' href='console.css'/>
 
+  <!-- Scripts -->
   <script src="lib/underscore.js"></script>
-  <script src="lib/jquery.min.js"></script>
+  <script src="lib/jquery.js"></script>
   <script src="lib/backbone.js"></script>
+  <script src="lib/util.js"></script>
   <script src="lib/operation.js"></script>
   <script src="document.js"></script>
   <script src="console.js"></script>
@@ -35,7 +166,7 @@
     <div id="document"></div>
   </script>
 
-  <script type="text/html" name="document">
+  <script type="text/html" name="console">
     <div class="operations">
       <% applied = true %>
       <% var width = parseInt((800 / operations.length) - 1, 10); %>
@@ -90,8 +221,118 @@
     </select>
   </script>
 
+  <script> 
+
+    // Util
+    // ---------------
+
+    // Render Underscore templates
+    _.tpl = function (tpl, ctx) {
+      var source = $('script[name='+tpl+']').html();
+
+      return _.template(source, ctx);
+    };
+
+    function loadDocument(doc, cb) {
+      $.getJSON('./data/' + doc, function(rawDoc) {
+        cb(null, rawDoc);
+      });
+    }
+
+
+    // Router
+    // ---------------
+
+    var Router = Backbone.Router.extend({
+      initialize: function() {
+        // Using this.route, because order matters
+        this.route(':document', 'loadDocument', this.loadDocument);
+        this.route('', 'start', this.loadDocument);
+      },
+
+      loadDocument: function(id) {
+        app.document(id || "empty.json");
+      }
+    });
+
+
+    // Welcome screen
+    // ---------------
+
+    var Start = Backbone.View.extend({
+      render: function() {
+        this.$el.html(_.tpl('start'));
+      }
+    });
+
+
+    // The Mothership
+    // ---------------
+
+    var Application = Backbone.View.extend({
+      events: {
+        'change #document_id': '_loadDocument'
+      },
+
+      _loadDocument: function(e) {
+        var id = $('#document_id').val();
+        this.document(id);
+        return false;
+      },
+
+      initialize: function (options) {
+        // Load some data
+        this.model = {
+          documents: [
+            { meta: { title: "Empty Document" }, id: "empty.json"},
+            { meta: { title: "Hello" }, id: "hello.json"},
+            { meta: { title: "Substance" }, id: "substance.json"}
+          ]
+        };
+      },
+
+      // Toggle document view
+      document: function(id) {
+        var that = this;
+        loadDocument(id, function(err, rawDoc) {
+          var doc = new Substance.Document(rawDoc);
+
+          // Add global ref for convenience
+          window.doc = doc;
+
+          that.view = new Substance.Console({el: '#document', model: doc });
+          that.view.render();
+        });
+      },
+
+      // Toggle Start view
+      start: function() {
+
+      },
+
+      // Render application template
+      render: function() {
+        this.$el.html(_.tpl('application', {
+          documents: this.model.documents
+        }));
+      }
+    });
+  
+    // Boot the console
+    $(function() {
+      window.app = new Application({el: '#container'});
+      window.app.render();
+
+      // Start responding to routes
+      window.router = new Router({});
+
+      Backbone.history.start();
+    });
+  </script>
+
 </head>
 <body>
+
 	<div id="container">
 	</div>
 </body>
