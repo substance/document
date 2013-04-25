@@ -284,9 +284,10 @@ var Document = function(doc, schema) {
   }
 
   // Allow both refs and sha's to be passed
-  this.checkout = function(branch, ref) {
+  this.checkout = function(ref) {
+
     var sha;
-    if (this.refs[branch] && this.refs[branch][ref]) {
+    if (this.refs['master'] && this.refs['master'][ref]) {
       sha = this.getRef(ref);
     } else {
       if (this.commits[ref]) {
@@ -398,31 +399,17 @@ var Document = function(doc, schema) {
   // Set ref to a particular commit
   // --------
 
-  this.setRef = function(branch, ref, sha, silent) {
-    // When called without branch
-    if (arguments.length === 2 || arguments.length === 3) {
-      silent = sha;
-      sha = ref;
-      ref = branch;
-      branch = 'master';
-    }
-    if (!this.refs[branch]) this.refs[branch] = {};
-    this.refs[branch][ref] = sha;
-
-    if (!silent) this.trigger('ref:updated', branch, ref, sha);
+  this.setRef = function(ref, sha, silent) {
+    if (!this.refs['master']) this.refs['master'] = {};
+    this.refs['master'][ref] = sha;
+    if (!silent) this.trigger('ref:updated', ref, sha);
   };
 
   // Get sha the given ref points to
   // --------
 
-  this.getRef = function(branch, ref) {
-
-    if (arguments.length === 1) {
-      ref = branch;
-      branch = 'master';
-    }
-
-    return (this.refs[branch]) ? this.refs[branch][ref] : null;
+  this.getRef = function(ref) {
+    return (this.refs['master']) ? this.refs['master'][ref] : null;
   };
 
   // Go back in document history
@@ -434,12 +421,12 @@ var Document = function(doc, schema) {
 
     if (commit && commit.parent) {
       this.checkout(commit.parent);
-      this.setRef('master', 'head', commit.parent);
+      this.setRef('head', commit.parent);
     } else {
       // No more commits available
       this.reset();
       this.head = null;
-      this.setRef('master', 'head', null);
+      this.setRef('head', null);
     }
   };
 
@@ -457,7 +444,7 @@ var Document = function(doc, schema) {
 
     if (commit) {
       this.checkout(commit.sha);
-      this.setRef('master', 'head', commit.sha);
+      this.setRef('head', commit.sha);
     }
   };
 
@@ -494,13 +481,7 @@ var Document = function(doc, schema) {
   this.apply = function(operation, options) {
     options = options ? options : {};
 
-    // TODO: this might slow things down, it's for debug purposes
-    // var prevState = JSON.parse(JSON.stringify(this.content));
-
     methods[operation[0]].call(this, operation[1]);
-
-    // This is a checker for state verification
-    // verifyState(this.content, operation, prevState);
 
     if (!options.silent) {
       var commit = this.commit(operation);
@@ -633,8 +614,8 @@ var Document = function(doc, schema) {
     };
 
     this.commits[commit.sha] = commit;
-    this.setRef('master', 'head', commit.sha, true);
-    this.setRef('master', 'last', commit.sha, true);
+    this.setRef('head', commit.sha, true);
+    this.setRef('last', commit.sha, true);
     return commit;
   };
 
@@ -657,8 +638,8 @@ var Document = function(doc, schema) {
 
   this.schema = schema || SCHEMA;
 
-  // Checkout master branch
-  this.checkout('master', 'head');
+  // Checkout head
+  this.checkout('head');
 };
 
 _.extend(Document.prototype, util.Events);

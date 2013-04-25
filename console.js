@@ -118,11 +118,9 @@ var Console = Backbone.View.extend({
     if (!$(e.currentTarget).hasClass('active')) return;
     var op = JSON.parse(this.$('#command').val());
 
-    this.model.apply(op, {
-      user: "demo"
-    });
+    this.model.apply(op);
 
-    this.sha = this.model.getRef('master', 'head');
+    this.sha = this.model.getRef('head');
 
     this.render();
     return false;
@@ -130,9 +128,9 @@ var Console = Backbone.View.extend({
 
   _checkoutOperation: function(e) {
     var sha = $(e.currentTarget).attr('data-sha');
+
     // Checkout previous version
     this.model.checkout(sha);
-
     this.model.setRef('head', sha);
 
     this.sha = sha;
@@ -160,7 +158,7 @@ var Console = Backbone.View.extend({
     this.$el.html(_.tpl('console', {
       sha: this.sha,
       operations: commits,
-      nodes: _.map(this.model.lists.content, function(n) { return that.model.nodes[n];}),
+      nodes: _.map(this.model.views.content, function(n) { return that.model.nodes[n];}),
       document: this.model
     }));
 
@@ -175,7 +173,7 @@ var Console = Backbone.View.extend({
 
   renderAnnotations: function() {
     var that = this;
-    _.each(this.model.lists.content, function(nodeId) {
+    _.each(this.model.views.content, function(nodeId) {
       var node = that.model.nodes[nodeId];
       var annotations = that.model.find('annotations', node.id);
       _.each(annotations, function(a) {
