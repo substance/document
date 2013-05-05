@@ -1,4 +1,4 @@
-// Substance.Document 0.3.0
+// Substance.Document 0.4.0
 // (c) 2010-2013 Michael Aufreiter
 // Substance.Document may be freely distributed under the MIT license.
 // For all details and documentation:
@@ -19,7 +19,6 @@ if (typeof exports !== 'undefined') {
   var util = root.Substance.util;
 }
 
-
 // Default Document Schema
 // --------
 
@@ -27,9 +26,9 @@ var SCHEMA = {
   "views": {
     // Stores order for content nodes
     "content": {
-      "types": ["node"]
     }
   },
+
   // static indexes  
   "indexes": {
     // all comments are now indexed by node association
@@ -206,16 +205,17 @@ var Document = function(doc, schema) {
 
       var types = self.getTypes(options.type);
 
-      // Only register content nodes
-      if (_.include(types, "content")) {
-        if (options.target === "front") {
+      if (options.target) {
+        var view = _.isArray(options.target) ? options.target[0] : "content";
+        var target = _.isArray(options.target) ? options.target[1] : options.target;
+        if (target === "front") {
           var pos = 0;
-        } else if (!options.target || options.target === "back") {
-          var pos = self.views["content"].length;
+        } else if (!target || target === "back") {
+          var pos = self.views[view].length;
         } else {
-          var pos = self.views["content"].indexOf(options.target)+1;
+          var pos = self.views[view].indexOf(target)+1;
         }
-        insertAt("content", id, pos);
+        insertAt(view, id, pos);
       }
     },
 
@@ -273,6 +273,7 @@ var Document = function(doc, schema) {
 
   // TODO: proper error handling
 
+
   // Get type chain
   this.getTypes = function(typeId) {
     var type = self.schema.types[typeId];
@@ -281,11 +282,21 @@ var Document = function(doc, schema) {
     } else {
       return [typeId];
     }
-  }
+  };
+
+  // Get properties for a given type (based on type chain)
+  this.getProperties = function(typeId) {
+    var properties = {};
+    var types = getTypes(typeId);
+    _.each(types, function(type) {
+      var type = this.schema.types[type];
+      _.extend(properties, type.properties);
+    }, this);
+    return properties;
+  };
 
   // Allow both refs and sha's to be passed
   this.checkout = function(ref) {
-
     var sha;
     if (this.refs['master'] && this.refs['master'][ref]) {
       sha = this.getRef(ref);
@@ -357,7 +368,13 @@ var Document = function(doc, schema) {
     // Reset content
     this.properties = {};
     this.nodes = {};
-    this.views = {"content": []};
+
+    // Init views
+    this.views = {};
+    _.each(this.schema.views, function(view, key) {
+     self.views[key] = [];
+    });
+
     this.indexes = {
       "comments": {},
       "annotations": {}
@@ -448,6 +465,15 @@ var Document = function(doc, schema) {
     }
   };
 
+  // View Traversal
+  // --------
+
+  this.traverse = function(view) {
+    return _.map(this.views[view], function(node) {
+      return self.nodes[node];
+    });
+  }, 
+
   // List all content elements
   // --------
 
@@ -465,11 +491,17 @@ var Document = function(doc, schema) {
     var indexes = this.indexes;
     var nodes = this.nodes;
 
+    function wrap(nodeIds) {
+      return _.map(nodeIds, function(n) {
+        return nodes[n];
+      });
+    }
+
     if (!indexes[index]) return []; // throw index-not-found error instead?
+    if (_.isArray(indexes[index])) return wrap(indexes[index]);
     if (!indexes[index][scope]) return [];
-    return _.map(indexes[index][scope], function(n) {
-      return nodes[n];
-    });
+
+    return wrap(indexes[index][scope]);
   };
 
 
@@ -505,14 +537,20 @@ var Document = function(doc, schema) {
       if (!_.include(self.getTypes(node.type), indexSpec.type)) return;
 
       // Create index if it doesn't exist
-      if (!idx) idx = indexes[index] = {};
-
+      
       var prop = indexSpec.properties[0];
-
-      if (!idx[node[prop]]) {
-        idx[node[prop]] = [node.id];
+      if (prop) {
+        if (!idx) idx = indexes[index] = {};
+        // Scoped by one property
+        if (!idx[node[prop]]) {
+          idx[node[prop]] = [node.id];
+        } else {
+          idx[node[prop]].push(node.id);
+        }
       } else {
-        idx[node[prop]].push(node.id);
+        // Flat indexes
+        if (!idx) idx = indexes[index] = [];
+        idx.push(node.id);
       }
     }
 
