@@ -310,7 +310,7 @@ var Document = function(doc, schema) {
 
     this.reset();
     _.each(this.getCommits(sha), function(op) {
-      this.apply(op.op, {silent: true});
+      this.apply(op.op, {silent: true, "no-commit": true});
     }, this);
     this.head = sha;
   };
@@ -507,21 +507,26 @@ var Document = function(doc, schema) {
 
   // Apply a given operation on the current document state
   // --------
-  // 
+  //
   // TODO: reactivate the state checker
 
   this.apply = function(operation, options) {
-    options = options ? options : {};
+    var commit;
 
+    options = options ? options : {};
     methods[operation[0]].call(this, operation[1]);
 
-    if (!options.silent) {
-      var commit = this.commit(operation);
+    // Note: Substance.Session calls this only with 'silent' set, i.e., applying the commit but not triggering.
+    if (!options['no-commit']) {
+      commit = this.commit(operation);
       this.head = commit.sha; // head points to new sha
+    }
 
-      // First trigger commit applied, which stores it
+    if(!options['silent']) {
       this.trigger('commit:applied', commit);
     }
+
+    return commit;
   };
 
   // Add node to index
