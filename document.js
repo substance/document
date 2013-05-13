@@ -10,7 +10,7 @@ var root = this;
 if (typeof exports !== 'undefined') {
   var _    = require('underscore');
   var ot   = require('operational-transformation');
-  
+
   // Should be require('substance-util') in the future
   var util   = require('./lib/util/util');
 } else {
@@ -29,7 +29,7 @@ var SCHEMA = {
     }
   },
 
-  // static indexes  
+  // static indexes
   "indexes": {
     // all comments are now indexed by node association
     "comments": {
@@ -47,7 +47,7 @@ var SCHEMA = {
     // Specific type for substance documents, holding all content elements
     "content": {
       "properties": {
-        
+
       }
     },
     "text": {
@@ -150,17 +150,16 @@ var SCHEMA = {
 
 // Document
 // --------
-// 
+//
 // A generic model for representing and transforming digital documents
 
 var Document = function(doc, schema) {
-  
+
   var self = this;
+  var proto = util.prototype(this);
 
   // Private Methods
   // --------
-
-
 
   // Methods for document manipulation
   // --------
@@ -267,15 +266,13 @@ var Document = function(doc, schema) {
     }
   };
 
-
   // Public Interface
   // --------
 
   // TODO: proper error handling
 
-
   // Get type chain
-  this.getTypes = function(typeId) {
+  proto.getTypes = function(typeId) {
     var type = self.schema.types[typeId];
     if (type.parent) {
       return [type.parent, typeId];
@@ -285,7 +282,7 @@ var Document = function(doc, schema) {
   };
 
   // Get properties for a given type (based on type chain)
-  this.getProperties = function(typeId) {
+  proto.getProperties = function(typeId) {
     var properties = {};
     var types = getTypes(typeId);
     _.each(types, function(type) {
@@ -296,7 +293,7 @@ var Document = function(doc, schema) {
   };
 
   // Allow both refs and sha's to be passed
-  this.checkout = function(ref) {
+  proto.checkout = function(ref) {
     var sha;
     if (this.refs['master'] && this.refs['master'][ref]) {
       sha = this.getRef(ref);
@@ -316,7 +313,7 @@ var Document = function(doc, schema) {
   };
 
   // Serialize as JSON
-  this.toJSON = function(includeIndexes) {
+  proto.toJSON = function(includeIndexes) {
     var result = {
       properties: this.properties,
       meta: this.meta,
@@ -330,7 +327,7 @@ var Document = function(doc, schema) {
 
 
   // Export operation history
-  this.export = function() {
+  proto.export = function() {
     return {
       id: this.id,
       meta: this.meta,
@@ -340,19 +337,19 @@ var Document = function(doc, schema) {
   };
 
   // For a given node return the position in the document
-  this.position = function(nodeId) {
+  proto.position = function(nodeId) {
     var elements = this.views["content"];
     return elements.indexOf(nodeId);
   };
 
-  this.getSuccessor = function(nodeId) {
+  proto.getSuccessor = function(nodeId) {
     var elements = this.views["content"];
     var index = elements.indexOf(nodeId);
     var successor = index >= 0 ? elements[index+1] : null;
     return successor;
   };
 
-  this.getPredecessor = function(nodeId) {
+  proto.getPredecessor = function(nodeId) {
     var elements = this.views["content"];
     var index = elements.indexOf(nodeId);
     var pred = index >= 0 ? elements[index-1] : null;
@@ -360,11 +357,11 @@ var Document = function(doc, schema) {
   };
 
   // Get property value
-  this.get = function(property) {
+  proto.get = function(property) {
     return this.properties[property];
   };
 
-  this.reset = function() {
+  proto.reset = function() {
     // Reset content
     this.properties = {};
     this.nodes = {};
@@ -381,15 +378,15 @@ var Document = function(doc, schema) {
     };
   };
 
-  // List commits 
+  // List commits
   // --------
 
-  this.getCommits = function(ref, ref2) {
+  proto.getCommits = function(ref, ref2) {
     // Current commit (=head)
     var commit = this.getRef(ref) || ref;
     var commit2 = this.getRef(ref2) || ref2;
     var skip = false;
-    
+
     if (commit === commit2) return [];
     var op = this.commits[commit];
 
@@ -416,7 +413,7 @@ var Document = function(doc, schema) {
   // Set ref to a particular commit
   // --------
 
-  this.setRef = function(ref, sha, silent) {
+  proto.setRef = function(ref, sha, silent) {
     if (!this.refs['master']) this.refs['master'] = {};
     this.refs['master'][ref] = sha;
     if (!silent) this.trigger('ref:updated', ref, sha);
@@ -425,14 +422,14 @@ var Document = function(doc, schema) {
   // Get sha the given ref points to
   // --------
 
-  this.getRef = function(ref) {
+  proto.getRef = function(ref) {
     return (this.refs['master']) ? this.refs['master'][ref] : null;
   };
 
   // Go back in document history
   // --------
 
-  this.undo = function() {
+  proto.undo = function() {
     var headRef = this.getRef(this.head) || this.head;
     var commit = this.commits[headRef];
 
@@ -450,10 +447,10 @@ var Document = function(doc, schema) {
   // If there are any undone commits
   // --------
 
-  this.redo = function() {
+  proto.redo = function() {
     var commits = this.getCommits('last');
     var that = this;
-    
+
     // Find the right commit
     var commit = _.find(commits, function(c) {
       return c.parent === that.head;
@@ -468,16 +465,16 @@ var Document = function(doc, schema) {
   // View Traversal
   // --------
 
-  this.traverse = function(view) {
+  proto.traverse = function(view) {
     return _.map(this.views[view], function(node) {
       return self.nodes[node];
     });
-  }, 
+  },
 
   // List all content elements
   // --------
 
-  this.each = function(fn, ctx) {
+  proto.each = function(fn, ctx) {
     _.each(this.views["content"], function(n, index) {
       var node = self.nodes[n];
       fn.call(ctx || this, node, index);
@@ -487,7 +484,7 @@ var Document = function(doc, schema) {
   // Find data nodes based on index
   // --------
 
-  this.find = function(index, scope) {
+  proto.find = function(index, scope) {
     var indexes = this.indexes;
     var nodes = this.nodes;
 
@@ -510,7 +507,7 @@ var Document = function(doc, schema) {
   //
   // TODO: reactivate the state checker
 
-  this.apply = function(operation, options) {
+  proto.apply = function(operation, options) {
     var commit;
 
     options = options ? options : {};
@@ -532,7 +529,7 @@ var Document = function(doc, schema) {
   // Add node to index
   // --------
 
-  this.addToIndex = function(node) {
+  proto.addToIndex = function(node) {
 
     function add(index) {
       var indexSpec = self.schema.indexes[index];
@@ -542,7 +539,7 @@ var Document = function(doc, schema) {
       if (!_.include(self.getTypes(node.type), indexSpec.type)) return;
 
       // Create index if it doesn't exist
-      
+
       var prop = indexSpec.properties[0];
       if (prop) {
         if (!idx) idx = indexes[index] = {};
@@ -565,7 +562,7 @@ var Document = function(doc, schema) {
   };
 
   // TODO: Prettify -> Code duplication alert
-  this.updateIndex = function(node, prevNode) {
+  proto.updateIndex = function(node, prevNode) {
 
     function update(index) {
       var indexSpec = self.schema.indexes[index];
@@ -580,7 +577,7 @@ var Document = function(doc, schema) {
 
       var nodes = scopes[prevNode[prop]];
       if (nodes) {
-        scopes[prevNode[prop]] = _.without(nodes, prevNode.id);   
+        scopes[prevNode[prop]] = _.without(nodes, prevNode.id);
       }
 
       // Create index if it doesn't exist
@@ -602,7 +599,7 @@ var Document = function(doc, schema) {
   // Silently remove node from index
   // --------
 
-  this.removeFromIndex = function(node) {
+  proto.removeFromIndex = function(node) {
 
     function remove(index) {
       var indexSpec = self.schema.indexes[index];
@@ -621,7 +618,7 @@ var Document = function(doc, schema) {
 
       var nodes = scopes[node[prop]];
       if (nodes) {
-        scopes[node[prop]] = _.without(nodes, node.id); 
+        scopes[node[prop]] = _.without(nodes, node.id);
       }
     }
 
@@ -632,8 +629,8 @@ var Document = function(doc, schema) {
 
   // Rebuild all indexes for fast lookup based on schema.indexes spec
   // --------
-  
-  this.buildIndexes =  function() {
+
+  proto.buildIndexes =  function() {
     this.indexes = {};
     var that = this;
     _.each(this.nodes, function(node) {
@@ -643,13 +640,13 @@ var Document = function(doc, schema) {
     });
   };
 
-  
+
   // Create a commit for given operation
   // --------
-  // 
+  //
   // op: A Substance document operation as JSON
 
-  this.commit = function(op) {
+  proto.commit = function(op) {
     var commit = {
       op: op,
       sha: util.uuid(),
@@ -671,7 +668,7 @@ var Document = function(doc, schema) {
     },
     commits: {}
   };
-  
+
   // Set public properties
   this.id = doc.id;
   this.meta = doc.meta || {};
