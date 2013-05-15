@@ -73,7 +73,8 @@ var SCHEMA = {
     "heading": {
       "parent": "node",
       "properties": {
-        "content": "string"
+        "content": "string",
+        "level": "number"
       },
       "parent": "content"
     },
