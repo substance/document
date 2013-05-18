@@ -9,8 +9,7 @@
 var root = this;
 if (typeof exports !== 'undefined') {
   var _    = require('underscore');
-  var ot   = require('operational-transformation');
-
+  var ot   = require('./lib/operation');
   // Should be require('substance-util') in the future
   var util   = require('./lib/util/util');
 } else {
@@ -155,9 +154,29 @@ var SCHEMA = {
 // A generic model for representing and transforming digital documents
 
 var Document = function(doc, schema) {
+  this.__id__ = this.__id__ || util.uuid();
 
-  var self = this;
-  var proto = util.prototype(this);
+  var defaults = {
+    refs: {
+      "master" : {"head" : ""}
+    },
+    commits: {}
+  };
+
+  // Set public properties
+  this.id = doc.id;
+  this.meta = doc.meta || {};
+
+  this.refs = doc.refs || {"master" : {"head" : ""}};
+  this.commits = doc.commits || {};
+
+  this.schema = schema || SCHEMA;
+
+  // Checkout head
+  this.checkout('head');
+};
+
+Document.__prototype__ = function() {
 
   // Private Methods
   // --------
@@ -165,21 +184,22 @@ var Document = function(doc, schema) {
   // Methods for document manipulation
   // --------
 
+  // Note: these methods are called on the Document instance
   var methods = {
     set: function(options) {
       _.each(options, function(val, key) {
         if (_.isArray(val)) {
-          self.properties[key] = ot.TextOperation.fromJSON(val).apply(self.properties[key] || "");
+          this.properties[key] = ot.TextOperation.fromJSON(val).apply(this.properties[key] || "");
         } else {
-          self.properties[key] = val;
+          this.properties[key] = val;
         }
-      });
+      }, this);
     },
 
     insert: function(options) {
       var id = options.id ? options.id : util.uuid();
 
-      if (self.nodes[id]) throw('id ' +options.id+ ' already exists.');
+      if (this.nodes[id]) throw('id ' +options.id+ ' already exists.');
 
       // Construct a new document node
       var newNode = _.clone(options.data);
@@ -190,6 +210,7 @@ var Document = function(doc, schema) {
       });
 
       // Insert element to provided list at given pos
+      var self = this;
       function insertAt(view, nodeId, pos) {
         var nodes = self.views[view];
         nodes.splice(pos, 0, nodeId);
@@ -199,28 +220,26 @@ var Document = function(doc, schema) {
       // validate(newNode);
 
       // Register new node
-      self.nodes[newNode.id] = newNode;
+      this.nodes[newNode.id] = newNode;
+      this.addToIndex(newNode);
 
-      self.addToIndex(newNode);
-
-      var types = self.getTypes(options.type);
-
+      var types = this.getTypes(options.type);
       if (options.target) {
         var view = _.isArray(options.target) ? options.target[0] : "content";
         var target = _.isArray(options.target) ? options.target[1] : options.target;
         if (target === "front") {
           var pos = 0;
         } else if (!target || target === "back") {
-          var pos = self.views[view].length;
+          var pos = this.views[view].length;
         } else {
-          var pos = self.views[view].indexOf(target)+1;
+          var pos = this.views[view].indexOf(target)+1;
         }
         insertAt(view, id, pos);
       }
     },
 
     update: function(options) {
-      var node = self.nodes[options.id];
+      var node = this.nodes[options.id];
 
       if (!node) throw('node ' +options.id+ ' not found.');
 
@@ -231,7 +250,7 @@ var Document = function(doc, schema) {
 
       _.each(options, function(val, prop) {
         // TODO: additionally check on schema if property is designated as string
-        var type = self.schema.types[node.type];
+        var type = this.schema.types[node.type];
         if (!type) throw Error("Type not found: ", node.type);
         var propType = type.properties[prop];
         if (!propType) throw Error("Missing property definition for: "+node.type+"."+ prop);
@@ -241,15 +260,15 @@ var Document = function(doc, schema) {
         } else {
           node[prop] = val;
         }
-      });
-      self.updateIndex(node, oldNode);
+      }, this);
+      this.updateIndex(node, oldNode);
     },
 
     move: function(options) {
-      var nodes = self.views["content"];
+      var nodes = this.views["content"];
 
       // TODO: Rather manipulate array directly?
-      nodes = self.views["content"] = _.difference(nodes, options.nodes);
+      nodes = this.views["content"] = _.difference(nodes, options.nodes);
 
       if (options.target === "front") var pos = 0;
       else if (options.target === "back") var pos = nodes.length;
@@ -259,11 +278,11 @@ var Document = function(doc, schema) {
     },
 
     delete: function(options) {
-      self.views["content"] = _.difference(self.views["content"], options.nodes);
+      this.views["content"] = _.difference(this.views["content"], options.nodes);
       _.each(options.nodes, function(nodeId) {
-        self.removeFromIndex(self.nodes[nodeId]);
-        delete self.nodes[nodeId];
-      });
+        this.removeFromIndex(this.nodes[nodeId]);
+        delete this.nodes[nodeId];
+      }, this);
     }
   };
 
@@ -273,8 +292,8 @@ var Document = function(doc, schema) {
   // TODO: proper error handling
 
   // Get type chain
-  proto.getTypes = function(typeId) {
-    var type = self.schema.types[typeId];
+  this.getTypes = function(typeId) {
+    var type = this.schema.types[typeId];
     if (type.parent) {
       return [type.parent, typeId];
     } else {
@@ -283,7 +302,7 @@ var Document = function(doc, schema) {
   };
 
   // Get properties for a given type (based on type chain)
-  proto.getProperties = function(typeId) {
+  this.getProperties = function(typeId) {
     var properties = {};
     var types = getTypes(typeId);
     _.each(types, function(type) {
@@ -294,7 +313,7 @@ var Document = function(doc, schema) {
   };
 
   // Allow both refs and sha's to be passed
-  proto.checkout = function(ref) {
+  this.checkout = function(ref) {
     var sha;
     if (this.refs['master'] && this.refs['master'][ref]) {
       sha = this.getRef(ref);
@@ -307,14 +326,15 @@ var Document = function(doc, schema) {
     }
 
     this.reset();
-    _.each(this.getCommits(sha), function(op) {
-      this.apply(op.op, {silent: true, "no-commit": true});
+    _.each(this.getCommits(sha), function(commit) {
+      this.apply(commit.op, {silent: true, "no-commit": true});
+      this.properties.updated_at = commit.date;
     }, this);
     this.head = sha;
   };
 
   // Serialize as JSON
-  proto.toJSON = function(includeIndexes) {
+  this.toJSON = function(includeIndexes) {
     var result = {
       properties: this.properties,
       meta: this.meta,
@@ -326,9 +346,8 @@ var Document = function(doc, schema) {
     return result;
   };
 
-
   // Export operation history
-  proto.export = function() {
+  this.export = function() {
     return {
       id: this.id,
       meta: this.meta,
@@ -338,19 +357,19 @@ var Document = function(doc, schema) {
   };
 
   // For a given node return the position in the document
-  proto.position = function(nodeId) {
+  this.position = function(nodeId) {
     var elements = this.views["content"];
     return elements.indexOf(nodeId);
   };
 
-  proto.getSuccessor = function(nodeId) {
+  this.getSuccessor = function(nodeId) {
     var elements = this.views["content"];
     var index = elements.indexOf(nodeId);
     var successor = index >= 0 ? elements[index+1] : null;
     return successor;
   };
 
-  proto.getPredecessor = function(nodeId) {
+  this.getPredecessor = function(nodeId) {
     var elements = this.views["content"];
     var index = elements.indexOf(nodeId);
     var pred = index >= 0 ? elements[index-1] : null;
@@ -358,11 +377,11 @@ var Document = function(doc, schema) {
   };
 
   // Get property value
-  proto.get = function(property) {
+  this.get = function(property) {
     return this.properties[property];
   };
 
-  proto.reset = function() {
+  this.reset = function() {
     // Reset content
     this.properties = {};
     this.nodes = {};
@@ -370,8 +389,8 @@ var Document = function(doc, schema) {
     // Init views
     this.views = {};
     _.each(this.schema.views, function(view, key) {
-     self.views[key] = [];
-    });
+     this.views[key] = [];
+    }, this);
 
     this.indexes = {
       "comments": {},
@@ -382,7 +401,7 @@ var Document = function(doc, schema) {
   // List commits
   // --------
 
-  proto.getCommits = function(ref, ref2) {
+  this.getCommits = function(ref, ref2) {
     // Current commit (=head)
     var commit = this.getRef(ref) || ref;
     var commit2 = this.getRef(ref2) || ref2;
@@ -414,7 +433,7 @@ var Document = function(doc, schema) {
   // Set ref to a particular commit
   // --------
 
-  proto.setRef = function(ref, sha, silent) {
+  this.setRef = function(ref, sha, silent) {
     if (!this.refs['master']) this.refs['master'] = {};
     this.refs['master'][ref] = sha;
     if (!silent) this.trigger('ref:updated', ref, sha);
@@ -423,14 +442,14 @@ var Document = function(doc, schema) {
   // Get sha the given ref points to
   // --------
 
-  proto.getRef = function(ref) {
+  this.getRef = function(ref) {
     return (this.refs['master']) ? this.refs['master'][ref] : null;
   };
 
   // Go back in document history
   // --------
 
-  proto.undo = function() {
+  this.undo = function() {
     var headRef = this.getRef(this.head) || this.head;
     var commit = this.commits[headRef];
 
@@ -448,7 +467,7 @@ var Document = function(doc, schema) {
   // If there are any undone commits
   // --------
 
-  proto.redo = function() {
+  this.redo = function() {
     var commits = this.getCommits('last');
     var that = this;
 
@@ -466,26 +485,26 @@ var Document = function(doc, schema) {
   // View Traversal
   // --------
 
-  proto.traverse = function(view) {
+  this.traverse = function(view) {
     return _.map(this.views[view], function(node) {
-      return self.nodes[node];
-    });
+      return this.nodes[node];
+    }, this);
   },
 
   // List all content elements
   // --------
 
-  proto.each = function(fn, ctx) {
+  this.each = function(fn, ctx) {
     _.each(this.views["content"], function(n, index) {
-      var node = self.nodes[n];
+      var node = this.nodes[n];
       fn.call(ctx || this, node, index);
-    });
+    }, this);
   };
 
   // Find data nodes based on index
   // --------
 
-  proto.find = function(index, scope) {
+  this.find = function(index, scope) {
     var indexes = this.indexes;
     var nodes = this.nodes;
 
@@ -508,7 +527,7 @@ var Document = function(doc, schema) {
   //
   // TODO: reactivate the state checker
 
-  proto.apply = function(operation, options) {
+  this.apply = function(operation, options) {
     var commit;
 
     options = options ? options : {};
@@ -530,8 +549,9 @@ var Document = function(doc, schema) {
   // Add node to index
   // --------
 
-  proto.addToIndex = function(node) {
+  this.addToIndex = function(node) {
 
+    var self = this;
     function add(index) {
       var indexSpec = self.schema.indexes[index];
       var indexes = self.indexes;
@@ -557,14 +577,15 @@ var Document = function(doc, schema) {
       }
     }
 
-    _.each(self.schema.indexes, function(index, key) {
+    _.each(this.schema.indexes, function(index, key) {
       add(key);
     });
   };
 
   // TODO: Prettify -> Code duplication alert
-  proto.updateIndex = function(node, prevNode) {
+  this.updateIndex = function(node, prevNode) {
 
+    var self = this;
     function update(index) {
       var indexSpec = self.schema.indexes[index];
       var indexes = self.indexes;
@@ -592,7 +613,7 @@ var Document = function(doc, schema) {
       }
     }
 
-    _.each(self.schema.indexes, function(index, key) {
+    _.each(this.schema.indexes, function(index, key) {
       update(key);
     });
   };
@@ -600,8 +621,9 @@ var Document = function(doc, schema) {
   // Silently remove node from index
   // --------
 
-  proto.removeFromIndex = function(node) {
+  this.removeFromIndex = function(node) {
 
+    var self = this;
     function remove(index) {
       var indexSpec = self.schema.indexes[index];
       var indexes = self.indexes;
@@ -623,7 +645,7 @@ var Document = function(doc, schema) {
       }
     }
 
-    _.each(self.schema.indexes, function(index, key) {
+    _.each(this.schema.indexes, function(index, key) {
       remove(key);
     });
   };
@@ -631,70 +653,45 @@ var Document = function(doc, schema) {
   // Rebuild all indexes for fast lookup based on schema.indexes spec
   // --------
 
-  proto.buildIndexes =  function() {
+  this.buildIndexes =  function() {
     this.indexes = {};
-    var that = this;
     _.each(this.nodes, function(node) {
-      _.each(that.schema.indexes, function(index, key) {
-        that.addToIndex(key, node);
-      });
-    });
+      _.each(this.schema.indexes, function(index, key) {
+        this.addToIndex(key, node);
+      }, this);
+    }, this);
   };
-
 
   // Create a commit for given operation
   // --------
   //
   // op: A Substance document operation as JSON
 
-  proto.commit = function(op) {
+  this.commit = function(op) {
     var commit = {
       op: op,
       sha: util.uuid(),
-      parent: this.head
+      parent: this.head,
+      date: new Date()
     };
-
     this.commits[commit.sha] = commit;
     this.setRef('head', commit.sha, true);
     this.setRef('last', commit.sha, true);
     return commit;
   };
+}
+Document.prototype = new Document.__prototype__();
 
-  // Initialization
-  // --------
-
-  var defaults = {
-    refs: {
-      "master" : {"head" : ""}
-    },
-    commits: {}
-  };
-
-  // Set public properties
-  this.id = doc.id;
-  this.meta = doc.meta || {};
-
-  this.refs = doc.refs || {"master" : {"head" : ""}};
-  this.commits = doc.commits || {};
-
-  this.schema = schema || SCHEMA;
-
-  // Checkout head
-  this.checkout('head');
-};
-
+// add event support
 _.extend(Document.prototype, util.Events);
 
 // Export Module
 // --------
 
 if (typeof exports === 'undefined') {
-  if (!root.Substance) root.Substance = {};
   root.Substance.Document = Document;
 } else {
-  module.exports = {
-    Document: Document
-  };
+  module.exports = Document;
 }
 
 }).call(this);
