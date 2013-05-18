@@ -159,7 +159,7 @@
       DOCUMENT: 
       <select id="document_id" name="document">
         <% _.each(documents, function(doc) { %>
-          <option value="<%= doc.id %>"><%= doc.meta.title %> <%= doc.id %></option>
+          <option value="<%= doc.id %>"><%= doc.properties.title %> <%= doc.id %></option>
         <% }); %>
       </select>
     </div>
