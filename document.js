@@ -560,10 +560,10 @@ Document.__prototype__ = function() {
       if (!_.include(self.getTypes(node.type), indexSpec.type)) return;
 
       // Create index if it doesn't exist
-
       var prop = indexSpec.properties[0];
       if (prop) {
         if (!idx) idx = indexes[index] = {};
+        if (!node[prop]) return; // skip falsy values
         // Scoped by one property
         if (!idx[node[prop]]) {
           idx[node[prop]] = [node.id];
