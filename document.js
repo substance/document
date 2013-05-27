@@ -156,13 +156,6 @@ var SCHEMA = {
 var Document = function(doc, schema) {
   this.__id__ = this.__id__ || util.uuid();
 
-  var defaults = {
-    refs: {
-      "master" : {"head" : ""}
-    },
-    commits: {}
-  };
-
   // Set public properties
   this.id = doc.id;
   this.meta = doc.meta || {};
@@ -223,7 +216,6 @@ Document.__prototype__ = function() {
       this.nodes[newNode.id] = newNode;
       this.addToIndex(newNode);
 
-      var types = this.getTypes(options.type);
       if (options.target) {
         var view = _.isArray(options.target) ? options.target[0] : "content";
         var target = _.isArray(options.target) ? options.target[1] : options.target;
