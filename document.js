@@ -4,19 +4,26 @@
 // For all details and documentation:
 // http://interior.substance.io/modules/document.html
 
-(function() {
+(function(root) {
 
-var root = this;
+// Import
+// ========
+
+var _, ot, util;
+
 if (typeof exports !== 'undefined') {
-  var _    = require('underscore');
-  var ot   = require('./lib/operation');
+  _    = require('underscore');
+  ot   = require('./lib/operation');
   // Should be require('substance-util') in the future
-  var util   = require('./lib/util/util');
+  util   = require('./lib/util/util');
 } else {
-  var _ = root._;
-  var ot = root.ot;
-  var util = root.Substance.util;
+  _ = root._;
+  ot = root.ot;
+  util = root.Substance.util;
 }
+
+// Implementation
+// ========
 
 // Default Document Schema
 // --------
@@ -70,7 +77,8 @@ var SCHEMA = {
       }
     },
     "heading": {
-      "parent": "node",
+      // TODO: this has been duplicate
+      // "parent": "node",
       "properties": {
         "content": "string",
         "level": "number"
@@ -147,6 +155,13 @@ var SCHEMA = {
   }
 };
 
+// Constants
+// --------
+
+var CONTENT = "content";
+var FRONT = "front";
+var BACK = "back";
+var SILENT = "silent";
 
 // Document
 // --------
@@ -167,6 +182,13 @@ var Document = function(doc, schema) {
 
   // Checkout head
   this.checkout('head');
+};
+
+Document.Constants = {
+  CONTENT: CONTENT,
+  FRONT: FRONT,
+  BACK: BACK,
+  SILENT: SILENT
 };
 
 Document.__prototype__ = function() {
@@ -217,14 +239,15 @@ Document.__prototype__ = function() {
       this.addToIndex(newNode);
 
       if (options.target) {
-        var view = _.isArray(options.target) ? options.target[0] : "content";
+        var view = _.isArray(options.target) ? options.target[0] : CONTENT;
         var target = _.isArray(options.target) ? options.target[1] : options.target;
-        if (target === "front") {
-          var pos = 0;
-        } else if (!target || target === "back") {
-          var pos = this.views[view].length;
+        var pos;
+        if (target === FRONT) {
+          pos = 0;
+        } else if (!target || target === BACK) {
+          pos = this.views[view].length;
         } else {
-          var pos = this.views[view].indexOf(target)+1;
+          pos = this.views[view].indexOf(target)+1;
         }
         insertAt(view, id, pos);
       }
@@ -236,7 +259,7 @@ Document.__prototype__ = function() {
       if (!node) throw('node ' +options.id+ ' not found.');
 
       var oldNode = JSON.parse(JSON.stringify(node)); // deep copy
-      var options = _.clone(options.data);
+      options = _.clone(options.data);
 
       delete options.id;
 
@@ -257,20 +280,24 @@ Document.__prototype__ = function() {
     },
 
     move: function(options) {
-      var nodes = this.views["content"];
+      var nodes = this.views[CONTENT];
 
       // TODO: Rather manipulate array directly?
-      nodes = this.views["content"] = _.difference(nodes, options.nodes);
+      nodes = this.views[CONTENT] = _.difference(nodes, options.nodes);
 
-      if (options.target === "front") var pos = 0;
-      else if (options.target === "back") var pos = nodes.length;
-      else var pos = nodes.indexOf(options.target)+1;
-
+      var pos;
+      if (options.target === FRONT) {
+        pos = 0;
+      } else if (options.target === BACK) {
+        pos = nodes.length;
+      } else {
+        pos = nodes.indexOf(options.target)+1;
+      }
       nodes.splice.apply(nodes, [pos, 0].concat(options.nodes));
     },
 
     delete: function(options) {
-      this.views["content"] = _.difference(this.views["content"], options.nodes);
+      this.views[CONTENT] = _.difference(this.views[CONTENT], options.nodes);
       _.each(options.nodes, function(nodeId) {
         this.removeFromIndex(this.nodes[nodeId]);
         delete this.nodes[nodeId];
@@ -296,9 +323,9 @@ Document.__prototype__ = function() {
   // Get properties for a given type (based on type chain)
   this.getProperties = function(typeId) {
     var properties = {};
-    var types = getTypes(typeId);
+    var types = this.getTypes(typeId);
     _.each(types, function(type) {
-      var type = this.schema.types[type];
+      type = this.schema.types[type];
       _.extend(properties, type.properties);
     }, this);
     return properties;
@@ -345,24 +372,24 @@ Document.__prototype__ = function() {
       meta: this.meta,
       refs: this.refs,
       commits: this.commits
-    }
+    };
   };
 
   // For a given node return the position in the document
   this.position = function(nodeId) {
-    var elements = this.views["content"];
+    var elements = this.views[CONTENT];
     return elements.indexOf(nodeId);
   };
 
   this.getSuccessor = function(nodeId) {
-    var elements = this.views["content"];
+    var elements = this.views[CONTENT];
     var index = elements.indexOf(nodeId);
     var successor = index >= 0 ? elements[index+1] : null;
     return successor;
   };
 
   this.getPredecessor = function(nodeId) {
-    var elements = this.views["content"];
+    var elements = this.views[CONTENT];
     var index = elements.indexOf(nodeId);
     var pred = index >= 0 ? elements[index-1] : null;
     return pred;
@@ -481,13 +508,13 @@ Document.__prototype__ = function() {
     return _.map(this.views[view], function(node) {
       return this.nodes[node];
     }, this);
-  },
+  };
 
   // List all content elements
   // --------
 
   this.each = function(fn, ctx) {
-    _.each(this.views["content"], function(n, index) {
+    _.each(this.views[CONTENT], function(n, index) {
       var node = this.nodes[n];
       fn.call(ctx || this, node, index);
     }, this);
@@ -531,7 +558,7 @@ Document.__prototype__ = function() {
       this.head = commit.sha; // head points to new sha
     }
 
-    if(!options['silent']) {
+    if(!options[SILENT]) {
       this.trigger('commit:applied', commit);
     }
 
@@ -596,7 +623,7 @@ Document.__prototype__ = function() {
 
       // Create index if it doesn't exist
       if (!scopes) scopes = indexes[index] = {};
-      var prop = indexSpec.properties[0];
+      prop = indexSpec.properties[0];
 
       if (!scopes[node[prop]]) {
         scopes[node[prop]] = [node.id];
@@ -671,19 +698,20 @@ Document.__prototype__ = function() {
     this.setRef('last', commit.sha, true);
     return commit;
   };
-}
+};
+
 Document.prototype = new Document.__prototype__();
 
 // add event support
 _.extend(Document.prototype, util.Events);
 
-// Export Module
-// --------
+// Export
+// ========
 
-if (typeof exports === 'undefined') {
-  root.Substance.Document = Document;
-} else {
+if (typeof exports !== 'undefined') {
   module.exports = Document;
+} else {
+  root.Substance.Document = Document;
 }
 
-}).call(this);
+})(this);
