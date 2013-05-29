@@ -180,8 +180,7 @@ var Document = function(doc, schema) {
 
   this.schema = schema || SCHEMA;
 
-  // Checkout head
-  this.checkout('head');
+  this.reset();
 };
 
 Document.Constants = {
@@ -331,27 +330,6 @@ Document.__prototype__ = function() {
     return properties;
   };
 
-  // Allow both refs and sha's to be passed
-  this.checkout = function(ref) {
-    var sha;
-    if (this.refs['master'] && this.refs['master'][ref]) {
-      sha = this.getRef(ref);
-    } else {
-      if (this.commits[ref]) {
-        sha = ref;
-      } else {
-        sha = null;
-      }
-    }
-
-    this.reset();
-    _.each(this.getCommits(sha), function(commit) {
-      this.apply(commit.op, {silent: true, "no-commit": true});
-      this.properties.updated_at = commit.date;
-    }, this);
-    this.head = sha;
-  };
-
   // Serialize as JSON
   this.toJSON = function(includeIndexes) {
     var result = {
@@ -363,16 +341,6 @@ Document.__prototype__ = function() {
     };
     if (includeIndexes) result.indexes = this.indexes;
     return result;
-  };
-
-  // Export operation history
-  this.export = function() {
-    return {
-      id: this.id,
-      meta: this.meta,
-      refs: this.refs,
-      commits: this.commits
-    };
   };
 
   // For a given node return the position in the document
@@ -415,90 +383,6 @@ Document.__prototype__ = function() {
       "comments": {},
       "annotations": {}
     };
-  };
-
-  // List commits
-  // --------
-
-  this.getCommits = function(ref, ref2) {
-    // Current commit (=head)
-    var commit = this.getRef(ref) || ref;
-    var commit2 = this.getRef(ref2) || ref2;
-    var skip = false;
-
-    if (commit === commit2) return [];
-    var op = this.commits[commit];
-
-    if (!op) return [];
-    op.sha = commit;
-
-    var commits = [op];
-    var prev = op;
-
-    while (!skip && (op = this.commits[op.parent])) {
-      if (commit2 && op.sha === commit2) {
-        skip = true;
-      } else {
-        op.sha = prev.parent;
-        commits.push(op);
-        prev = op;
-      }
-    }
-
-    return commits.reverse();
-  };
-
-
-  // Set ref to a particular commit
-  // --------
-
-  this.setRef = function(ref, sha, silent) {
-    if (!this.refs['master']) this.refs['master'] = {};
-    this.refs['master'][ref] = sha;
-    if (!silent) this.trigger('ref:updated', ref, sha);
-  };
-
-  // Get sha the given ref points to
-  // --------
-
-  this.getRef = function(ref) {
-    return (this.refs['master']) ? this.refs['master'][ref] : null;
-  };
-
-  // Go back in document history
-  // --------
-
-  this.undo = function() {
-    var headRef = this.getRef(this.head) || this.head;
-    var commit = this.commits[headRef];
-
-    if (commit && commit.parent) {
-      this.checkout(commit.parent);
-      this.setRef('head', commit.parent);
-    } else {
-      // No more commits available
-      this.reset();
-      this.head = null;
-      this.setRef('head', null);
-    }
-  };
-
-  // If there are any undone commits
-  // --------
-
-  this.redo = function() {
-    var commits = this.getCommits('last');
-    var that = this;
-
-    // Find the right commit
-    var commit = _.find(commits, function(c) {
-      return c.parent === that.head;
-    });
-
-    if (commit) {
-      this.checkout(commit.sha);
-      this.setRef('head', commit.sha);
-    }
   };
 
   // View Traversal
@@ -546,23 +430,14 @@ Document.__prototype__ = function() {
   //
   // TODO: reactivate the state checker
 
-  this.apply = function(operation, options) {
+  this.apply = function(operation, silent) {
     var commit;
 
-    options = options ? options : {};
     methods[operation[0]].call(this, operation[1]);
 
-    // Note: Substance.Session calls this only with 'silent' set, i.e., applying the commit but not triggering.
-    if (!options['no-commit']) {
-      commit = this.commit(operation);
-      this.head = commit.sha; // head points to new sha
+    if(!silent) {
+      this.trigger('operation:applied', commit);
     }
-
-    if(!options[SILENT]) {
-      this.trigger('commit:applied', commit);
-    }
-
-    return commit;
   };
 
   // Add node to index
@@ -679,24 +554,6 @@ Document.__prototype__ = function() {
         this.addToIndex(key, node);
       }, this);
     }, this);
-  };
-
-  // Create a commit for given operation
-  // --------
-  //
-  // op: A Substance document operation as JSON
-
-  this.commit = function(op) {
-    var commit = {
-      op: op,
-      sha: util.uuid(),
-      parent: this.head,
-      date: new Date()
-    };
-    this.commits[commit.sha] = commit;
-    this.setRef('head', commit.sha, true);
-    this.setRef('last', commit.sha, true);
-    return commit;
   };
 };
 
