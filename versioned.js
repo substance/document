@@ -3,7 +3,7 @@
 // Import
 // ========
 
-var _, ot, util, Document;
+var _, ot, util, Document, Substance;
 
 if (typeof exports !== 'undefined') {
   _    = require('underscore');
@@ -13,16 +13,9 @@ if (typeof exports !== 'undefined') {
   _ = root._;
   ot = root.ot;
   util = root.Substance.util;
+  Substance = root.Substance;
+  Chronicle = root.Substance.Chronicle;
 }
-
-// Implementation
-// ========
-
-var VersionedDocument = function(chronicle, document, schema) {
-  Substance.Document.call(this, document, schema);
-  this.adapter = new VersionedDocument.Adapter(this, chronicle);
-}
-
 
 /*
 
@@ -116,7 +109,6 @@ Applying such a change would look like
 
  property = JSON.parse(ot.apply(JSON.stringify(property)))
 
-
 Adapt methods.set to support the following cases:
 1. [OTs...]
 2. ["JSON", OTs] JSON.parse(ot.apply(JSON.stringify()))
@@ -135,66 +127,59 @@ Remove. Use `chronicle.open()`.
 
 `commits` should only contain operations in correct order.
 
+### commit
+
+Remove. Done by apply.
+
 ### getCommits
 
 Remove. Use `chronicle.index.path(a, b)`.
 
-###
+### setRef/getRef
 
+Remove. Use `chronicle.mark(name)` and `chronicle.find(name)`.
+
+### undo/redo
+
+Remove. Use `chronicle.step(next)`.
+
+### apply
+
+Remove commit stufff and override.
+Call Document.apply (silently), add information necessary for inversion,
+and record the operation. Finally, trigger listeners.
 
 */
+
+// Implementation
+// ========
+
+var VersionedDocument = function(chronicle, document, schema) {
+  Substance.Document.call(this, document, schema);
+  this.adapter = new VersionedDocument.Adapter(this, chronicle);
+}
 
 VersionedDocument.__prototype__ = function() {
   var __super__ = util.prototype(this);
 
-  this.checkout = function(ref) {
-    throw "Removed. Do this using the Chronicle.");
-  };
-
   this.export = function() {
-    throw "Not yet implemented.";
+    return {
+      id: this.id,
+      meta: this.meta,
+      refs: this.refs,
+      commits: this.chronicle.getChanges()
+    };
   };
 
-  this.getCommits = function(ref, ref2) {
-    this.adapter.getCommits(ref, ref2);
-  };
+  this.apply = function(operation, silent, norecord) {
+    __super__.apply.call(this, operation, true);
 
-  // If really necessary, this should be done with the chronicle
-  this.setRef = function(ref, sha, silent) {
-    throw "Removed.";
-  };
+    if(!norecord) this.adapter.record(operation);
 
-  this.getRef = function(ref) {
-    this.adapter.getRef(ref);
-  };
-
-  this.undo = function() {
-    this.adapter.undo();
-  };
-
-  this.redo = function() {
-    this.adapter.redo();
-  };
-
-  this.apply = function(operation, options) {
-    options = options ? options : {};
-
-    methods[operation[0]].call(this, operation[1]);
-    this.adapter.record(operation);
-
-    if(!options[SILENT]) {
+    if(!silend) {
       this.trigger('commit:applied', this.adapter.getState());
     }
   };
-
-  // Does document need commits?
-  // As long the document is connected to a chronicle, this is not necessary.
-  //
-  // They are useful to create a document without a chronicler
-  //
-  this.commit = function(op) {
-  };
-
 }
 VersionedDocument.__prototype__.prototype = Substance.Document.prototype;
 VersionedDocument.prototype = new VersionedDocument.__prototype__();
@@ -203,11 +188,13 @@ var Adapter = function(doc, chronicle) {
   Chronicle.Versioned.call(this, chronicle);
   this.doc = doc;
 };
+
 Adapter.__prototype__ = function() {
 
   var __super__ = util.prototype(this);
 
   this.apply = function(change) {
+    // call the apply
     throw new errors.SubstanceError("Not implemented.");
   };
 
