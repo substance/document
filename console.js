@@ -90,9 +90,9 @@ var Console = Backbone.View.extend({
     if (view === "visualization") {
       this.render();
     } else if (view === "content") {
-      this.$('.output .document').html('<textarea class="json">'+JSON.stringify(this.model.toJSON(), null, '  ')+'</textarea>');
+      this.$('.output .document').html('<textarea class="json">'+JSON.stringify(this.document.toJSON(), null, '  ')+'</textarea>');
     } else {
-      this.$('.output .document').html('<textarea class="json">'+JSON.stringify(this.model.export(), null, '  ')+'</textarea>');
+      this.$('.output .document').html('<textarea class="json">'+JSON.stringify(this.document.export(), null, '  ')+'</textarea>');
     }
     return false;
   },
@@ -118,28 +118,22 @@ var Console = Backbone.View.extend({
     if (!$(e.currentTarget).hasClass('active')) return;
     var op = JSON.parse(this.$('#command').val());
 
-    this.model.apply(op);
-
-    this.sha = this.model.getRef('head');
+    this.document.apply(op);
+    this.sha = this.document.chronicle.getState();
 
     this.render();
     return false;
   },
 
   _checkoutOperation: function(e) {
-    var sha = $(e.currentTarget).attr('data-sha');
-
-    // Checkout previous version
-    this.model.checkout(sha);
-    this.model.setRef('head', sha);
-
-    this.sha = sha;
+    this.sha = $(e.currentTarget).attr('data-sha');
+    this.document.chronicle.open(sha);
     this.render(); // Re-render it
     return false;
   },
 
   initialize: function (options) {
-    this.sha = this.model.getRef('head');
+    this.sha = this.document.chronicle.getState();
     this.scope = 'document';
   },
 
@@ -151,19 +145,18 @@ var Console = Backbone.View.extend({
   // Render application template
   render: function() {
 
-    var last = this.model.getRef('last') || this.model.getRef('head');
-    var that = this;
-    var commits = this.model.getCommits(last);
+    var last = this.chronicle.find('last') || this.chronicle.getState();
+    var commits = this.chronicle.getChanges(last);
 
     this.$el.html(_.tpl('console', {
       sha: this.sha,
       operations: commits,
-      nodes: _.map(this.model.views.content, function(n) { return that.model.nodes[n];}),
-      document: this.model
+      nodes: _.map(this.document.views.content, function(n) { return this.document.nodes[n];}, this),
+      document: this.document
     }));
 
     // Get current op
-    var op = this.model.commits[this.sha];
+    var op = this.chronicle.get(this.sha).data;
     
     if (op) $('#command').val(JSON.stringify(op.op, null, '  '));
     this.renderAnnotations();
@@ -173,7 +166,7 @@ var Console = Backbone.View.extend({
 
   renderAnnotations: function() {
     var that = this;
-    _.each(this.model.views.content, function(nodeId) {
+    _.each(this.document.views.content, function(nodeId) {
       var node = that.model.nodes[nodeId];
       var annotations = that.model.find('annotations', node.id);
       _.each(annotations, function(a) {
