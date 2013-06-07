@@ -9,20 +9,29 @@
 // Import
 // ========
 
-var _, ot, util, Chronicle;
+var _,
+    ot,
+    util,
+    errors,
+    Chronicle,
+    ArrayOperation;
 
 if (typeof exports !== 'undefined') {
   _    = require('underscore');
   ot   = require('./lib/operation');
   // Should be require('substance-util') in the future
   util   = require('./lib/util/util');
+  errors   = require('./lib/util/errors');
   Chronicle = require('./lib/chronicle/chronicle');
 } else {
   _ = root._;
   ot = root.ot;
   util = root.Substance.util;
+  errors   = root.Substance.errors;
   Chronicle = root.Substance.Chronicle;
 }
+
+ArrayOperation = Chronicle.OT.ArrayOperation;
 
 // Implementation
 // ========
@@ -161,9 +170,6 @@ var SCHEMA = {
 // --------
 
 var CONTENT = "content";
-var FRONT = "front";
-var BACK = "back";
-var SILENT = "silent";
 
 // Document
 // --------
@@ -177,7 +183,7 @@ var Document = function(doc, schema) {
 
   this.schema = schema || SCHEMA;
 
-  this.chronicle = Substance.Chronicle.create();
+  this.chronicle = Chronicle.create();
   this.chronicle.manage(this);
 
   // TODO: Should be chronicle.open(Chronicle.ROOT.id);
@@ -361,128 +367,211 @@ Document.__prototype__ = function() {
     });
   };
 
+  // Helper to get uniformized options from a document command body.
+  // --------
 
+  function extractCommandOptions(body) {
+    if (!body.target) return {};
 
+    if (!_.isArray(body.target)) {
+      body.target = ["content", body.target];
+    }
+
+    var view = body.target[0];
+    var target = body.target[1];
+    var pos;
+
+    if (target === 'back') {
+      pos = this.views[view].length;
+    } else if (target === 'front') {
+      pos = 0;
+    } else {
+      pos = this.views[view].indexOf(target)+1;
+    }
+    return {
+      pos: pos,
+      view: view,
+      target: target
+    };
+  }
+
+  // Executes a document manipulation command.
+  // --------
+  // The command is converted into a change
+  // which is applied (see apply()) and recorded by the chronicle.
 
   this.exec = function(cmd) {
 
+    var op = cmd[0];
+    var body = cmd[1];
 
-    function extractData(body) {
-      if (!body.target) return {};
-      if (!_.isArray(body.target)) {
-        body.target = ["content", body.target];
-      }
+    var node, change, options, i;
 
-      var view = body.target[0];
-      var target = body.target[1];
+    if (op === 'insert') {
+      options = extractCommandOptions.call(this, body);
 
-      var pos;
-
-      if (target === 'back') {
-        pos = this.views[view].length;
-      } else if (target === 'front') {
-        pos = 0;
-      } else {
-        pos = this.views[view].indexOf(target)+1;
-      }
-      return {
-        pos: pos,
-        view: view,
-        target: target
-      };
-    }
-
-
-    // console.log('this is the op', cmd);
-    // 1. extend the op
-
-    // Deep copy original command
-    var iCmd = JSON.parse(JSON.stringify(cmd));
-    var op = iCmd[0];
-    var body = iCmd[1];
-
-    if (op === 'insert' && body.target) {
-      var options = extractData.call(this, body);
-
-      iCmd.push({
-        view: options.view,
-        op: ["+", options.pos, body.id]
+      node = util.deepclone(body.data);
+      _.extend(node, {
+        id: body.id,
+        type: body.type
       });
 
-      this.apply(iCmd);
-
-      console.log('se command', iCmd);
-    } else if (op === 'insert') {
-      this.apply(iCmd);
-    } else if (op === 'move') {
-      var options = extractData.call(this, body);
-
-      for (var i=body.nodes.length-1; i>=0; i--) {
-        var n = body.nodes[i];
-        var mvCmd = ['move', {}, {
-          view: options.view,
-          op: [">>", this.position(options.view, n), this.position(options.view, body.target[1])]
-        }];
-        this.apply(mvCmd);
+      change = {
+        command: 'insert',
+        data: {
+          node: node
+        }
       };
+
+      if (options.view) {
+        change.data.view = options.view;
+        change.data.op = ["+", options.pos, body.id];
+      }
+
+      this.apply(change);
+      this.chronicle.record(change);
+
     } else if (op === 'delete') {
-      var options = extractData.call(this, body);
 
-      for (var i=body.nodes.length-1; i>=0; i--) {
+      // Note: document operations allow to delete multiple nodes
+      // at once. Such a compound is transformed into multiple atomic operations.
+      for (i = 0; i < body.nodes.length; i++) {
+        var id = body.nodes[i];
+        node = this.nodes[id];
+
+        change = {
+          command: 'delete',
+          data: {
+            node: util.deepclone(node)
+          }
+        };
+
+        // add view specific operations data
+        // assuming that a node can only be in exactly one view
+        for (var name in this.views) {
+          var pos = this.views[name].indexOf(id);
+          if (pos >= 0) {
+            change.data.view = name;
+            change.data.op = [ArrayOperation.DEL, pos, id];
+            break;
+          }
+        }
+
+        console.log("Executing delete: change = ", change);
+
+        this.apply(change);
+        this.chronicle.record(change);
+      }
+
+    } else if (op === 'move') {
+      options = extractCommandOptions.call(this, body);
+
+      // Note: document operations allow to move multiple nodes
+      // at once. Such a compound is transformed into multiple atomic operations
+      // which need to be generated in reverse order so that we the same insert position can be used.
+
+      for (i = body.nodes.length-1; i >= 0; i--) {
         var n = body.nodes[i];
-        var mvCmd = ['delete', {id: n}]
-        this.apply(mvCmd);
-      };
+        change = {
+          command: 'move',
+          data: {
+            view: options.view,
+            op: [">>", this.position(options.view, n), this.position(options.view, body.target[1])]
+          }
+        };
+        this.apply(change);
+        this.chronicle.record(change);
+      }
+
     }
+
   };
 
   // Chronicle.Versioned API
   // --------
   //
+  // Specification:
+  //
+  //    change = {
+  //      command: <command>
+  //      data: <command-specific-data>
+  //    }
+  //
+  // 'insert', 'delete':  inserts / deletes a node
+  //
+  //    {
+  //      command: 'insert' | 'delete',
+  //      data: {
+  //        node: <document-node>,
+  //        view: <view>,           (optional)
+  //        op: <array-operation>   (if view is given)
+  //      }
+  //    }
+  //
+  //  > Note: it is necessary to store the current node data into the delete command for invertibility.
+  //
+  // 'move':  Moves a node
+  //
+  //    {
+  //      command: 'move',
+  //      data: {
+  //        op: <array-operation>,
+  //        view: <view>
+  //    }
+  //
 
   this.apply = function(change) {
-    var op = change[0];
-    var body = change[1];
-    var ctrl = change[2];
+    var command = change.command;
+    var data = change.data;
 
-    if (op === 'insert') {
+    var op, node, view;
+
+    if (command === 'insert') {
       // Construct a new document node
-      var newNode = JSON.parse(JSON.stringify(body.data));
-
-      _.extend(newNode, {
-        id: body.id,
-        type: body.type
-      });
-
-      this.nodes[body.id] = newNode;
-      this.addToIndex(newNode);
-
-      if (ctrl) {
-        Chronicle.OT.ArrayOperation.fromJSON(ctrl.op).apply(this.views[ctrl.view]);
+      node = util.deepclone(data.node);
+      this.nodes[node.id] = node;
+      this.addToIndex(node);
+      if (data.view) {
+        view = this.views[data.view];
+        op = ArrayOperation.fromJSON(data.op);
+        op.apply(view);
       }
-    } else if (op === 'move') {
-      Chronicle.OT.ArrayOperation.fromJSON(ctrl.op).apply(this.views[ctrl.view]);
-    } else if (op ==='delete') {
-      this.removeFromIndex(this.nodes[body.id]);
-      delete this.nodes[body.id];
+
+    } else if (command ==='delete') {
+      node = data.node;
+      this.removeFromIndex(node);
+      delete this.nodes[node.id];
+      if (data.view) {
+        view = this.views[data.view];
+        op = ArrayOperation.fromJSON(data.op);
+        op.apply(view);
+      }
+    } else if (command === 'move') {
+      view = this.views[data.view];
+      op = ArrayOperation.fromJSON(data.op);
+      op.apply(view);
     }
   };
 
-  // Reverts the given change.
-  // --------
-  //
-
-  this.revert = function(change) {
-    change = this.invert(change);
-    this.apply(change);
-  };
-
-  // Inverts a given change
-  // --------
-  //
-
   this.invert = function(change) {
-    throw new errors.SubstanceError("Not implemented.");
+    var command = change.command;
+    var data = change.data;
+
+    var inverted;
+
+    if (command === 'insert' || command === 'delete') {
+      inverted = util.deepclone(change);
+      inverted.command = (command === 'insert') ? 'delete' : 'insert';
+      if (data.view) {
+        inverted.data.view = data.view;
+        inverted.data.op = ArrayOperation.fromJSON(data.op).invert().toJSON();
+      }
+    } else if (command === 'move') {
+      inverted = JSON.parse(JSON.stringify(change));
+      inverted.data.op = ArrayOperation.fromJSON(change.data.op).invert().toJSON();
+    }
+
+    return inverted;
   };
 
   // Transforms two sibling changes.
@@ -503,51 +592,13 @@ Document.__prototype__ = function() {
     throw new errors.SubstanceError("Not implemented.");
   };
 
-  // Provides a representation of the conflict between
-  // two changes.
-  // --------
-  //
-  // If two changes `a` and `b` as in the following graph should not be applied
-  // after transformation because they contain conflicting changes,
-  // then this method should return a tuple `(a~, b~)` which can be used to
-  // resolve the conflict or give feedback before transformation.
-  //
-  //       / - a   !!!         / - a - a~ - b' \           / - a           \
-  //      o        !!!  ~ >   o                 o   or    o                 o
-  //       \ - b   !!!         \ - b           /           \ - b - b~ - a' /
-  //
-  // If no conflict is detected, the method should return `false`.
-  //
-  // TODO: re-think how such a diff would be applied.
-
-  this.conflict = function(a, b) {
-    throw new errors.SubstanceError("Not implemented.");
-  }
-
-  // Provides the current state.
-  // --------
-  //
-
-  this.getState = function() {
-    return this.state;
-  };
-
-  // Sets the state.
-  // --------
-  //
-  // Note: this is necessary for implementing merges.
-  //
-
-  this.setState = function(state) {
-    this.state = state;
-  };
-
   // Resets the versioned object to a clean state.
   // --------
   //
 
   this.reset = function() {
     this.state = Chronicle.Index.ROOT.id;
+
     console.log('resetting the shit out of it');
     // // Reset content
     this.properties = {};
@@ -564,10 +615,11 @@ Document.__prototype__ = function() {
       "comments": {},
       "annotations": {}
     };
-
   };
+
 };
 
+Document.__prototype__.prototype = Chronicle.Versioned.prototype;
 Document.prototype = new Document.__prototype__();
 
 // add event support
