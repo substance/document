@@ -37,6 +37,7 @@ if (typeof exports !== 'undefined') {
 ArrayOperation = Chronicle.OT.ArrayOperation;
 TextOperation = Chronicle.OT.TextOperation;
 
+
 // Implementation
 // ========
 
@@ -184,11 +185,18 @@ var SCHEMA = {
 };
 
 
+// Seed Data
+// ========
+// 
+// Some pre-defined nodes that are required for each document
+// `document` stores all meta-information about the document
+// `content` is the main view
+
 var SEED = [
   ["create", {
       "id": "document",
       "type": "document",
-      "views": ["content", "figures"]
+      "views": ["content", "figures", "publications"]
     }
   ],
   ["create", {
@@ -202,20 +210,33 @@ var SEED = [
       "type": "view",
       "nodes": []
     }
+  ],
+  ["create", {
+      "id": "publications",
+      "type": "view",
+      "nodes": []
+    }
   ]
 ];
 
 
 
-// The Command Converter
+// Command Converter
+// ========
+// 
+// Turns document command into Data.Graph commands
 
 var Converter = function(graph) {
+
+  // Position nodes in document
+  // --------
+  // 
+  // ["position", {"nodes": ["t1", "t2"], "target": -1}]
+
   this.position = function(graph, command) {
     var path = command.path.concat(["nodes"]);
     var view = graph.resolve(path);
     var target = (view.length + command.args.target) % view.length;
-
-    console.log('VIEW', view, command);
 
     var nodes = command.args.nodes;
     var ops = [];
@@ -233,7 +254,6 @@ var Converter = function(graph) {
     }
 
     ops = ArrayOperation.chain(ops);
-    console.log('OPZ', ops);
     _.each(ops, function(op) {
       res.push({
         op: "update",
@@ -243,6 +263,21 @@ var Converter = function(graph) {
     });
 
     return res;
+  };
+
+  // Delete nodes from document
+  // --------
+  // 
+  // ["delete", {nodes: ["h1", "t1"]}]
+
+  this.delete = function(graph, command) {
+    return _.map(command.args.nodes, function(n) {
+      return {
+        "op": "delete",
+        "path": [],
+        "args": {id: n}
+      };
+    });
   };
 };
 
@@ -258,9 +293,6 @@ var Document = function(doc, schema) {
 
   // Set public properties
   this.id = doc.id;
-
-  // What to do with meta?
-  // this.meta = doc.meta || {};
 
   this.schema = schema || SCHEMA;
   this.reset();
