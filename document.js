@@ -220,7 +220,6 @@ var SEED = [
 ];
 
 
-
 // Command Converter
 // ========
 // 
@@ -279,8 +278,81 @@ var Converter = function(graph) {
       };
     });
   };
-};
 
+  // Update incrementally
+  // --------
+  // 
+  // ["update", "h1", {
+  //   "content": ["abc", 4, -1],
+  //   "children": [4, "a", -2]
+  // }]
+  // ["+", 0, "abc"]
+  // ["-", 7, "x"]
+
+  // ["+", 0, "abc"]
+  // ["-", 4, "adfx"]  -> ["+", 4, "adfx"]
+
+  this.update = function(graph, command) {
+    var res = [];
+
+    function convertStringOp(val, op) {
+      var cops = []; // transformed ops
+      var i = 0, j=0;
+      _.each(op, function(el) {
+        if (_.isString(el)) { // insert chars
+          cops.push(["+", j, el]);
+          j += el.length;
+        } else if (el<0) { // delete n chars
+          var offset = Math.abs(el);
+          cops.push(["-", j, val.slice(i, i+offset)]);
+          i += offset;
+        } else { // skip n chars
+          i += el;
+          j += el;
+        }
+      });
+      return cops;
+    }
+
+    function convertArrayOp(val, op) {
+
+    }
+    
+    _.each(command.args, function(op, key) {
+      var node = graph.resolve(command.path);
+      var ops = convertStringOp(node[key], op);
+
+      _.each(ops, function(op) {
+        res.push({
+          "op": "update",
+          "path": command.path.concat(key),
+          args: op
+        });
+      });
+    });
+
+    console.log('transformed commands', res);
+    return res;
+  };
+
+  // Set property values
+  // --------
+  // 
+  // Unlike update you can reset values directly
+  // ["update", "h1", {
+  //   "content": ["abc"]
+  // }]
+
+  this.set = function(graph, command) {
+    return _.map(command.args.nodes, function(n) {
+      return {
+        "op": "update",
+        "path": [],
+        "args": {id: n}
+      };
+    });
+  };
+};
 
 
 // Document
