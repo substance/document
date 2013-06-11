@@ -37,7 +37,6 @@ if (typeof exports !== 'undefined') {
 ArrayOperation = Chronicle.OT.ArrayOperation;
 TextOperation = Chronicle.OT.TextOperation;
 
-
 // Implementation
 // ========
 
@@ -45,23 +44,17 @@ TextOperation = Chronicle.OT.TextOperation;
 // --------
 
 var SCHEMA = {
-  "views": {
-    // Stores order for content nodes
-    "content": {
-    }
-  },
-
-  // static indexes
+  // Static indexes
   "indexes": {
     // all comments are now indexed by node association
     "comments": {
       "type": "comment",
-      "properties": ["node"]
+      "properties": ["source"]
     },
     // All comments are now indexed by node
     "annotations": {
-      "type": "annotation", // alternatively [type1, type2]
-      "properties": ["node"]
+      "type": "annotation",
+      "properties": ["source"]
     }
   },
 
@@ -72,6 +65,7 @@ var SCHEMA = {
 
       }
     },
+
     "text": {
       "parent": "content",
       "properties": {
@@ -81,22 +75,23 @@ var SCHEMA = {
 
     "document": {
       "properties": {
-        "views": "array"
+        "views": ["array", "views"]
       }
     },
 
     "view": {
       "properties": {
-        "nodes": "array"
+        "nodes": ["array", "content"]
       }
     },
 
-    "code": {
+    "codeblock": {
       "parent": "content",
       "properties": {
         "content": "string"
       }
     },
+
     "image": {
       "parent": "content",
       "properties": {
@@ -105,75 +100,66 @@ var SCHEMA = {
         "caption": "string"
       }
     },
+
     "heading": {
-      // TODO: this has been duplicate
-      // "parent": "node",
+      "parent": "content",
       "properties": {
         "content": "string",
         "level": "number"
-      },
-      "parent": "content"
+      }
     },
+
     // Annotations
     "annotation": {
       "properties": {
-        "node": "node",
-        "pos": "object"
+        "node": "content",
+        "pos": ["array", "number"]
       }
     },
+
     "strong": {
-      "properties": {
-        "node": "string", // should be type:node
-        "pos": "object"
-      },
-      "parent": "annotation"
-    },
-    "emphasis": {
-      "properties": {
-        "node": "string", // should be type:node
-        "pos": "object"
-      },
-      "parent": "annotation"
-    },
-    "inline-code": {
       "parent": "annotation",
       "properties": {
-        "node": "string", // should be type:node
-        "pos": "object"
       }
     },
+
+    "emphasis": {
+      "properties": {
+      },
+      "parent": "annotation"
+    },
+
+    "code": {
+      "parent": "annotation",
+      "properties": {
+      }
+    },
+
     "link": {
       "parent": "annotation",
       "properties": {
-        "node": "string", // should be type:node
-        "pos": "object",
         "url": "string"
       }
     },
+
     "idea": {
       "parent": "annotation",
       "properties": {
-        "node": "string", // should be type:node
-        "pos": "object",
-        "url": "string"
       }
     },
+
     "error": {
       "parent": "annotation",
       "properties": {
-        "node": "string", // should be type:node
-        "pos": "object",
-        "url": "string",
       }
     },
+
     "question": {
       "parent": "annotation",
       "properties": {
-        "node": "string", // should be type:node
-        "pos": "object",
-        "url": "string"
       }
     },
+
     // Comments
     "comment": {
       "properties": {
@@ -235,17 +221,19 @@ var Converter = function(graph) {
   this.position = function(graph, command) {
     var path = command.path.concat(["nodes"]);
     var view = graph.resolve(path);
-    var target = (view.length + command.args.target) % view.length;
 
+    var target = view.length > 0 ? (view.length + command.args.target) % view.length
+                                 : 0;
+    
     var nodes = command.args.nodes;
     var ops = [];
     var res = [];
     var i;
 
-    for (i=nodes.length-1; i>=0; i--) {
+    for (i=0; i<nodes.length; i++) {
       var n = nodes[i];
       var idx = view.indexOf(n);
-      if (idx>=0) {
+      if (idx >= 0) {
         ops.push(new ArrayOperation([">>", idx, target]));
       } else {
         ops.push(new ArrayOperation(["+", target, n]));
@@ -331,7 +319,7 @@ var Converter = function(graph) {
       });
     });
 
-    console.log('transformed commands', res);
+    // console.log('transformed commands', res);
     return res;
   };
 
@@ -352,6 +340,24 @@ var Converter = function(graph) {
       };
     });
   };
+
+  // Annotate document
+  // --------
+  // 
+  // `source` is a node id of an existing content node
+
+  this.annotate = function(graph, command) {
+    // Delegates to graph.create method
+    // TODO: check if source exists, otherwise reject annotation
+
+    // keep track of annotation
+
+    return {
+      "op": "create",
+      "path": [],
+      "args": command.args
+    }
+  }
 };
 
 
@@ -406,7 +412,19 @@ Document.__prototype__ = function() {
 
     var commands = _.isArray(command) ? command : [command];
     _.each(commands, function(c) {
-      __super__.exec.call(this, c);  
+      __super__.exec.call(this, c);
+
+      // if (c.op === "annotate") {
+      //   // track se annotation
+      //   c.args.id
+      //   // extract string from pos
+
+      //   this.annoationops[c.args.id] = new TextOperation(["+", 3, "ABC"]);
+      // } else if (c.op === "update") {
+      //   // 
+      //   var tops = TextOperation.transform(this.annoationops[c.args.id]
+      //   this.annotationops[c.args.id] tops[0]
+      // }
     }, this);
   }
 };
