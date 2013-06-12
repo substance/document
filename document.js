@@ -37,6 +37,27 @@ if (typeof exports !== 'undefined') {
 ArrayOperation = Chronicle.OT.ArrayOperation;
 TextOperation = Chronicle.OT.TextOperation;
 
+
+function convertStringOp(val, op) {
+  var cops = []; // transformed ops
+  var i = 0, j=0;
+  _.each(op, function(el) {
+    if (_.isString(el)) { // insert chars
+      cops.push(["+", j, el]);
+      j += el.length;
+    } else if (el<0) { // delete n chars
+      var offset = Math.abs(el);
+      cops.push(["-", j, val.slice(i, i+offset)]);
+      i += offset;
+    } else { // skip n chars
+      i += el;
+      j += el;
+    }
+  });
+  return cops;
+}
+
+
 // Implementation
 // ========
 
@@ -283,34 +304,13 @@ var Converter = function(graph) {
   this.update = function(graph, command) {
     var res = [];
 
-    function convertStringOp(val, op) {
-      var cops = []; // transformed ops
-      var i = 0, j=0;
-      _.each(op, function(el) {
-        if (_.isString(el)) { // insert chars
-          cops.push(["+", j, el]);
-          j += el.length;
-        } else if (el<0) { // delete n chars
-          var offset = Math.abs(el);
-          cops.push(["-", j, val.slice(i, i+offset)]);
-          i += offset;
-        } else { // skip n chars
-          i += el;
-          j += el;
-        }
-      });
-      return cops;
-    }
+
 
     function convertArrayOp(val, op) {
 
     }
     
-    // _.each(command.args, function(op, key) {
     var val = graph.resolve(command.path);
-
-    console.log('VAL', val, command.args);
-
     var ops = convertStringOp(val, command.args);
 
     _.each(ops, function(op) {
@@ -320,9 +320,7 @@ var Converter = function(graph) {
         args: op
       });
     });
-    // });
 
-    // console.log('transformed commands', res);
     return res;
   };
 
@@ -375,7 +373,7 @@ var Converter = function(graph) {
     // keep track of annotation
     console.log('ANNOTATING', command.path);
 
-    if (command.path.length !== 1) throw new Error("Unknown operation: " + this.op);
+    if (command.path.length !== 1) throw new Error("Invalid target: " + this.path);
     command.args.node = command.path[0];
     if (!command.args.type) command.args.type = 'comment';
 
@@ -467,30 +465,54 @@ Document.__prototype__ = function() {
         // var tops = TextOperation.transform(this.annoationops[c.args.id];
         // this.annotationops[c.args.id] tops[0]
         var node = this.get(command.path[0]);
+        var property = command.path[1];
+        var change = command.args;
 
-        _.each(command.args, function(change, property) {
-          // console.log('annotations for ', node.id, property);
+        // _.each(command.args, function(change, property) {
+        // console.log('annotations for ', node.id, property);
 
-          // Get all annotations for a given property
-          var annotations = _.filter(this.find("annotations", node.id), function(a) {
-            return a.property === property;
+        // Get all annotations for a given property
+        var annotations = _.filter(this.find("annotations", node.id), function(a) {
+          return a.property === property;
+        });
+
+        _.each(annotations, function(a) {
+          var aop = this.annotationOps[a.id];
+
+          console.log('before', aop);
+          console.log('change', change);
+
+          // console.log('OLDSTYLE CHANGE', graphCommand.);
+
+          var tops = [null, aop];
+          _.each(commands, function(c) {
+            // console.log('MEH', );
+            tops = TextOperation.transform(TextOperation.fromJSON(c.args), tops[1]);
+            console.log('tops', tops);
+
+            // console.log('tops', tops);
+            // this.annotationops[a.id] = tops[1];
           });
 
-          // _.each(annotations, function(a) {
-          //   var aop = this.annotationOps[a.id];
+          this.annotationOps[a.id] = tops[1];
 
-          //   console.log('LE CHANGE', change);
-          //   // var tops = TextOperation.transform(this.annoationops[c.args.id]);
-          //   // Tranformed textop
-          //   // var taop
+          console.log("XXX", this.annotationOps[a.id]);
+          // Update annotation object in memory
+          aop = this.annotationOps[a.id];
+          a.pos = [aop.pos, aop.str.length];
 
-          //   console.log('textop', this.annotationOps[a.id]);
 
-          // }, this);
+          // var tops = TextOperation.transform(this.annoationops[a.id], change);
+          // Tranformed textop
+          // var taop
 
-          console.log('annots', annotations);
-          
+          console.log('after', this.annotationOps[a.id]);
+
         }, this);
+
+        console.log('annots', annotations);
+          
+        // }, this);
 
         // Get all annotations for the updated text bla
         // this.annotationOps = 
