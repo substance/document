@@ -49,12 +49,12 @@ var SCHEMA = {
     // all comments are now indexed by node association
     "comments": {
       "type": "comment",
-      "properties": ["source"]
+      "properties": ["node"]
     },
     // All comments are now indexed by node
     "annotations": {
       "type": "annotation",
-      "properties": ["source"]
+      "properties": ["node"]
     }
   },
 
@@ -306,18 +306,21 @@ var Converter = function(graph) {
 
     }
     
-    _.each(command.args, function(op, key) {
-      var node = graph.resolve(command.path);
-      var ops = convertStringOp(node[key], op);
+    // _.each(command.args, function(op, key) {
+    var val = graph.resolve(command.path);
 
-      _.each(ops, function(op) {
-        res.push({
-          "op": "update",
-          "path": command.path.concat(key),
-          args: op
-        });
+    console.log('VAL', val, command.args);
+
+    var ops = convertStringOp(val, command.args);
+
+    _.each(ops, function(op) {
+      res.push({
+        "op": "update",
+        "path": command.path,
+        args: op
       });
     });
+    // });
 
     // console.log('transformed commands', res);
     return res;
@@ -344,13 +347,37 @@ var Converter = function(graph) {
   // Annotate document
   // --------
   // 
-  // `source` is a node id of an existing content node
+  // `command.path` defines the referenced content node and property
 
   this.annotate = function(graph, command) {
+    // TODO: check if source exists, otherwise reject annotation
+    if (command.path.length !== 2) throw new Error("Invalid target: " + command.path);
+
+    command.args.node = command.path[0];
+    command.args.property = command.path[1];
+    return {
+      "op": "create",
+      "path": [],
+      "args": command.args
+    }
+  };
+
+
+  // Comment
+  // --------
+  // 
+  // `command.path` holds the node id, where the comment should stick on
+
+  this.comment = function(graph, command) {
     // Delegates to graph.create method
     // TODO: check if source exists, otherwise reject annotation
 
     // keep track of annotation
+    console.log('ANNOTATING', command.path);
+
+    if (command.path.length !== 1) throw new Error("Unknown operation: " + this.op);
+    command.args.node = command.path[0];
+    if (!command.args.type) command.args.type = 'comment';
 
     return {
       "op": "create",
@@ -374,6 +401,9 @@ var Document = function(doc, schema) {
 
   this.schema = schema || SCHEMA;
   this.reset();
+
+  // Text Op for each annotation
+  this.annotationOps = {};
 };
 
 Document.__prototype__ = function() {
@@ -394,37 +424,79 @@ Document.__prototype__ = function() {
 
   // Executes a document manipulation command.
   // --------
-  // The command is converted into a change
-  // which is applied (see apply()) and recorded by the chronicle.
+  // The command is converted into a sequence of graph commands
 
   this.exec = function(command) {
     console.log("Executing command: ", command);
+    var graphCommand;
     // convert the command into a Data.Graph compatible command
     command = new Data.Graph.Command(command);
     if (converter[command.op]) {
-      var item = this.resolve(command.path); // call context?
-      command = converter[command.op](this, command, item);
+      graphCommand = converter[command.op](this, command);
     } else {
-      command = command.toJSON(); // needed?
+      graphCommand = command.toJSON(); // needed?
     }
 
-    console.log('converted cmd', command);
-
-    var commands = _.isArray(command) ? command : [command];
+    // console.log('converted cmd', command);
+    var commands = _.isArray(graphCommand) ? graphCommand : [graphCommand];
     _.each(commands, function(c) {
       __super__.exec.call(this, c);
 
-      // if (c.op === "annotate") {
-      //   // track se annotation
-      //   c.args.id
-      //   // extract string from pos
+      console.log('=============', command.op, command);
 
-      //   this.annoationops[c.args.id] = new TextOperation(["+", 3, "ABC"]);
-      // } else if (c.op === "update") {
-      //   // 
-      //   var tops = TextOperation.transform(this.annoationops[c.args.id]
-      //   this.annotationops[c.args.id] tops[0]
-      // }
+      // Smart updating of annotations, when text ops are applied
+      if (command.op === "annotate") {
+        // track se annotation
+        // c.args.id
+        // extract string from pos
+        console.log('new annotation arrived', command.args.id);
+
+        // The text the annotation refers to
+        var text = this.resolve(command.path);
+
+        // console.log('pos', command.args.pos);
+        var pos = command.args.pos;
+        var annotatedText = text.substr(pos[0], pos[1]);
+
+        // Store the op for reference (later)
+        this.annotationOps[c.args.id] = new TextOperation(["+", pos[0], annotatedText]);
+        // console.log('THE OP', this.annotationOps[c.args.id]);
+
+        // this.annoationops[c.args.id] = new TextOperation(["+", 3, "ABC"]);
+      } else if (command.op === "update") {
+        // var tops = TextOperation.transform(this.annoationops[c.args.id];
+        // this.annotationops[c.args.id] tops[0]
+        var node = this.get(command.path[0]);
+
+        _.each(command.args, function(change, property) {
+          // console.log('annotations for ', node.id, property);
+
+          // Get all annotations for a given property
+          var annotations = _.filter(this.find("annotations", node.id), function(a) {
+            return a.property === property;
+          });
+
+          // _.each(annotations, function(a) {
+          //   var aop = this.annotationOps[a.id];
+
+          //   console.log('LE CHANGE', change);
+          //   // var tops = TextOperation.transform(this.annoationops[c.args.id]);
+          //   // Tranformed textop
+          //   // var taop
+
+          //   console.log('textop', this.annotationOps[a.id]);
+
+          // }, this);
+
+          console.log('annots', annotations);
+          
+        }, this);
+
+        // Get all annotations for the updated text bla
+        // this.annotationOps = 
+        // var target
+        console.log('now update annotations that stick on the text node', node);
+      }
     }, this);
   }
 };
