@@ -37,7 +37,6 @@ if (typeof exports !== 'undefined') {
 ArrayOperation = Chronicle.OT.ArrayOperation;
 TextOperation = Chronicle.OT.TextOperation;
 
-
 function convertStringOp(val, op) {
   var cops = []; // transformed ops
   var i = 0, j=0;
@@ -232,7 +231,7 @@ var SEED = [
 //
 // Turns document command into Data.Graph commands
 
-var Converter = function(graph) {
+var Converter = function() {
 
   // Position nodes in document
   // --------
@@ -241,36 +240,34 @@ var Converter = function(graph) {
 
   this.position = function(graph, command) {
     var path = command.path.concat(["nodes"]);
-    var view = graph.resolve(path);
-
-    var target = view.length > 0 ? (view.length + command.args.target) % view.length
-                                 : 0;
-
+    var view = graph.resolve(path).slice(0);
     var nodes = command.args.nodes;
     var ops = [];
-    var res = [];
-    var i;
+    var idx;
 
-    for (i=0; i<nodes.length; i++) {
-      var n = nodes[i];
-      var idx = view.indexOf(n);
+    var seq = _.intersection(view, nodes);
+    var l = view.length;
+
+    while(seq.length > 0) {
+      var id = seq.pop();
+      idx = view.indexOf(id);
       if (idx >= 0) {
-        ops.push(ArrayOperation.Move(idx, target));
-      } else {
-        ops.push(ArrayOperation.Insert(target, n));
+        ops.push(ArrayOperation.Delete(idx, id));
+        l--;
       }
     }
 
-    ops = ArrayOperation.chain(ops);
-    _.each(ops, function(op) {
-      res.push({
+    var target = (l == 0) ? 0 : (l + command.args.target) % l;
+
+    for (idx = 0; idx < nodes.length; idx++) {
+      ops.push(ArrayOperation.Insert(target + idx, nodes[idx]));
+    }
+
+    return {
         op: "update",
         path: path,
-        args: op.toJSON()
-      });
-    });
-
-    return res;
+        args: ArrayOperation.Compound(ops)
+    };
   };
 
   // Delete nodes from document
@@ -304,47 +301,38 @@ var Converter = function(graph) {
   this.update = function(graph, command) {
     var res = [];
 
-
-
-    function convertArrayOp(val, op) {
-
-    }
-
     var val = graph.resolve(command.path);
     var ops = convertStringOp(val, command.args);
 
-    _.each(ops, function(op) {
-      res.push({
-        "op": "update",
-        "path": command.path,
-        "args": op
-      });
-    });
+    return {
+      "op": "update",
+      "path": command.path,
+      "args": TextOperation.Compound(ops)
+    };
 
-    return res;
   };
 
   // Set property values
   // --------
-  // 
+  //
   // Unlike update you can set values directly
   // ["update", "h1", "content", "Hello Welt"] // string update
   // ["update", "a1", "pos", ["a", "b", "c"]] // array update (not yet implemented)
 
   this.set = function(graph, command) {
-    
+
     if (!command.args) { // for string updates
-      command.args = command.path.pop();  
+      command.args = command.path.pop();
     }
 
     var propertyBaseType = graph.propertyBaseType(graph.get(command.path[0]), command.path[1]);
-      
+    var ops = [];
+
     if (propertyBaseType === 'array') {
       throw new Error("Not yet implemented for arrays");
     } else {
       // Consider everything else as a string
       var val = graph.resolve(command.path);
-      var ops = [];
 
       // Delete old value
       ops.push({
@@ -380,7 +368,7 @@ var Converter = function(graph) {
       "op": "create",
       "path": [],
       "args": command.args
-    }
+    };
   };
 
 
@@ -402,8 +390,8 @@ var Converter = function(graph) {
       "op": "create",
       "path": [],
       "args": command.args
-    }
-  }
+    };
+  };
 };
 
 
@@ -540,7 +528,7 @@ Document.__prototype__ = function() {
         console.log('now update annotations that stick on the text node', node);
       }
     }, this);
-  }
+  };
 };
 
 
