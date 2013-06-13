@@ -43,11 +43,11 @@ function convertStringOp(val, op) {
   var i = 0, j=0;
   _.each(op, function(el) {
     if (_.isString(el)) { // insert chars
-      cops.push(["+", j, el]);
+      cops.push(TextOperation.Insert(j, el));
       j += el.length;
     } else if (el<0) { // delete n chars
       var offset = Math.abs(el);
-      cops.push(["-", j, val.slice(i, i+offset)]);
+      cops.push(TextOperation.Delete(j, val.slice(i, i+offset)));
       i += offset;
     } else { // skip n chars
       i += el;
@@ -194,7 +194,7 @@ var SCHEMA = {
 
 // Seed Data
 // ========
-// 
+//
 // Some pre-defined nodes that are required for each document
 // `document` stores all meta-information about the document
 // `content` is the main view
@@ -229,14 +229,14 @@ var SEED = [
 
 // Command Converter
 // ========
-// 
+//
 // Turns document command into Data.Graph commands
 
 var Converter = function(graph) {
 
   // Position nodes in document
   // --------
-  // 
+  //
   // ["position", {"nodes": ["t1", "t2"], "target": -1}]
 
   this.position = function(graph, command) {
@@ -245,7 +245,7 @@ var Converter = function(graph) {
 
     var target = view.length > 0 ? (view.length + command.args.target) % view.length
                                  : 0;
-    
+
     var nodes = command.args.nodes;
     var ops = [];
     var res = [];
@@ -255,9 +255,9 @@ var Converter = function(graph) {
       var n = nodes[i];
       var idx = view.indexOf(n);
       if (idx >= 0) {
-        ops.push(new ArrayOperation([">>", idx, target]));
+        ops.push(ArrayOperation.Move(idx, target));
       } else {
-        ops.push(new ArrayOperation(["+", target, n]));
+        ops.push(ArrayOperation.Insert(target, n));
       }
     }
 
@@ -275,7 +275,7 @@ var Converter = function(graph) {
 
   // Delete nodes from document
   // --------
-  // 
+  //
   // ["delete", {nodes: ["h1", "t1"]}]
 
   this.delete = function(graph, command) {
@@ -290,7 +290,7 @@ var Converter = function(graph) {
 
   // Update incrementally
   // --------
-  // 
+  //
   // ["update", "h1", {
   //   "content": ["abc", 4, -1],
   //   "children": [4, "a", -2]
@@ -309,7 +309,7 @@ var Converter = function(graph) {
     function convertArrayOp(val, op) {
 
     }
-    
+
     var val = graph.resolve(command.path);
     var ops = convertStringOp(val, command.args);
 
@@ -366,7 +366,7 @@ var Converter = function(graph) {
 
   // Annotate document
   // --------
-  // 
+  //
   // `command.path` defines the referenced content node and property
   // ["annotate", "t1", "content", {"id": "a1",  type": "idea"}]
 
@@ -386,7 +386,7 @@ var Converter = function(graph) {
 
   // Comment
   // --------
-  // 
+  //
   // `command.path` holds the node id, where the comment should stick on
 
   this.comment = function(graph, command) {
@@ -478,10 +478,9 @@ Document.__prototype__ = function() {
         var annotatedText = text.substr(pos[0], pos[1]);
 
         // Store the op for reference (later)
-        this.annotationOps[c.args.id] = new TextOperation(["+", pos[0], annotatedText]);
+        this.annotationOps[c.args.id] = TextOperation.Insert(pos[0], annotatedText);
         // console.log('THE OP', this.annotationOps[c.args.id]);
 
-        // this.annoationops[c.args.id] = new TextOperation(["+", 3, "ABC"]);
       } else if (command.op === "update") {
         // var tops = TextOperation.transform(this.annoationops[c.args.id];
         // this.annotationops[c.args.id] tops[0]
@@ -532,11 +531,11 @@ Document.__prototype__ = function() {
         }, this);
 
         console.log('annots', annotations);
-          
+
         // }, this);
 
         // Get all annotations for the updated text bla
-        // this.annotationOps = 
+        // this.annotationOps =
         // var target
         console.log('now update annotations that stick on the text node', node);
       }
