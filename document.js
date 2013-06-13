@@ -317,7 +317,7 @@ var Converter = function(graph) {
       res.push({
         "op": "update",
         "path": command.path,
-        args: op
+        "args": op
       });
     });
 
@@ -327,25 +327,48 @@ var Converter = function(graph) {
   // Set property values
   // --------
   // 
-  // Unlike update you can reset values directly
-  // ["update", "h1", {
-  //   "content": ["abc"]
-  // }]
+  // Unlike update you can set values directly
+  // ["update", "h1", "content", "Hello Welt"] // string update
+  // ["update", "a1", "pos", ["a", "b", "c"]] // array update (not yet implemented)
 
   this.set = function(graph, command) {
-    return _.map(command.args.nodes, function(n) {
-      return {
+    
+    if (!command.args) { // for string updates
+      command.args = command.path.pop();  
+    }
+
+    var propertyBaseType = graph.propertyBaseType(graph.get(command.path[0]), command.path[1]);
+      
+    if (propertyBaseType === 'array') {
+      throw new Error("Not yet implemented for arrays");
+    } else {
+      // Consider everything else as a string
+      var val = graph.resolve(command.path);
+      var ops = [];
+
+      // Delete old value
+      ops.push({
         "op": "update",
-        "path": [],
-        "args": {id: n}
-      };
-    });
+        "path": command.path,
+        "args": ["-", 0, val]
+      });
+
+      // Insert new value
+      ops.push({
+        "op": "update",
+        "path": command.path,
+        "args": ["+", 0, command.args]
+      });
+    }
+
+    return ops;
   };
 
   // Annotate document
   // --------
   // 
   // `command.path` defines the referenced content node and property
+  // ["annotate", "t1", "content", {"id": "a1",  type": "idea"}]
 
   this.annotate = function(graph, command) {
     // TODO: check if source exists, otherwise reject annotation
@@ -371,9 +394,7 @@ var Converter = function(graph) {
     // TODO: check if source exists, otherwise reject annotation
 
     // keep track of annotation
-    console.log('ANNOTATING', command.path);
-
-    if (command.path.length !== 1) throw new Error("Invalid target: " + this.path);
+    if (command.path.length !== 1) throw new Error("Invalid target: " + command.path);
     command.args.node = command.path[0];
     if (!command.args.type) command.args.type = 'comment';
 
