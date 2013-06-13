@@ -332,20 +332,22 @@ var Converter = function() {
       throw new Error("Not yet implemented for arrays");
     } else {
       // Consider everything else as a string
-      var val = graph.resolve(command.path);
+      var val = graph.resolve(command.path).toString();
+      var newVal = command.args.toString();
 
+      var ops = [];
       // Delete old value
       ops.push({
         "op": "update",
         "path": command.path,
-        "args": ["-", 0, val]
+        "args": TextOperation.Delete(0, val)
       });
 
       // Insert new value
       ops.push({
         "op": "update",
         "path": command.path,
-        "args": ["+", 0, command.args]
+        "args": TextOperation.Insert(0, newVal)
       });
     }
 
@@ -364,6 +366,7 @@ var Converter = function() {
 
     command.args.node = command.path[0];
     command.args.property = command.path[1];
+
     return {
       "op": "create",
       "path": [],
@@ -401,12 +404,11 @@ var Converter = function() {
 // A generic model for representing and transforming digital documents
 
 var Document = function(doc, schema) {
-  Data.Graph.call(this, schema);
+  Data.Graph.call(this, schema || SCHEMA);
 
   // Set public properties
   this.id = doc.id;
 
-  this.schema = schema || SCHEMA;
   this.reset();
 
   // Text Op for each annotation
