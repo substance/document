@@ -305,7 +305,6 @@ var Converter = function(graph) {
     var res = [];
 
 
-
     function convertArrayOp(val, op) {
 
     }
@@ -343,21 +342,22 @@ var Converter = function(graph) {
       throw new Error("Not yet implemented for arrays");
     } else {
       // Consider everything else as a string
-      var val = graph.resolve(command.path);
-      var ops = [];
+      var val = graph.resolve(command.path).toString();
+      var newVal = command.args.toString();
 
+      var ops = [];
       // Delete old value
       ops.push({
         "op": "update",
         "path": command.path,
-        "args": ["-", 0, val]
+        "args": TextOperation.Delete(0, val)
       });
 
       // Insert new value
       ops.push({
         "op": "update",
         "path": command.path,
-        "args": ["+", 0, command.args]
+        "args": TextOperation.Insert(0, newVal)
       });
     }
 
@@ -376,6 +376,7 @@ var Converter = function(graph) {
 
     command.args.node = command.path[0];
     command.args.property = command.path[1];
+
     return {
       "op": "create",
       "path": [],
