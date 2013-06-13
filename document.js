@@ -413,12 +413,11 @@ var Converter = function(graph) {
 // A generic model for representing and transforming digital documents
 
 var Document = function(doc, schema) {
-  Data.Graph.call(this, schema);
+  Data.Graph.call(this, schema || SCHEMA);
 
   // Set public properties
   this.id = doc.id;
 
-  this.schema = schema || SCHEMA;
   this.reset();
 
   // Text Op for each annotation
