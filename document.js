@@ -24,6 +24,8 @@ if (typeof exports !== 'undefined') {
   util   = require('./lib/util/util');
   errors   = require('./lib/util/errors');
   Chronicle = require('./lib/chronicle/chronicle');
+  ArrayOperation = require('./lib/chronicle/lib/ot/array_operation');
+  TextOperation = require('./lib/chronicle/lib/ot/text_operation');
   Data = require('./lib/data/data');
 } else {
   _ = root._;
@@ -31,11 +33,11 @@ if (typeof exports !== 'undefined') {
   util = root.Substance.util;
   errors   = root.Substance.errors;
   Chronicle = root.Substance.Chronicle;
+  ArrayOperation = Chronicle.OT.ArrayOperation;
+  TextOperation = Chronicle.OT.TextOperation;
   Data = root.Substance.Data;
 }
 
-ArrayOperation = Chronicle.OT.ArrayOperation;
-TextOperation = Chronicle.OT.TextOperation;
 
 function convertStringOp(val, op) {
   var cops = []; // transformed ops
@@ -288,15 +290,6 @@ var Converter = function() {
   // Update incrementally
   // --------
   //
-  // ["update", "h1", {
-  //   "content": ["abc", 4, -1],
-  //   "children": [4, "a", -2]
-  // }]
-  // ["+", 0, "abc"]
-  // ["-", 7, "x"]
-
-  // ["+", 0, "abc"]
-  // ["-", 4, "adfx"]  -> ["+", 4, "adfx"]
 
   this.update = function(graph, command) {
     var res = [];
