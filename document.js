@@ -317,35 +317,32 @@ var Converter = function() {
 
     var val, newVal, update;
 
+    val = graph.resolve(command.path);
+    newVal = command.args;
+
     // String
     if (propertyBaseType === 'string') {
-      val = graph.resolve(command.path);
-      newVal = command.args;
       update = ot.TextOperation.fromOT(val, [-val.length, newVal]);
-      result = Data.Graph.Update(command.path, update);
     }
-
     // Array
     else if (propertyBaseType === 'array') {
-      throw new Error("Not yet implemented for arrays");
+      update = ot.ArrayOperation.Update(val, newVal);
     }
-
     // Object
     else if (propertyBaseType === 'object') {
-      // TODO: needs ObjectOperation to be finished
+      // TODO: for that we need to delete all keys and create the new ones
+      //  or a more intelligent solution (i.e. diff)
       throw new Error("Not yet implemented for objects");
     }
-
     // Other
-    // Note: treating any other type via string operation
     else {
-      val = graph.resolve(command.path).toString();
-      newVal = command.args.toString();
-
+      // treating any other type via string operation
+      val = val.toString();
+      newVal = newVal.toString();
       update = ot.TextOperation.fromOT(val, [-val.length, newVal]);
-      result = Data.Graph.Update(command.path, update);
     }
 
+    result = Data.Graph.Update(command.path, update);
     return result;
   };
 
