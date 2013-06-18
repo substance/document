@@ -24,6 +24,8 @@ if (typeof exports !== 'undefined') {
   util   = require('./lib/util/util');
   errors   = require('./lib/util/errors');
   Chronicle = require('./lib/chronicle/chronicle');
+  ArrayOperation = require('./lib/chronicle/lib/ot/array_operation');
+  TextOperation = require('./lib/chronicle/lib/ot/text_operation');
   Data = require('./lib/data/data');
 } else {
   _ = root._;
@@ -31,30 +33,9 @@ if (typeof exports !== 'undefined') {
   util = root.Substance.util;
   errors   = root.Substance.errors;
   Chronicle = root.Substance.Chronicle;
+  ArrayOperation = Chronicle.OT.ArrayOperation;
+  TextOperation = Chronicle.OT.TextOperation;
   Data = root.Substance.Data;
-}
-
-ArrayOperation = Chronicle.OT.ArrayOperation;
-TextOperation = Chronicle.OT.TextOperation;
-
-
-function convertStringOp(val, op) {
-  var cops = []; // transformed ops
-  var i = 0, j=0;
-  _.each(op, function(el) {
-    if (_.isString(el)) { // insert chars
-      cops.push(TextOperation.Insert(j, el));
-      j += el.length;
-    } else if (el<0) { // delete n chars
-      var offset = Math.abs(el);
-      cops.push(TextOperation.Delete(j, val.slice(i, i+offset)));
-      i += offset;
-    } else { // skip n chars
-      i += el;
-      j += el;
-    }
-  });
-  return cops;
 }
 
 
@@ -83,7 +64,6 @@ var SCHEMA = {
     // Specific type for substance documents, holding all content elements
     "content": {
       "properties": {
-
       }
     },
 
@@ -134,7 +114,8 @@ var SCHEMA = {
     "annotation": {
       "properties": {
         "node": "content",
-        "pos": ["array", "number"]
+        "property": "string",
+        "range": "object"
       }
     },
 
@@ -232,46 +213,7 @@ var SEED = [
 //
 // Turns document command into Data.Graph commands
 
-var Converter = function(graph) {
-
-  // Position nodes in document
-  // --------
-  //
-  // ["position", {"nodes": ["t1", "t2"], "target": -1}]
-
-  this.position = function(graph, command) {
-    var path = command.path.concat(["nodes"]);
-    var view = graph.resolve(path);
-
-    var target = view.length > 0 ? (view.length + command.args.target) % view.length
-                                 : 0;
-
-    var nodes = command.args.nodes;
-    var ops = [];
-    var res = [];
-    var i;
-
-    for (i=0; i<nodes.length; i++) {
-      var n = nodes[i];
-      var idx = view.indexOf(n);
-      if (idx >= 0) {
-        ops.push(ArrayOperation.Move(idx, target));
-      } else {
-        ops.push(ArrayOperation.Insert(target, n));
-      }
-    }
-
-    ops = ArrayOperation.chain(ops);
-    _.each(ops, function(op) {
-      res.push({
-        op: "update",
-        path: path,
-        args: op.toJSON()
-      });
-    });
-
-    return res;
-  };
+var Converter = function() {
 
   // Delete nodes from document
   // --------
@@ -280,88 +222,134 @@ var Converter = function(graph) {
 
   this.delete = function(graph, command) {
     return _.map(command.args.nodes, function(n) {
-      return {
-        "op": "delete",
-        "path": [],
-        "args": {id: n}
-      };
+      return Data.Graph.Delete({id: n});
     });
   };
+
+  // Position nodes in document
+  // --------
+  //
+  // ["position", {"nodes": ["t1", "t2"], "target": -1}]
+  //
+
+  this.position = function(graph, command) {
+    var path = command.path.concat(["nodes"]);
+    var view = graph.resolve(path).slice(0);
+    var nodes = command.args.nodes;
+    var ops = [];
+    var idx;
+
+    // Create a sequence of atomic array operations that
+    // are bundled into a Compound operation
+    // 1. Remove elements (from right to left)
+    // 2. Insert at the very position
+
+    // the sequence contains selected nodes in the order they
+    // occurr in the view
+    var seq = _.intersection(view, nodes);
+    var l = view.length;
+
+    while(seq.length > 0) {
+      var id = seq.pop();
+      idx = view.indexOf(id);
+      if (idx >= 0) {
+        ops.push(ArrayOperation.Delete(idx, id));
+        l--;
+      }
+    }
+
+    // target index can be given as negative number (as known from python/ruby)
+    var target = (l === 0) ? 0 : (l + command.args.target) % l;
+    for (idx = 0; idx < nodes.length; idx++) {
+      ops.push(ArrayOperation.Insert(target + idx, nodes[idx]));
+    }
+
+    var compound = ArrayOperation.Compound(ops);
+
+    return Data.Graph.Update(path, compound);
+  };
+
 
   // Update incrementally
   // --------
   //
-  // ["update", "h1", {
-  //   "content": ["abc", 4, -1],
-  //   "children": [4, "a", -2]
-  // }]
-  // ["+", 0, "abc"]
-  // ["-", 7, "x"]
-
-  // ["+", 0, "abc"]
-  // ["-", 4, "adfx"]  -> ["+", 4, "adfx"]
 
   this.update = function(graph, command) {
-    var res = [];
+    var propertyBaseType = graph.propertyBaseType(graph.get(command.path[0]), command.path[1]);
+    var val = graph.resolve(command.path);
 
+    var update;
 
-    function convertArrayOp(val, op) {
-
+    // String
+    if (propertyBaseType === 'string') {
+      update = TextOperation.fromOT(command.args, val);
     }
 
-    var val = graph.resolve(command.path);
-    var ops = convertStringOp(val, command.args);
+    // Array
+    else if (propertyBaseType === 'array') {
+      throw new Error("Not yet implemented for arrays");
+    }
 
-    _.each(ops, function(op) {
-      res.push({
-        "op": "update",
-        "path": command.path,
-        "args": op
-      });
-    });
+    // Object
+    else if (propertyBaseType === 'object') {
+      // TODO: needs ObjectOperation to be finished
+      throw new Error("Not yet implemented for objects");
+    }
 
-    return res;
+    // Other
+    else {
+      throw new Error("Unsupported type for update: " + propertyBaseType);
+    }
+
+    return Data.Graph.Update(command.path, update);
   };
 
   // Set property values
   // --------
-  // 
+  //
   // Unlike update you can set values directly
-  // ["update", "h1", "content", "Hello Welt"] // string update
-  // ["update", "a1", "pos", ["a", "b", "c"]] // array update (not yet implemented)
+  // ["set", "h1", "content", "Hello Welt"] // string update
+  // ["set", "a1", "pos", ["a", "b", "c"]] // array update (not yet implemented)
 
   this.set = function(graph, command) {
-    
+
     if (!command.args) { // for string updates
-      command.args = command.path.pop();  
+      command.args = command.path.pop();
     }
 
     var propertyBaseType = graph.propertyBaseType(graph.get(command.path[0]), command.path[1]);
-      
-    if (propertyBaseType === 'array') {
+    var result;
+
+    // String
+    if (propertyBaseType === 'string') {
+      var val = graph.resolve(command.path);
+      var newVal = command.args;
+      var update = TextOperation.fromOT([-val.length, newVal], val);
+      result = Data.Graph.Update(command.path, update);
+    }
+
+    // Array
+    else if (propertyBaseType === 'array') {
       throw new Error("Not yet implemented for arrays");
-    } else {
-      // Consider everything else as a string
+    }
+
+    // Object
+    else if (propertyBaseType === 'object') {
+      // TODO: needs ObjectOperation to be finished
+      throw new Error("Not yet implemented for objects");
+    }
+
+    // Other
+    // Note: treating any other type via string operation
+    else {
       var val = graph.resolve(command.path).toString();
       var newVal = command.args.toString();
 
-      var ops = [];
-      // Delete old value
-      ops.push({
-        "op": "update",
-        "path": command.path,
-        "args": TextOperation.Delete(0, val)
-      });
-
-      // Insert new value
-      ops.push({
-        "op": "update",
-        "path": command.path,
-        "args": TextOperation.Insert(0, newVal)
-      });
+      var update = TextOperation.fromOT([-val.length, newVal], val);
+      result = Data.Graph.Update(command.path, update);
     }
 
-    return ops;
+    return result;
   };
 
   // Annotate document
@@ -374,14 +362,12 @@ var Converter = function(graph) {
     // TODO: check if source exists, otherwise reject annotation
     if (command.path.length !== 2) throw new Error("Invalid target: " + command.path);
 
-    command.args.node = command.path[0];
-    command.args.property = command.path[1];
+    var annotation = _.extend({}, command.args, {
+      node: command.path[0],
+      property: command.path[1]
+    });
 
-    return {
-      "op": "create",
-      "path": [],
-      "args": command.args
-    }
+    return Data.Graph.Create(annotation);
   };
 
 
@@ -396,15 +382,13 @@ var Converter = function(graph) {
 
     // keep track of annotation
     if (command.path.length !== 1) throw new Error("Invalid target: " + command.path);
-    command.args.node = command.path[0];
-    if (!command.args.type) command.args.type = 'comment';
 
-    return {
-      "op": "create",
-      "path": [],
-      "args": command.args
-    }
-  }
+    var comment = _.extend({}, command.args);
+    comment.node = command.path[0];
+    comment.type = comment.type || 'comment';
+
+    return Data.Graph.Create(comment);
+  };
 };
 
 
@@ -415,14 +399,10 @@ var Converter = function(graph) {
 
 var Document = function(doc, schema) {
   Data.Graph.call(this, schema || SCHEMA);
-
   // Set public properties
   this.id = doc.id;
 
   this.reset();
-
-  // Text Op for each annotation
-  this.annotationOps = {};
 };
 
 Document.__prototype__ = function() {
@@ -441,6 +421,18 @@ Document.__prototype__ = function() {
     }, this);
   };
 
+  var updateAnnotations = function(node, property, change) {
+    // We need to update the range of affected annotations.
+
+    var annotations = this.find("annotations", node.id);
+    annotations = _.filter(annotations, function(a) {
+      return a.property === property;
+    });
+    for (var idx = 0; idx < annotations.length; idx++) {
+      TextOperation.Range.transform(annotations[idx].range, change);
+    }
+  };
+
   // Executes a document manipulation command.
   // --------
   // The command is converted into a sequence of graph commands
@@ -453,94 +445,24 @@ Document.__prototype__ = function() {
     if (converter[command.op]) {
       graphCommand = converter[command.op](this, command);
     } else {
-      graphCommand = command.toJSON(); // needed?
+      graphCommand = command;
     }
 
     // console.log('converted cmd', command);
     var commands = _.isArray(graphCommand) ? graphCommand : [graphCommand];
+
     _.each(commands, function(c) {
+
       __super__.exec.call(this, c);
 
-      console.log('=============', command.op, command);
-
-      // Smart updating of annotations, when text ops are applied
-      if (command.op === "annotate") {
-        // track se annotation
-        // c.args.id
-        // extract string from pos
-        console.log('new annotation arrived', command.args.id);
-
-        // The text the annotation refers to
-        var text = this.resolve(command.path);
-
-        // console.log('pos', command.args.pos);
-        var pos = command.args.pos;
-        var annotatedText = text.substr(pos[0], pos[1]);
-
-        // Store the op for reference (later)
-        this.annotationOps[c.args.id] = TextOperation.Insert(pos[0], annotatedText);
-        // console.log('THE OP', this.annotationOps[c.args.id]);
-
-      } else if (command.op === "update") {
-        // var tops = TextOperation.transform(this.annoationops[c.args.id];
-        // this.annotationops[c.args.id] tops[0]
-        var node = this.get(command.path[0]);
-        var property = command.path[1];
-        var change = command.args;
-
-        // _.each(command.args, function(change, property) {
-        // console.log('annotations for ', node.id, property);
-
-        // Get all annotations for a given property
-        var annotations = _.filter(this.find("annotations", node.id), function(a) {
-          return a.property === property;
-        });
-
-        _.each(annotations, function(a) {
-          var aop = this.annotationOps[a.id];
-
-          console.log('before', aop);
-          console.log('change', change);
-
-          // console.log('OLDSTYLE CHANGE', graphCommand.);
-
-          var tops = [null, aop];
-          _.each(commands, function(c) {
-            // console.log('MEH', );
-            tops = TextOperation.transform(TextOperation.fromJSON(c.args), tops[1]);
-            console.log('tops', tops);
-
-            // console.log('tops', tops);
-            // this.annotationops[a.id] = tops[1];
-          });
-
-          this.annotationOps[a.id] = tops[1];
-
-          console.log("XXX", this.annotationOps[a.id]);
-          // Update annotation object in memory
-          aop = this.annotationOps[a.id];
-          a.pos = [aop.pos, aop.str.length];
-
-
-          // var tops = TextOperation.transform(this.annoationops[a.id], change);
-          // Tranformed textop
-          // var taop
-
-          console.log('after', this.annotationOps[a.id]);
-
-        }, this);
-
-        console.log('annots', annotations);
-
-        // }, this);
-
-        // Get all annotations for the updated text bla
-        // this.annotationOps =
-        // var target
-        console.log('now update annotations that stick on the text node', node);
+      if (c.op === "update") {
+        var node = this.get(c.path[0]);
+        var property = c.path[1];
+        var change = c.args;
+        updateAnnotations.call(this, node, property, change);
       }
     }, this);
-  }
+  };
 };
 
 

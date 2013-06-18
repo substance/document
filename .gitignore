@@ -16,3 +16,4 @@ npm-debug.log
 /_site/
 /lib/util
 /lib/chronicle
+/lib/data
