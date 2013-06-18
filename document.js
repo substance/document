@@ -282,7 +282,7 @@ var Converter = function() {
 
     // String
     if (propertyBaseType === 'string') {
-      update = TextOperation.fromOT(command.args, val);
+      update = TextOperation.fromOT(val, command.args);
     }
 
     // Array
@@ -324,7 +324,7 @@ var Converter = function() {
     if (propertyBaseType === 'string') {
       var val = graph.resolve(command.path);
       var newVal = command.args;
-      var update = TextOperation.fromOT([-val.length, newVal], val);
+      var update = TextOperation.fromOT(val, [-val.length, newVal]);
       result = Data.Graph.Update(command.path, update);
     }
 
