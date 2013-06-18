@@ -402,6 +402,9 @@ var Document = function(doc, schema) {
   // Set public properties
   this.id = doc.id;
 
+  // TODO: shift into a dedicated facility
+  this.meta = {};
+
   this.reset();
 };
 
@@ -462,6 +465,7 @@ Document.__prototype__ = function() {
         updateAnnotations.call(this, node, property, change);
       }
     }, this);
+    this.trigger('command:executed', command);
   };
 };
 
