@@ -449,7 +449,7 @@ Document.__prototype__ = function() {
     console.log("Executing command: ", command);
     var graphCommand;
     // convert the command into a Data.Graph compatible command
-    command = new Data.Graph.Command(command);
+    command = new Data.Command(command);
     if (converter[command.op]) {
       graphCommand = converter[command.op](this, command);
     } else {
