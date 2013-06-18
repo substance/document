@@ -10,13 +10,10 @@
 // ========
 
 var _,
-    ot,
     util,
     errors,
     Chronicle,
-    ArrayOperation,
-    TextOperation,
-    ObjectOperation,
+    ot,
     Data;
 
 if (typeof exports !== 'undefined') {
@@ -25,9 +22,7 @@ if (typeof exports !== 'undefined') {
   util   = require('./lib/util/util');
   errors   = require('./lib/util/errors');
   Chronicle = require('./lib/chronicle/chronicle');
-  ArrayOperation = require('./lib/chronicle/lib/ot/array_operation');
-  TextOperation = require('./lib/chronicle/lib/ot/text_operation');
-  ObjectOperation = require('./lib/chronicle/lib/ot/object_operation');
+  ot = require('./lib/chronicle/lib/ot/index');
   Data = require('./lib/data/data');
 } else {
   _ = root._;
@@ -35,9 +30,7 @@ if (typeof exports !== 'undefined') {
   util = root.Substance.util;
   errors   = root.Substance.errors;
   Chronicle = root.Substance.Chronicle;
-  ArrayOperation = Chronicle.OT.ArrayOperation;
-  TextOperation = Chronicle.OT.TextOperation;
-  ObjectOperation = Chronicle.OT.ObjectOperation;
+  ot = Chronicle.ot;
   Data = root.Substance.Data;
 }
 
@@ -256,7 +249,7 @@ var Converter = function() {
       var id = seq.pop();
       idx = view.indexOf(id);
       if (idx >= 0) {
-        ops.push(ArrayOperation.Delete(idx, id));
+        ops.push(ot.ArrayOperation.Delete(idx, id));
         l--;
       }
     }
@@ -264,10 +257,10 @@ var Converter = function() {
     // target index can be given as negative number (as known from python/ruby)
     var target = (l === 0) ? 0 : (l + command.args.target) % l;
     for (idx = 0; idx < nodes.length; idx++) {
-      ops.push(ArrayOperation.Insert(target + idx, nodes[idx]));
+      ops.push(ot.ArrayOperation.Insert(target + idx, nodes[idx]));
     }
 
-    var compound = ArrayOperation.Compound(ops);
+    var compound = ot.ArrayOperation.Compound(ops);
 
     return Data.Graph.Update(path, compound);
   };
@@ -285,7 +278,7 @@ var Converter = function() {
 
     // String
     if (propertyBaseType === 'string') {
-      update = TextOperation.fromOT(val, command.args);
+      update = ot.TextOperation.fromOT(val, command.args);
     }
 
     // Array
@@ -295,7 +288,7 @@ var Converter = function() {
 
     // Object
     else if (propertyBaseType === 'object') {
-      update = ObjectOperation.Extend(val, command.args);
+      update = ot.ObjectOperation.Extend(val, command.args);
     }
 
     // Other
@@ -322,11 +315,13 @@ var Converter = function() {
     var propertyBaseType = graph.propertyBaseType(graph.get(command.path[0]), command.path[1]);
     var result;
 
+    var val, newVal, update;
+
     // String
     if (propertyBaseType === 'string') {
-      var val = graph.resolve(command.path);
-      var newVal = command.args;
-      var update = TextOperation.fromOT(val, [-val.length, newVal]);
+      val = graph.resolve(command.path);
+      newVal = command.args;
+      update = ot.TextOperation.fromOT(val, [-val.length, newVal]);
       result = Data.Graph.Update(command.path, update);
     }
 
@@ -344,10 +339,10 @@ var Converter = function() {
     // Other
     // Note: treating any other type via string operation
     else {
-      var val = graph.resolve(command.path).toString();
-      var newVal = command.args.toString();
+      val = graph.resolve(command.path).toString();
+      newVal = command.args.toString();
 
-      var update = TextOperation.fromOT(val, [-val.length, newVal]);
+      update = ot.TextOperation.fromOT(val, [-val.length, newVal]);
       result = Data.Graph.Update(command.path, update);
     }
 
@@ -434,7 +429,7 @@ Document.__prototype__ = function() {
       return a.property === property;
     });
     for (var idx = 0; idx < annotations.length; idx++) {
-      TextOperation.Range.transform(annotations[idx].range, change);
+      ot.TextOperation.Range.transform(annotations[idx].range, change);
     }
   };
 
