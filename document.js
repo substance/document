@@ -345,7 +345,7 @@ var Converter = function() {
       var val = graph.resolve(command.path).toString();
       var newVal = command.args.toString();
 
-      var update = TextOperation.fromOT([-val.length, newVal], val);
+      var update = TextOperation.fromOT(val, [-val.length, newVal]);
       result = Data.Graph.Update(command.path, update);
     }
 
