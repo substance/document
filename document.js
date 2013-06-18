@@ -228,6 +228,8 @@ var Converter = function() {
   // ["position", {"nodes": ["t1", "t2"], "target": -1}]
   //
 
+  // TODO: we could use Graph.set which computes a rather minimal set of ArrayOps
+  //       to get rid of the ArrayOperation dependency here
   this.position = function(graph, command) {
     var path = command.path.concat(["nodes"]);
     var view = graph.resolve(path).slice(0);
@@ -269,6 +271,9 @@ var Converter = function() {
   // Update incrementally
   // --------
   //
+
+  // TODO: if we would integrate the convenience mechanisms for update and set into
+  //  Data.Graph, we could get rid of the OT dependencies here.
 
   this.update = function(graph, command) {
     var propertyBaseType = graph.propertyBaseType(graph.get(command.path[0]), command.path[1]);
