@@ -455,9 +455,7 @@ Document.__prototype__ = function() {
     var commands = _.isArray(graphCommand) ? graphCommand : [graphCommand];
 
     _.each(commands, function(c) {
-
       __super__.exec.call(this, c);
-
       if (c.op === "update") {
         var node = this.get(c.path[0]);
         var property = c.path[1];
@@ -469,12 +467,10 @@ Document.__prototype__ = function() {
   };
 };
 
-
-// Document.__prototype__.prototype = Chronicle.Versioned.prototype;
 Document.__prototype__.prototype = Data.Graph.prototype;
 Document.prototype = new Document.__prototype__();
 
-// add event support
+// Add event support
 _.extend(Document.prototype, util.Events);
 
 // Export
