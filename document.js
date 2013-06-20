@@ -217,10 +217,49 @@ var Converter = function() {
   // ["delete", {nodes: ["h1", "t1"]}]
 
   this.delete = function(graph, command) {
-    return _.map(command.args.nodes, function(n) {
-      return Data.Graph.Delete({id: n});
-    });
+    var nodes = command.args.nodes;
+
+    var commands = [];
+    _.each(nodes, function(n) {
+      commands.push(Data.Graph.Delete({id: n}));
+    }, this);
+
+    _.each(graph.get('document').views, function(view) {
+      var match = _.intersection(graph.get(view).nodes, nodes);
+      commands.push(this.hide(graph, {
+        "path": [view],
+        args: {nodes: match}
+      }));
+    }, this);
+    return commands;
   };
+
+
+  // Hide elements from provided view
+  // --------
+  //
+  // ["hide", {"nodes": ["t1", "t2"]}]
+  //
+
+  this.hide = function(graph, command) {
+    var path = command.path.concat(["nodes"]);
+    var view = graph.resolve(path).slice(0);
+    var nodes = command.args.nodes;
+
+    var indices = [];
+    _.each(nodes, function(n) {
+      var i = view.indexOf(n);
+      if (i>=0) indices.push(i);
+    }, this);
+
+    indices = indices.sort().reverse();
+
+    var ops = _.map(indices, function(index) {
+      return ot.ArrayOperation.Delete(index, view[index]);
+    });
+    return Data.Graph.Update(path, ot.ArrayOperation.Compound(ops));
+  },
+
 
   // Position nodes in document
   // --------
@@ -275,7 +314,7 @@ var Converter = function() {
   //
 
   // TODO: if we would integrate the convenience mechanisms for update and set into
-  //  Data.Graph, we could get rid of the OT dependencies here.
+  // Data.Graph, we could get rid of the OT dependencies here.
 
   this.update = function(graph, command) {
     var propertyBaseType = graph.propertyBaseType(graph.get(command.path[0]), command.path[1]);
