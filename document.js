@@ -10,12 +10,10 @@
 // ========
 
 var _,
-    ot,
     util,
     errors,
     Chronicle,
-    ArrayOperation,
-    TextOperation,
+    ot,
     Data;
 
 if (typeof exports !== 'undefined') {
@@ -24,8 +22,7 @@ if (typeof exports !== 'undefined') {
   util   = require('./lib/util/util');
   errors   = require('./lib/util/errors');
   Chronicle = require('./lib/chronicle/chronicle');
-  ArrayOperation = require('./lib/chronicle/lib/ot/array_operation');
-  TextOperation = require('./lib/chronicle/lib/ot/text_operation');
+  ot = require('./lib/chronicle/lib/ot/index');
   Data = require('./lib/data/data');
 } else {
   _ = root._;
@@ -33,8 +30,7 @@ if (typeof exports !== 'undefined') {
   util = root.Substance.util;
   errors   = root.Substance.errors;
   Chronicle = root.Substance.Chronicle;
-  ArrayOperation = Chronicle.OT.ArrayOperation;
-  TextOperation = Chronicle.OT.TextOperation;
+  ot = Chronicle.ot;
   Data = root.Substance.Data;
 }
 
@@ -232,6 +228,8 @@ var Converter = function() {
   // ["position", {"nodes": ["t1", "t2"], "target": -1}]
   //
 
+  // TODO: we could use Graph.set which computes a rather minimal set of ArrayOps
+  //       to get rid of the ArrayOperation dependency here
   this.position = function(graph, command) {
     var path = command.path.concat(["nodes"]);
     var view = graph.resolve(path).slice(0);
@@ -253,7 +251,7 @@ var Converter = function() {
       var id = seq.pop();
       idx = view.indexOf(id);
       if (idx >= 0) {
-        ops.push(ArrayOperation.Delete(idx, id));
+        ops.push(ot.ArrayOperation.Delete(idx, id));
         l--;
       }
     }
@@ -261,10 +259,10 @@ var Converter = function() {
     // target index can be given as negative number (as known from python/ruby)
     var target = (l === 0) ? 0 : (l + command.args.target) % l;
     for (idx = 0; idx < nodes.length; idx++) {
-      ops.push(ArrayOperation.Insert(target + idx, nodes[idx]));
+      ops.push(ot.ArrayOperation.Insert(target + idx, nodes[idx]));
     }
 
-    var compound = ArrayOperation.Compound(ops);
+    var compound = ot.ArrayOperation.Compound(ops);
 
     return Data.Graph.Update(path, compound);
   };
@@ -274,6 +272,9 @@ var Converter = function() {
   // --------
   //
 
+  // TODO: if we would integrate the convenience mechanisms for update and set into
+  //  Data.Graph, we could get rid of the OT dependencies here.
+
   this.update = function(graph, command) {
     var propertyBaseType = graph.propertyBaseType(graph.get(command.path[0]), command.path[1]);
     var val = graph.resolve(command.path);
@@ -282,7 +283,7 @@ var Converter = function() {
 
     // String
     if (propertyBaseType === 'string') {
-      update = TextOperation.fromOT(command.args, val);
+      update = ot.TextOperation.fromOT(val, command.args);
     }
 
     // Array
@@ -292,8 +293,7 @@ var Converter = function() {
 
     // Object
     else if (propertyBaseType === 'object') {
-      // TODO: needs ObjectOperation to be finished
-      throw new Error("Not yet implemented for objects");
+      update = ot.ObjectOperation.Extend(val, command.args);
     }
 
     // Other
@@ -320,35 +320,34 @@ var Converter = function() {
     var propertyBaseType = graph.propertyBaseType(graph.get(command.path[0]), command.path[1]);
     var result;
 
+    var val, newVal, update;
+
+    val = graph.resolve(command.path);
+    newVal = command.args;
+
     // String
     if (propertyBaseType === 'string') {
-      var val = graph.resolve(command.path);
-      var newVal = command.args;
-      var update = TextOperation.fromOT([-val.length, newVal], val);
-      result = Data.Graph.Update(command.path, update);
+      update = ot.TextOperation.fromOT(val, [-val.length, newVal]);
     }
-
     // Array
     else if (propertyBaseType === 'array') {
-      throw new Error("Not yet implemented for arrays");
+      update = ot.ArrayOperation.Update(val, newVal);
     }
-
     // Object
     else if (propertyBaseType === 'object') {
-      // TODO: needs ObjectOperation to be finished
+      // TODO: for that we need to delete all keys and create the new ones
+      //  or a more intelligent solution (i.e. diff)
       throw new Error("Not yet implemented for objects");
     }
-
     // Other
-    // Note: treating any other type via string operation
     else {
-      var val = graph.resolve(command.path).toString();
-      var newVal = command.args.toString();
-
-      var update = TextOperation.fromOT([-val.length, newVal], val);
-      result = Data.Graph.Update(command.path, update);
+      // treating any other type via string operation
+      val = val.toString();
+      newVal = newVal.toString();
+      update = ot.TextOperation.fromOT(val, [-val.length, newVal]);
     }
 
+    result = Data.Graph.Update(command.path, update);
     return result;
   };
 
@@ -432,7 +431,7 @@ Document.__prototype__ = function() {
       return a.property === property;
     });
     for (var idx = 0; idx < annotations.length; idx++) {
-      TextOperation.Range.transform(annotations[idx].range, change);
+      ot.TextOperation.Range.transform(annotations[idx].range, change);
     }
   };
 
