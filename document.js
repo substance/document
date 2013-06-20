@@ -257,7 +257,9 @@ var Converter = function() {
     }
 
     // target index can be given as negative number (as known from python/ruby)
-    var target = (l === 0) ? 0 : (l + command.args.target) % l;
+    var target = Math.min(command.args.target, l);
+    if (target<0) target = Math.max(0, l+target);
+
     for (idx = 0; idx < nodes.length; idx++) {
       ops.push(ot.ArrayOperation.Insert(target + idx, nodes[idx]));
     }
