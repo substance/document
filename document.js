@@ -72,7 +72,9 @@ var SCHEMA = {
 
     "document": {
       "properties": {
-        "views": ["array", "views"]
+        "views": ["array", "views"],
+        "title": "string",
+        "abstract": "string"
       }
     },
 
@@ -162,7 +164,9 @@ var SCHEMA = {
     "comment": {
       "properties": {
         "content": "string",
-        "node": "node"
+        "created_at": "string", // should be date
+        "creator": "string", // should be date
+        "node": "node" // references either a content node or annotation
       }
     }
   }
@@ -180,7 +184,9 @@ var SEED = [
   ["create", {
       "id": "document",
       "type": "document",
-      "views": ["content", "figures", "publications"]
+      "views": ["content", "figures", "publications"],
+      "title": "Untitled",
+      "abstract": "Enter abstract"
     }
   ],
   ["create", {
@@ -481,7 +487,7 @@ Document.__prototype__ = function() {
   // The command is converted into a sequence of graph commands
 
   this.exec = function(command) {
-    console.log("Executing command: ", command);
+    // console.log("Executing command: ", command);
     var graphCommand;
     // convert the command into a Data.Graph compatible command
     command = new Data.Command(command);
@@ -509,6 +515,24 @@ Document.__prototype__ = function() {
 
 Document.__prototype__.prototype = Data.Graph.prototype;
 Document.prototype = new Document.__prototype__();
+
+
+
+
+// Factories
+
+Document.Create = function(node) {
+  return Data.Graph.Create(node);
+};
+
+Document.Delete = function(nodes) {
+  return ["delete", {nodes: nodes}];
+};
+
+Document.Delete = function(nodes) {
+  return ["delete", {nodes: nodes}];
+};
+
 
 // Add event support
 _.extend(Document.prototype, util.Events);
