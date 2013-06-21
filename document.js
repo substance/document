@@ -35,9 +35,6 @@ if (typeof exports !== 'undefined') {
 }
 
 
-// Implementation
-// ========
-
 // Default Document Schema
 // --------
 
@@ -497,7 +494,6 @@ Document.__prototype__ = function() {
       graphCommand = command;
     }
 
-    // console.log('converted cmd', command);
     var commands = _.isArray(graphCommand) ? graphCommand : [graphCommand];
 
     _.each(commands, function(c) {
@@ -517,9 +513,115 @@ Document.__prototype__.prototype = Data.Graph.prototype;
 Document.prototype = new Document.__prototype__();
 
 
+// AnnotatedText
+// --------
+//
+// Ties together a text node with its annotations
+// Interface defined by Substance.Surface
+
+Document.AnnotatedText = function(doc, path) {
+  this.doc = doc;
+  this.path = path;
+  this.property = doc.getProperty(path);
+  this.resetCache();
+};
+
+Document.AnnotatedText.prototype.setAnnotation = function(annotation) {
+  this.cache.annotations[annotation.id] = annotation;
+  this.commit();
+};
+
+Document.AnnotatedText.prototype.getAnnotation = function(id) {
+  return this.cache.annotations[id] || this.doc.get(id);
+};
+
+Document.AnnotatedText.prototype.deleteAnnotation = function(id) {
+  delete this.cache.annotations[id];
+  this.cache.deleted_annotations.push(id);
+};
+
+Document.AnnotatedText.prototype.setContent = function(content) {
+  this.cache.content = content;
+};
+
+Document.AnnotatedText.prototype.getContent = function() {
+  if (this.cache.content !== null) return this.cache.content;
+  return this.property.get();
+};
+
+// Transform Hook 
+// --------
+// 
+
+Document.AnnotatedText.prototype.each = function(fn) {
+  var annos = this.doc.find('annotations', this.property.node.id);
+  _.each(this.cache.annotations, fn);
+
+  _.each(annos, function(a) {
+    if (!this.cache.annotations[a.id] && !_.include(this.cache.deleted_annotations, a.id)) fn(a, a.id);
+  }, this);
+};
+
+// Transform Hook 
+// --------
+// 
+// triggered implicitly by Surface.insert|deleteTransformer)
+
+Document.AnnotatedText.prototype.transformAnnotation = function(a, op, expand) {
+  if (this.cache.annotations[a.id]) {
+    a = this.cache.annotations[a.id];
+  } else {
+    a = util.deepclone(a);
+  }
+  ot.TextOperation.Range.transform(a.range, op, expand);
+  this.cache.annotations[a.id] = a;
+};
+
+Document.AnnotatedText.prototype.resetCache = function() {
+  this.cache = {
+    annotations: {},
+    content: null,
+    deleted_annotations: []
+  };
+};
+
+// Commit changes
+// --------
+// 
+
+Document.AnnotatedText.prototype.commit = function(fn) {
+
+  // 1. Insert Annotations
+  var newAnnotations = [];
+  var updatedAnnotations = [];
+  _.each(this.cache.annotations, function(a) {
+    var oa = this.doc.get(a.id);
+    if (!oa) newAnnotations.push(a);
+    else if (a.type !== oa.type) updatedAnnotations.push(a);
+  }, this);
+
+  var cmds = [];
+
+  _.each(newAnnotations, function(a) {
+    a.node = this.property.node.id;
+    cmds.push(Substance.Document.Create(a));
+  }, this);
+
+  // Text diff computation
+  if (this.cache.content !== null) {
+    var delta = _.extractOperation(this.property.get(), this.cache.content);  
+    cmds.push(Data.Graph.Update(this.path, ot.TextOperation.fromOT(delta)));
+  }
+
+  _.each(cmds, function(c) {
+    this.doc.exec(c);
+  }, this);
+  this.resetCache();
+};
 
 
-// Factories
+// Command Factories
+// --------
 
 Document.Create = function(node) {
   return Data.Graph.Create(node);
@@ -529,13 +631,11 @@ Document.Delete = function(nodes) {
   return ["delete", {nodes: nodes}];
 };
 
-Document.Delete = function(nodes) {
-  return ["delete", {nodes: nodes}];
-};
 
 
 // Add event support
 _.extend(Document.prototype, util.Events);
+
 
 // Export
 // ========
