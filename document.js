@@ -46,7 +46,7 @@ var SCHEMA = {
       "type": "comment",
       "properties": ["node"]
     },
-    // All comments are now indexed by node
+    // All annotations are now indexed by node
     "annotations": {
       "type": "annotation",
       "properties": ["node"]
@@ -69,7 +69,7 @@ var SCHEMA = {
 
     "document": {
       "properties": {
-        "views": ["array", "views"],
+        "views": ["array", "view"],
         "title": "string",
         "abstract": "string"
       }
@@ -246,7 +246,7 @@ var Converter = function() {
 
   this.hide = function(graph, command) {
     var path = command.path.concat(["nodes"]);
-    var view = graph.resolve(path).slice(0);
+    var view = graph.resolve(path).get();
     var nodes = command.args.nodes;
 
     var indices = [];
@@ -274,7 +274,7 @@ var Converter = function() {
   //       to get rid of the ArrayOperation dependency here
   this.position = function(graph, command) {
     var path = command.path.concat(["nodes"]);
-    var view = graph.resolve(path).slice(0);
+    var view = graph.resolve(path).get();
     var nodes = command.args.nodes;
     var ops = [];
     var idx;
@@ -300,7 +300,7 @@ var Converter = function() {
 
     // target index can be given as negative number (as known from python/ruby)
     var target = Math.min(command.args.target, l);
-    if (target<0) target = Math.max(0, l+target);
+    if (target<0) target = Math.max(0, l+target+1);
 
     for (idx = 0; idx < nodes.length; idx++) {
       ops.push(ot.ArrayOperation.Insert(target + idx, nodes[idx]));
@@ -320,29 +320,29 @@ var Converter = function() {
   // Data.Graph, we could get rid of the OT dependencies here.
 
   this.update = function(graph, command) {
-    var propertyBaseType = graph.propertyBaseType(graph.get(command.path[0]), command.path[1]);
-    var val = graph.resolve(command.path);
+    var property = graph.resolve(command.path);
+    var val = property.get();
 
     var update;
 
     // String
-    if (propertyBaseType === 'string') {
+    if (property.baseType === 'string') {
       update = ot.TextOperation.fromOT(val, command.args);
     }
 
     // Array
-    else if (propertyBaseType === 'array') {
+    else if (property.baseType === 'array') {
       throw new Error("Not yet implemented for arrays");
     }
 
     // Object
-    else if (propertyBaseType === 'object') {
+    else if (property.baseType === 'object') {
       update = ot.ObjectOperation.Extend(val, command.args);
     }
 
     // Other
     else {
-      throw new Error("Unsupported type for update: " + propertyBaseType);
+      throw new Error("Unsupported type for update: " + property.baseType);
     }
 
     return Data.Graph.Update(command.path, update);
@@ -361,24 +361,24 @@ var Converter = function() {
       command.args = command.path.pop();
     }
 
-    var propertyBaseType = graph.propertyBaseType(graph.get(command.path[0]), command.path[1]);
     var result;
 
-    var val, newVal, update;
+    var property, val, newVal, update;
 
-    val = graph.resolve(command.path);
+    property = graph.resolve(command.path);
+    val = property.get();
     newVal = command.args;
 
     // String
-    if (propertyBaseType === 'string') {
+    if (property.baseType === 'string') {
       update = ot.TextOperation.fromOT(val, [-val.length, newVal]);
     }
     // Array
-    else if (propertyBaseType === 'array') {
+    else if (property.baseType === 'array') {
       update = ot.ArrayOperation.Update(val, newVal);
     }
     // Object
-    else if (propertyBaseType === 'object') {
+    else if (property.baseType === 'object') {
       // TODO: for that we need to delete all keys and create the new ones
       //  or a more intelligent solution (i.e. diff)
       throw new Error("Not yet implemented for objects");
@@ -522,7 +522,7 @@ Document.prototype = new Document.__prototype__();
 Document.AnnotatedText = function(doc, path) {
   this.doc = doc;
   this.path = path;
-  this.property = doc.getProperty(path);
+  this.property = doc.resolve(path);
   this.resetCache();
 };
 
@@ -549,9 +549,9 @@ Document.AnnotatedText.prototype.getContent = function() {
   return this.property.get();
 };
 
-// Transform Hook 
+// Transform Hook
 // --------
-// 
+//
 
 Document.AnnotatedText.prototype.each = function(fn) {
   var annos = this.doc.find('annotations', this.property.node.id);
@@ -562,9 +562,9 @@ Document.AnnotatedText.prototype.each = function(fn) {
   }, this);
 };
 
-// Transform Hook 
+// Transform Hook
 // --------
-// 
+//
 // triggered implicitly by Surface.insert|deleteTransformer)
 
 Document.AnnotatedText.prototype.transformAnnotation = function(a, op, expand) {
@@ -587,7 +587,7 @@ Document.AnnotatedText.prototype.resetCache = function() {
 
 // Commit changes
 // --------
-// 
+//
 
 Document.AnnotatedText.prototype.commit = function(fn) {
 
@@ -609,7 +609,7 @@ Document.AnnotatedText.prototype.commit = function(fn) {
 
   // Text diff computation
   if (this.cache.content !== null) {
-    var delta = _.extractOperation(this.property.get(), this.cache.content);  
+    var delta = _.extractOperation(this.property.get(), this.cache.content);
     cmds.push(Data.Graph.Update(this.path, ot.TextOperation.fromOT(delta)));
   }
 
