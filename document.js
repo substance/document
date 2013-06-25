@@ -636,6 +636,7 @@ Document.Delete = function(nodes) {
 // Add event support
 _.extend(Document.prototype, util.Events);
 
+Document.SCHEMA = SCHEMA;
 
 // Export
 // ========
