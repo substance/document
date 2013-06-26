@@ -442,13 +442,7 @@ var Converter = function() {
 
 var Document = function(doc, schema) {
   Data.Graph.call(this, schema || SCHEMA);
-  // Set public properties
   this.id = doc.id;
-
-  // TODO: shift into a dedicated facility
-  this.meta = {};
-
-  this.reset();
 };
 
 Document.__prototype__ = function() {
@@ -456,12 +450,9 @@ Document.__prototype__ = function() {
   var __super__ = util.prototype(this);
   var converter = new Converter();
 
-  // Resets the versioned object to a clean state.
-  // --------
-  //
-
-  this.reset = function() {
-    // Seed graph
+  this.init = function() {
+    __super__.init.call(this);
+    this.meta = {};
     _.each(SEED, function(cmd) {
       this.exec(cmd);
     }, this);
