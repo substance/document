@@ -322,27 +322,21 @@ var Converter = function() {
   this.update = function(graph, command) {
     var property = graph.resolve(command.path);
     var val = property.get();
+    var valueType = property.type()[0];
 
     var update;
 
-    // String
-    if (property.baseType === 'string') {
+    if (valueType === 'string') {
       update = ot.TextOperation.fromOT(val, command.args);
     }
-
-    // Array
-    else if (property.baseType === 'array') {
+    else if (valueType === 'array') {
       throw new Error("Not yet implemented for arrays");
     }
-
-    // Object
-    else if (property.baseType === 'object') {
+    else if (valueType === 'object') {
       update = ot.ObjectOperation.Extend(val, command.args);
     }
-
-    // Other
     else {
-      throw new Error("Unsupported type for update: " + property.baseType);
+      throw new Error("Unsupported type for update: " + valueType);
     }
 
     return Data.Graph.Update(command.path, update);
