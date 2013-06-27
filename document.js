@@ -350,42 +350,10 @@ var Converter = function() {
   // ["set", "a1", "pos", ["a", "b", "c"]] // array update (not yet implemented)
 
   this.set = function(graph, command) {
-
     if (!command.args) { // for string updates
       command.args = command.path.pop();
     }
-
-    var result;
-
-    var property, val, newVal, update;
-
-    property = graph.resolve(command.path);
-    val = property.get();
-    newVal = command.args;
-
-    // String
-    if (property.baseType === 'string') {
-      update = ot.TextOperation.fromOT(val, [-val.length, newVal]);
-    }
-    // Array
-    else if (property.baseType === 'array') {
-      update = ot.ArrayOperation.Update(val, newVal);
-    }
-    // Object
-    else if (property.baseType === 'object') {
-      // TODO: for that we need to delete all keys and create the new ones
-      //  or a more intelligent solution (i.e. diff)
-      throw new Error("Not yet implemented for objects");
-    }
-    // Other
-    else {
-      // treating any other type via string operation
-      val = val.toString();
-      newVal = newVal.toString();
-      update = ot.TextOperation.fromOT(val, [-val.length, newVal]);
-    }
-
-    result = Data.Graph.Update(command.path, update);
+    result = Data.Graph.Set(command.path, command.args);
     return result;
   };
 
@@ -490,6 +458,7 @@ Document.__prototype__ = function() {
         updateAnnotations.call(this, node, property, change);
       }
     }, this);
+
     this.trigger('command:executed', command);
   };
 };
