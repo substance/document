@@ -261,7 +261,7 @@ var Converter = function() {
       return ot.ArrayOperation.Delete(index, view[index]);
     });
     return Data.Graph.Update(path, ot.ArrayOperation.Compound(ops));
-  },
+  };
 
 
   // Position nodes in document
@@ -574,7 +574,7 @@ Document.AnnotatedText.prototype.resetCache = function() {
 // --------
 //
 
-Document.AnnotatedText.prototype.commit = function(fn) {
+Document.AnnotatedText.prototype.commit = function() {
 
   // 1. Insert Annotations
   var newAnnotations = [];
@@ -589,7 +589,7 @@ Document.AnnotatedText.prototype.commit = function(fn) {
 
   _.each(newAnnotations, function(a) {
     a.node = this.property.node.id;
-    cmds.push(Substance.Document.Create(a));
+    cmds.push(Document.Create(a));
   }, this);
 
   // Text diff computation
@@ -615,7 +615,6 @@ Document.Create = function(node) {
 Document.Delete = function(nodes) {
   return ["delete", {nodes: nodes}];
 };
-
 
 
 // Add event support
