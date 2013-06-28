@@ -338,24 +338,9 @@ var Converter = function() {
     else {
       throw new Error("Unsupported type for update: " + valueType);
     }
-
     return Data.Graph.Update(command.path, update);
   };
 
-  // Set property values
-  // --------
-  //
-  // Unlike update you can set values directly
-  // ["set", "h1", "content", "Hello Welt"] // string update
-  // ["set", "a1", "pos", ["a", "b", "c"]] // array update (not yet implemented)
-
-  this.set = function(graph, command) {
-    if (!command.args) { // for string updates
-      command.args = command.path.pop();
-    }
-    result = Data.Graph.Set(command.path, command.args);
-    return result;
-  };
 
   // Annotate document
   // --------
@@ -440,7 +425,7 @@ Document.__prototype__ = function() {
     // console.log("Executing command: ", command);
     var graphCommand;
     // convert the command into a Data.Graph compatible command
-    command = new Data.Command(command);
+    command = new Data.Command(command, Document.COMMANDS);
     if (converter[command.op]) {
       graphCommand = converter[command.op](this, command);
     } else {
@@ -573,7 +558,6 @@ Document.AnnotatedText.prototype.commit = function() {
   this.resetCache();
 };
 
-
 // Command Factories
 // --------
 
@@ -584,6 +568,30 @@ Document.Create = function(node) {
 Document.Delete = function(nodes) {
   return ["delete", {nodes: nodes}];
 };
+
+
+Document.COMMANDS = _.extend({}, Data.COMMANDS, {
+  "position": {
+    "types": ["array"],
+    "arguments": 1
+  },
+  "hide": {
+    "types": ["array"],
+    "arguments": 1
+  },
+  "delete": {
+    "types": ["graph"],
+    "arguments": 1
+  },
+  "annotate": {
+    "types": ["content"],
+    "arguments": 1
+  },
+  "comment": {
+    "types": ["content", "annotation"],
+    "arguments": 1
+  }
+});
 
 
 // Add event support
