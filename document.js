@@ -70,6 +70,8 @@ var SCHEMA = {
     "document": {
       "properties": {
         "views": ["array", "view"],
+        "id": "string",
+        "creator": "string",
         "title": "string",
         "abstract": "string"
       }
@@ -169,7 +171,6 @@ var SCHEMA = {
   }
 };
 
-
 // Seed Data
 // ========
 //
@@ -177,42 +178,129 @@ var SCHEMA = {
 // `document` stores all meta-information about the document
 // `content` is the main view
 
-var SEED = [
-  ["create", {
-      "id": "document",
-      "type": "document",
-      "views": ["content", "figures", "publications"],
-      "title": "Untitled",
-      "abstract": "Enter abstract"
-    }
-  ],
-  ["create", {
-      "id": "content",
-      "type": "view",
-      "nodes": []
-    }
-  ],
-  ["create", {
-      "id": "figures",
-      "type": "view",
-      "nodes": []
-    }
-  ],
-  ["create", {
-      "id": "publications",
-      "type": "view",
-      "nodes": []
-    }
-  ]
-];
+// Provides an initial state by a set of nodes.
+// --------
+// These commands change will not be versioned.
+// Every document's history must be applicable on this.
+var SEED = function(options) {
+  return [
+    Data.Graph.Create({
+      id: "document",
+      type: "document",
+      creator: options.creator,
+      created_at: options.created_at,
+      views: ["content", "figures", "publications"],
+      title: "",
+      abstract: ""
+    }),
+    Data.Graph.Set(["document", "id"], options.id),
+    Data.Graph.Create({
+      id: "content",
+      type: "view",
+      nodes: [],
+    }),
+    Data.Graph.Create({
+      id: "figures",
+      type: "view",
+      nodes: [],
+    }),
+    Data.Graph.Create({
+      id: "publications",
+      type: "view",
+      nodes: [],
+    })
+  ];
+};
 
+// forward declaration
+var Converter;
+
+// Document
+// --------
+//
+// A generic model for representing and transforming digital documents
+
+var Document = function(options) {
+  options.seed = options.seed || SEED(options);
+  Data.Graph.call(this, options.schema || SCHEMA, options);
+};
+
+Document.__prototype__ = function() {
+
+  var __super__ = util.prototype(this);
+  var converter = new Converter();
+
+  // this.init = function() {
+  //   __super__.init.call(this);
+  // };
+
+  var updateAnnotations = function(node, property, change) {
+    // We need to update the range of affected annotations.
+
+    var annotations = this.find("annotations", node.id);
+    annotations = _.filter(annotations, function(a) {
+      return a.property === property;
+    });
+    for (var idx = 0; idx < annotations.length; idx++) {
+      ot.TextOperation.Range.transform(annotations[idx].range, change);
+    }
+  };
+
+  // Executes a document manipulation command.
+  // --------
+  // The command is converted into a sequence of graph commands
+
+  this.exec = function(command) {
+    // console.log("Executing command: ", command);
+    var graphCommand;
+    // convert the command into a Data.Graph compatible command
+    command = new Data.Command(command, Document.COMMANDS);
+    if (converter[command.op]) {
+      graphCommand = converter[command.op](this, command);
+    } else {
+      graphCommand = command;
+    }
+
+    var commands = _.isArray(graphCommand) ? graphCommand : [graphCommand];
+
+    _.each(commands, function(c) {
+      __super__.exec.call(this, c);
+      if (c.op === "update") {
+        var node = this.get(c.path[0]);
+        var property = c.path[1];
+        var change = c.args;
+        updateAnnotations.call(this, node, property, change);
+      }
+    }, this);
+
+    this.trigger('command:executed', command);
+  };
+
+  // Convenience accessors to builtin document attributes
+
+  this["get id"] = function() {
+    return this.get("document").id;
+  };
+
+  this["get creator"] = function() {
+    return this.get("document").creator;
+  };
+
+  this["get created_at"] = function() {
+    return this.get("document").created_at;
+  };
+
+  this["get views"] = function() {
+    return this.get("document").views;
+  };
+};
 
 // Command Converter
 // ========
 //
 // Turns document command into Data.Graph commands
 
-var Converter = function() {
+Converter = function() {
 
   // Delete nodes from document
   // --------
@@ -237,7 +325,6 @@ var Converter = function() {
     return commands;
   };
 
-
   // Hide elements from provided view
   // --------
   //
@@ -260,9 +347,9 @@ var Converter = function() {
     var ops = _.map(indices, function(index) {
       return ot.ArrayOperation.Delete(index, view[index]);
     });
+
     return Data.Graph.Update(path, ot.ArrayOperation.Compound(ops));
   };
-
 
   // Position nodes in document
   // --------
@@ -381,76 +468,8 @@ var Converter = function() {
   };
 };
 
-
-// Document
-// --------
-//
-// A generic model for representing and transforming digital documents
-
-var Document = function(doc, schema) {
-  Data.Graph.call(this, schema || SCHEMA);
-  this.id = doc.id;
-};
-
-Document.__prototype__ = function() {
-
-  var __super__ = util.prototype(this);
-  var converter = new Converter();
-
-  this.init = function() {
-    __super__.init.call(this);
-    this.meta = {};
-    _.each(SEED, function(cmd) {
-      this.exec(cmd);
-    }, this);
-  };
-
-  var updateAnnotations = function(node, property, change) {
-    // We need to update the range of affected annotations.
-
-    var annotations = this.find("annotations", node.id);
-    annotations = _.filter(annotations, function(a) {
-      return a.property === property;
-    });
-    for (var idx = 0; idx < annotations.length; idx++) {
-      ot.TextOperation.Range.transform(annotations[idx].range, change);
-    }
-  };
-
-  // Executes a document manipulation command.
-  // --------
-  // The command is converted into a sequence of graph commands
-
-  this.exec = function(command) {
-    // console.log("Executing command: ", command);
-    var graphCommand;
-    // convert the command into a Data.Graph compatible command
-    command = new Data.Command(command, Document.COMMANDS);
-    if (converter[command.op]) {
-      graphCommand = converter[command.op](this, command);
-    } else {
-      graphCommand = command;
-    }
-
-    var commands = _.isArray(graphCommand) ? graphCommand : [graphCommand];
-
-    _.each(commands, function(c) {
-      __super__.exec.call(this, c);
-      if (c.op === "update") {
-        var node = this.get(c.path[0]);
-        var property = c.path[1];
-        var change = c.args;
-        updateAnnotations.call(this, node, property, change);
-      }
-    }, this);
-
-    this.trigger('command:executed', command);
-  };
-};
-
 Document.__prototype__.prototype = Data.Graph.prototype;
 Document.prototype = new Document.__prototype__();
-
 
 // AnnotatedText
 // --------
@@ -458,105 +477,109 @@ Document.prototype = new Document.__prototype__();
 // Ties together a text node with its annotations
 // Interface defined by Substance.Surface
 
-Document.AnnotatedText = function(doc, path) {
+var AnnotatedText = function(doc, path) {
   this.doc = doc;
   this.path = path;
   this.property = doc.resolve(path);
   this.resetCache();
 };
 
-Document.AnnotatedText.prototype.setAnnotation = function(annotation) {
-  this.cache.annotations[annotation.id] = annotation;
-  this.commit();
-};
+AnnotatedText.__prototype__ = function() {
 
-Document.AnnotatedText.prototype.getAnnotation = function(id) {
-  return this.cache.annotations[id] || this.doc.get(id);
-};
+  this.setAnnotation = function(annotation) {
+    this.cache.annotations[annotation.id] = annotation;
+    this.commit();
+  };
 
-Document.AnnotatedText.prototype.deleteAnnotation = function(id) {
-  delete this.cache.annotations[id];
-  this.cache.deleted_annotations.push(id);
-};
+  this.getAnnotation = function(id) {
+    return this.cache.annotations[id] || this.doc.get(id);
+  };
 
-Document.AnnotatedText.prototype.setContent = function(content) {
-  this.cache.content = content;
-};
+  this.deleteAnnotation = function(id) {
+    delete this.cache.annotations[id];
+    this.cache.deleted_annotations.push(id);
+  };
 
-Document.AnnotatedText.prototype.getContent = function() {
-  if (this.cache.content !== null) return this.cache.content;
-  return this.property.get();
-};
+  this.setContent = function(content) {
+    this.cache.content = content;
+  };
 
-// Transform Hook
-// --------
-//
+  this.getContent = function() {
+    if (this.cache.content !== null) return this.cache.content;
+    return this.property.get();
+  };
 
-Document.AnnotatedText.prototype.each = function(fn) {
-  var annos = this.doc.find('annotations', this.property.node.id);
-  _.each(this.cache.annotations, fn);
+  // Transform Hook
+  // --------
+  //
 
-  _.each(annos, function(a) {
-    if (!this.cache.annotations[a.id] && !_.include(this.cache.deleted_annotations, a.id)) fn(a, a.id);
-  }, this);
-};
+  this.each = function(fn) {
+    var annos = this.doc.find('annotations', this.property.node.id);
+    _.each(this.cache.annotations, fn);
 
-// Transform Hook
-// --------
-//
-// triggered implicitly by Surface.insert|deleteTransformer)
+    _.each(annos, function(a) {
+      if (!this.cache.annotations[a.id] && !_.include(this.cache.deleted_annotations, a.id)) fn(a, a.id);
+    }, this);
+  };
 
-Document.AnnotatedText.prototype.transformAnnotation = function(a, op, expand) {
-  if (this.cache.annotations[a.id]) {
-    a = this.cache.annotations[a.id];
-  } else {
-    a = util.deepclone(a);
-  }
-  ot.TextOperation.Range.transform(a.range, op, expand);
-  this.cache.annotations[a.id] = a;
-};
+  // Transform Hook
+  // --------
+  //
+  // triggered implicitly by Surface.insert|deleteTransformer)
 
-Document.AnnotatedText.prototype.resetCache = function() {
-  this.cache = {
-    annotations: {},
-    content: null,
-    deleted_annotations: []
+  this.transformAnnotation = function(a, op, expand) {
+    if (this.cache.annotations[a.id]) {
+      a = this.cache.annotations[a.id];
+    } else {
+      a = util.deepclone(a);
+    }
+    ot.TextOperation.Range.transform(a.range, op, expand);
+    this.cache.annotations[a.id] = a;
+  };
+
+  this.resetCache = function() {
+    this.cache = {
+      annotations: {},
+      content: null,
+      deleted_annotations: []
+    };
+  };
+
+  // Commit changes
+  // --------
+  //
+
+  this.commit = function() {
+
+    // 1. Insert Annotations
+    var newAnnotations = [];
+    var updatedAnnotations = [];
+    _.each(this.cache.annotations, function(a) {
+      var oa = this.doc.get(a.id);
+      if (!oa) newAnnotations.push(a);
+      else if (a.type !== oa.type) updatedAnnotations.push(a);
+    }, this);
+
+    var cmds = [];
+
+    _.each(newAnnotations, function(a) {
+      a.node = this.property.node.id;
+      cmds.push(Document.Create(a));
+    }, this);
+
+    // Text diff computation
+    if (this.cache.content !== null) {
+      var delta = _.extractOperation(this.property.get(), this.cache.content);
+      cmds.push(Data.Graph.Update(this.path, ot.TextOperation.fromOT(delta)));
+    }
+
+    _.each(cmds, function(c) {
+      this.doc.exec(c);
+    }, this);
+    this.resetCache();
   };
 };
-
-// Commit changes
-// --------
-//
-
-Document.AnnotatedText.prototype.commit = function() {
-
-  // 1. Insert Annotations
-  var newAnnotations = [];
-  var updatedAnnotations = [];
-  _.each(this.cache.annotations, function(a) {
-    var oa = this.doc.get(a.id);
-    if (!oa) newAnnotations.push(a);
-    else if (a.type !== oa.type) updatedAnnotations.push(a);
-  }, this);
-
-  var cmds = [];
-
-  _.each(newAnnotations, function(a) {
-    a.node = this.property.node.id;
-    cmds.push(Document.Create(a));
-  }, this);
-
-  // Text diff computation
-  if (this.cache.content !== null) {
-    var delta = _.extractOperation(this.property.get(), this.cache.content);
-    cmds.push(Data.Graph.Update(this.path, ot.TextOperation.fromOT(delta)));
-  }
-
-  _.each(cmds, function(c) {
-    this.doc.exec(c);
-  }, this);
-  this.resetCache();
-};
+AnnotatedText.prototype = new AnnotatedText.__prototype__();
 
 // Command Factories
 // --------
@@ -598,6 +621,7 @@ Document.COMMANDS = _.extend({}, Data.COMMANDS, {
 _.extend(Document.prototype, util.Events);
 
 Document.SCHEMA = SCHEMA;
+Document.AnnotatedText = AnnotatedText;
 
 // Export
 // ========
