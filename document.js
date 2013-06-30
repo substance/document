@@ -251,21 +251,24 @@ Document.__prototype__ = function() {
   // The command is converted into a sequence of graph commands
 
   this.exec = function(command) {
-    // console.log("Executing command: ", command);
-    var graphCommand;
+
     // convert the command into a Data.Graph compatible command
     command = new Data.Command(command, Document.COMMANDS);
-    if (converter[command.op]) {
-      graphCommand = converter[command.op](this, command);
-    } else {
-      graphCommand = command;
+    var graphCommand = command;
+
+    if (converter[command.type]) {
+      graphCommand = converter[command.type](this, command);
+      if (_.isArray(graphCommand)) {
+        graphCommand = Data.Graph.Compound(this, graphCommand);
+      }
     }
+    // Note: Data.Graph converts everything into ObjectOperations
+    // We will pass this also back to the caller.
+    var op = __super__.exec.call(this, graphCommand);
 
-    var commands = _.isArray(graphCommand) ? graphCommand : [graphCommand];
-
-    _.each(commands, function(c) {
-      __super__.exec.call(this, c);
-      if (c.op === "update") {
+    var cmds = (graphCommand.type === Data.Graph.COMPOUND) ? graphCommand.ops : [graphCommand];
+    _.each(cmds, function(c) {
+      if (c.type === "update") {
         var node = this.get(c.path[0]);
         var property = c.path[1];
         var change = c.args;
@@ -273,32 +276,17 @@ Document.__prototype__ = function() {
       }
     }, this);
 
+    // TODO: maybe we could add events to Data.Graph?
     this.trigger('command:executed', command);
-  };
 
-  // Convenience accessors to builtin document attributes
-
-  this["get id"] = function() {
-    return this.get("document").id;
-  };
-
-  this["get creator"] = function() {
-    return this.get("document").creator;
-  };
-
-  this["get created_at"] = function() {
-    return this.get("document").created_at;
-  };
-
-  this["get views"] = function() {
-    return this.get("document").views;
+    return op;
   };
 };
 
 // Command Converter
 // ========
 //
-// Turns document command into Data.Graph commands
+// Turns document commands into Data.Graph commands
 
 Converter = function() {
 
@@ -467,9 +455,31 @@ Converter = function() {
     return Data.Graph.Create(comment);
   };
 };
-
 Document.__prototype__.prototype = Data.Graph.prototype;
 Document.prototype = new Document.__prototype__();
+// Add convenience accessors for builtin document attributes
+Object.defineProperties(Document.prototype, {
+  id: {
+    get: function () {
+      return this.get("document").id;
+    }
+  },
+  creator: {
+    get: function () {
+      return this.get("document").creator;
+    }
+  },
+  created_at: {
+    get: function () {
+      return this.get("document").created_at;
+    }
+  },
+  views: {
+    get: function () {
+      return this.get("document").views;
+    }
+  }
+});
 
 // AnnotatedText
 // --------
