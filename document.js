@@ -397,7 +397,7 @@ Converter = function() {
   this.update = function(graph, command) {
     var property = graph.resolve(command.path);
     var val = property.get();
-    var valueType = property.baseType();
+    var valueType = property.baseType;
 
     var update;
 
