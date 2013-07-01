@@ -70,7 +70,7 @@ var SCHEMA = {
     "document": {
       "properties": {
         "views": ["array", "view"],
-        "id": "string",
+        "docId": "string",
         "creator": "string",
         "title": "string",
         "abstract": "string"
@@ -187,13 +187,13 @@ var SEED = function(options) {
     Data.Graph.Create({
       id: "document",
       type: "document",
+      docId: options.id,
       creator: options.creator,
       created_at: options.created_at,
       views: ["content", "figures", "publications"],
       title: "",
       abstract: ""
     }),
-    Data.Graph.Set(["document", "id"], options.id),
     Data.Graph.Create({
       id: "content",
       type: "view",
@@ -229,10 +229,6 @@ Document.__prototype__ = function() {
 
   var __super__ = util.prototype(this);
   var converter = new Converter();
-
-  // this.init = function() {
-  //   __super__.init.call(this);
-  // };
 
   var updateAnnotations = function(node, property, change) {
     // We need to update the range of affected annotations.
@@ -405,7 +401,7 @@ Converter = function() {
       update = ot.TextOperation.fromOT(val, command.args);
     }
     else if (valueType === 'array') {
-      throw new Error("Not yet implemented for arrays");
+      update = command.args;
     }
     else if (valueType === 'object') {
       update = ot.ObjectOperation.Extend(val, command.args);
@@ -461,7 +457,7 @@ Document.prototype = new Document.__prototype__();
 Object.defineProperties(Document.prototype, {
   id: {
     get: function () {
-      return this.get("document").id;
+      return this.get("document").docId;
     }
   },
   creator: {
