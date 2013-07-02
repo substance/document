@@ -73,7 +73,8 @@ var SCHEMA = {
         "docId": "string",
         "creator": "string",
         "title": "string",
-        "abstract": "string"
+        "abstract": "string",
+        "keywords": ["array", "string"]
       }
     },
 
@@ -277,6 +278,7 @@ Document.__prototype__ = function() {
 
     return op;
   };
+
 };
 
 // Command Converter
@@ -379,6 +381,8 @@ Converter = function() {
 
     var compound = ot.ArrayOperation.Compound(ops);
 
+    // TODO: We pack multiple array commands into a compound
+
     return Data.Graph.Update(path, compound);
   };
 
@@ -470,11 +474,28 @@ Object.defineProperties(Document.prototype, {
       return this.get("document").created_at;
     }
   },
+  title: {
+    get: function () {
+      return this.get("document").title;
+    }
+  },
+  abstract: {
+    get: function () {
+      return this.get("document").abstract;
+    }
+  },
+  keywords: {
+    get: function () {
+      // Note: returing a copy to avoid inadvertent changes
+      return this.get("document").keywords.slice(0);
+    }
+  },
   views: {
     get: function () {
-      return this.get("document").views;
+      // Note: returing a copy to avoid inadvertent changes
+      return this.get("document").views.slice(0);
     }
-  }
+  },
 });
 
 // AnnotatedText
