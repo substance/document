@@ -272,6 +272,7 @@ Document.__prototype__ = function() {
       }
     }, this);
 
+    // console.log('execing command', command);
     // TODO: maybe we could add events to Data.Graph?
     this.trigger('command:executed', command);
 
@@ -338,7 +339,7 @@ Converter = function() {
   // Position nodes in document
   // --------
   //
-  // ["position", {"nodes": ["t1", "t2"], "target": -1}]
+  // ["position", "content", {"nodes": ["t1", "t2"], "target": -1}]
   //
 
   // TODO: we could use Graph.set which computes a rather minimal set of ArrayOps
@@ -453,6 +454,7 @@ Converter = function() {
 };
 Document.__prototype__.prototype = Data.Graph.prototype;
 Document.prototype = new Document.__prototype__();
+
 // Add convenience accessors for builtin document attributes
 Object.defineProperties(Document.prototype, {
   id: {
@@ -508,6 +510,7 @@ AnnotatedText.__prototype__ = function() {
 
   this.setContent = function(content) {
     this.cache.content = content;
+    this.commit();
   };
 
   this.getContent = function() {
@@ -585,7 +588,97 @@ AnnotatedText.__prototype__ = function() {
     this.resetCache();
   };
 };
+
 AnnotatedText.prototype = new AnnotatedText.__prototype__();
+
+Object.defineProperties(AnnotatedText.prototype, {
+  content: {
+    get: function () {
+      return this.getContent();
+    },
+    set: function(content) {
+      this.setContent(content);
+    }
+  }
+});
+
+
+// Document Range
+// --------
+// 
+// Can refer to a view range
+// Or alternatively to a text range within a textnode
+// 
+// [:startnode, :startpos, :endnode, :endpos]
+
+var Range = function(range) {
+  if (_.isArray(range)) {
+    this.start = [range[0], range[1]];
+    this.end = [range[2], range[3]];
+  } else {
+    this.start = _.clone(range.start);
+    this.end = _.clone(range.end);
+  }
+};
+
+
+Range.__prototype__ = function() {
+  this.toJSON = function() {
+    return {
+      "start": this.start,
+      "end": this.end
+    };
+  };
+
+  // For a given document return the selected nodes
+  // --------
+
+  this.getNodes = function(document) {
+    var view = document.get('content').nodes;
+
+    return _.map(view.slice(this.start[0], this.end[0]+1), function(n) {
+      return document.get(n);
+    });
+  };
+
+  this.isCollapsed = function() {
+    return this.start[0] === this.end[0] && this.start[1] === this.end[1];
+  };
+
+  // For a given document return the selected text
+  // --------
+
+  this.getText = function(document) {
+    var text = "";
+
+    // start node
+    var nodes = this.getNodes(document);
+
+    if (nodes.length === 1) {
+      return nodes[0].content.slice(this.start[1], this.end[1]);
+    }
+
+    _.each(nodes, function(n, index) {
+      if (n.content) {
+        if (index === 0) {
+          text += nodes[0].content.slice(this.start[1]);
+        } else if (index === nodes.length-1) {
+          text += nodes[0].content.slice(0, this.end[1]);
+        } else {
+          text += n.content  
+        }
+      }
+    }, this);
+
+    return text;
+  };
+
+};
+
+
+
+Range.prototype = new Range.__prototype__();
+
 
 // Command Factories
 // --------
@@ -628,6 +721,8 @@ _.extend(Document.prototype, util.Events);
 
 Document.SCHEMA = SCHEMA;
 Document.AnnotatedText = AnnotatedText;
+Document.Range = Range;
+
 
 // Export
 // ========
