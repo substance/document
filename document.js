@@ -249,9 +249,12 @@ Document.__prototype__ = function() {
 
   this.exec = function(command) {
 
-    // convert the command into a Data.Graph compatible command
-    command = new Data.Command(command, Document.COMMANDS);
     var graphCommand = command;
+
+    // normalize commands given in array notation
+    if(_.isArray(command)) {
+      command = new Data.Command(command, Document.COMMANDS);
+    }
 
     if (converter[command.type]) {
       graphCommand = converter[command.type](this, command);
@@ -259,6 +262,7 @@ Document.__prototype__ = function() {
         graphCommand = Data.Graph.Compound(this, graphCommand);
       }
     }
+
     // Note: Data.Graph converts everything into ObjectOperations
     // We will pass this also back to the caller.
     var op = __super__.exec.call(this, graphCommand);
@@ -632,7 +636,8 @@ Object.defineProperties(AnnotatedText.prototype, {
 // 
 // [:startnode, :startpos, :endnode, :endpos]
 
-var Range = function(range) {
+var Range = function(doc, range) {
+  this.doc = doc;
   if (_.isArray(range)) {
     this.start = [range[0], range[1]];
     this.end = [range[2], range[3]];
@@ -654,12 +659,12 @@ Range.__prototype__ = function() {
   // For a given document return the selected nodes
   // --------
 
-  this.getNodes = function(document) {
-    var view = document.get('content').nodes;
+  this.getNodes = function() {
+    var view = this.doc.get('content').nodes;
 
     return _.map(view.slice(this.start[0], this.end[0]+1), function(n) {
-      return document.get(n);
-    });
+      return this.doc.get(n);
+    }, this);
   };
 
   this.isCollapsed = function() {
@@ -669,11 +674,11 @@ Range.__prototype__ = function() {
   // For a given document return the selected text
   // --------
 
-  this.getText = function(document) {
+  this.getText = function() {
     var text = "";
 
     // start node
-    var nodes = this.getNodes(document);
+    var nodes = this.getNodes();
 
     if (nodes.length === 1) {
       return nodes[0].content.slice(this.start[1], this.end[1]);
@@ -695,8 +700,6 @@ Range.__prototype__ = function() {
   };
 
 };
-
-
 
 Range.prototype = new Range.__prototype__();
 
