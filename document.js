@@ -638,6 +638,11 @@ Object.defineProperties(AnnotatedText.prototype, {
 
 var Range = function(doc, range) {
   this.doc = doc;
+  if (!range) {
+    this.start = null;
+    this.end = null;
+    return;
+  }
   if (_.isArray(range)) {
     this.start = [range[0], range[1]];
     this.end = [range[2], range[3]];
@@ -661,13 +666,24 @@ Range.__prototype__ = function() {
 
   this.getNodes = function() {
     var view = this.doc.get('content').nodes;
+    if (this.isNull()) return [];
 
     return _.map(view.slice(this.start[0], this.end[0]+1), function(n) {
       return this.doc.get(n);
     }, this);
   };
 
+  this.isNull = function() {
+    return !this.start;
+  };
+
+
+  // this.isSingleNode = function() {
+  //   return this.start[0] === this.end[0];
+  // };
+
   this.isCollapsed = function() {
+    // if (this.isNull()) return "";
     return this.start[0] === this.end[0] && this.start[1] === this.end[1];
   };
 
@@ -676,6 +692,8 @@ Range.__prototype__ = function() {
 
   this.getText = function() {
     var text = "";
+
+    if (this.isNull()) return "";
 
     // start node
     var nodes = this.getNodes();
@@ -695,10 +713,8 @@ Range.__prototype__ = function() {
         }
       }
     }, this);
-
     return text;
   };
-
 };
 
 Range.prototype = new Range.__prototype__();
