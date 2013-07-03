@@ -707,7 +707,7 @@ Range.__prototype__ = function() {
         if (index === 0) {
           text += nodes[0].content.slice(this.start[1]);
         } else if (index === nodes.length-1) {
-          text += nodes[0].content.slice(0, this.end[1]);
+          text += nodes[index].content.slice(0, this.end[1]);
         } else {
           text += n.content  
         }
