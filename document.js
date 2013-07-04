@@ -18,15 +18,14 @@ var _,
 
 if (typeof exports !== 'undefined') {
   _    = require('underscore');
-  ot   = require('./lib/operation');
-  util   = require('./lib/util/util');
-  errors   = require('./lib/util/errors');
-  Chronicle = require('./lib/chronicle/chronicle');
-  ot = require('./lib/chronicle/lib/ot/index');
-  Data = require('./lib/data/data');
+  util   = require('substance-util');
+  errors   = require('substance-util/errors');
+  Chronicle = require('substance-chronicle');
+
+  ot = require('substance-chronicle/lib/ot');
+  Data = require('substance-data');
 } else {
   _ = root._;
-  ot = root.ot;
   util = root.Substance.util;
   errors   = root.Substance.errors;
   Chronicle = root.Substance.Chronicle;
