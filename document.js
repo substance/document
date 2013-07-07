@@ -13,7 +13,7 @@ var _,
     util,
     errors,
     Chronicle,
-    ot,
+    Operator,
     Data;
 
 if (typeof exports !== 'undefined') {
@@ -21,18 +21,16 @@ if (typeof exports !== 'undefined') {
   util   = require('substance-util');
   errors   = require('substance-util/errors');
   Chronicle = require('substance-chronicle');
-
-  ot = require('substance-chronicle/lib/ot');
+  Operator = require('substance-operator');
   Data = require('substance-data');
 } else {
   _ = root._;
   util = root.Substance.util;
   errors   = root.Substance.errors;
   Chronicle = root.Substance.Chronicle;
-  ot = Chronicle.ot;
+  Operator = root.Substance.Operator;
   Data = root.Substance.Data;
 }
-
 
 // Default Document Schema
 // --------
@@ -238,13 +236,13 @@ Document.__prototype__ = function() {
       return a.property === property;
     });
     for (var idx = 0; idx < annotations.length; idx++) {
-      ot.TextOperation.Range.transform(annotations[idx].range, change);
+      Operator.TextOperation.Range.transform(annotations[idx].range, change);
     }
   };
 
   // Make a new selection on the document
   // --------
-  // 
+  //
 
   this.select = function(range) {
     this.selection = new Document.Range(this, range);
@@ -253,7 +251,7 @@ Document.__prototype__ = function() {
 
   // Cut current selection from document
   // --------
-  // 
+  //
   // Returns cutted content as a new Substance.Document
 
   this.cut = function() {
@@ -264,7 +262,7 @@ Document.__prototype__ = function() {
 
   // Based on current selection, insert new node
   // --------
-  // 
+  //
 
   this.insertNode = function(type) {
 
@@ -287,7 +285,7 @@ Document.__prototype__ = function() {
 
     if (trailingText.length > 0) {
       var r = [cursorPos, -trailingText.length];
-      ops.push(Data.Graph.Update([node.id, "content"], ot.TextOperation.fromOT(node.content, r)));
+      ops.push(Data.Graph.Update([node.id, "content"], Operator.TextOperation.fromOT(node.content, r)));
     }
 
     var id1 = type+"_"+util.uuid();
@@ -300,7 +298,7 @@ Document.__prototype__ = function() {
         type: "text",
         content: trailingText
       }));
-      ops.push(Data.Graph.Update(["content", "nodes"], ot.ArrayOperation.Insert(nodePos+1, id2)));
+      ops.push(Data.Graph.Update(["content", "nodes"], Operator.ArrayOperation.Insert(nodePos+1, id2)));
     }
 
     // Insert new empty node
@@ -308,7 +306,7 @@ Document.__prototype__ = function() {
       id: id1,
       type: type
     }));
-    ops.push(Data.Graph.Update(["content", "nodes"], ot.ArrayOperation.Insert(nodePos+1, id1)));
+    ops.push(Data.Graph.Update(["content", "nodes"], Operator.ArrayOperation.Insert(nodePos+1, id1)));
 
     // Execute all steps at once
     this.exec(Data.Graph.Compound(this, ops));
@@ -319,7 +317,7 @@ Document.__prototype__ = function() {
 
   // Delete current selection
   // --------
-  // 
+  //
 
   this.delete = function() {
     // Convenience vars
@@ -340,20 +338,20 @@ Document.__prototype__ = function() {
             var trailingText = node.content.slice(startOffset);
             var r = [startOffset, -trailingText.length];
             // remove trailing text from first node at the beginning of the selection
-            ops.push(Data.Graph.Update([node.id, "content"], ot.TextOperation.fromOT(node.content, r)));
+            ops.push(Data.Graph.Update([node.id, "content"], Operator.TextOperation.fromOT(node.content, r)));
           } else if (index === nodes.length-1) {
             // Last node of selection
             var text = node.content.slice(0, endOffset);
             var r = [-text.length];
 
             // remove preceding text from last node until the end of the selection
-            ops.push(Data.Graph.Update([node.id, "content"], ot.TextOperation.fromOT(node.content, r)));
+            ops.push(Data.Graph.Update([node.id, "content"], Operator.TextOperation.fromOT(node.content, r)));
           } else {
             // Delete node from document
             ops.push(Data.Graph.Delete(_.clone(node)));
             var pos = this.get('content').nodes.indexOf(node.id);
             // ... and from view
-            ops.push(Data.Graph.Update(["content", "nodes"], ot.ArrayOperation.Delete(pos, node.id)));
+            ops.push(Data.Graph.Update(["content", "nodes"], Operator.ArrayOperation.Delete(pos, node.id)));
           }
         }
       }, this);
@@ -362,7 +360,7 @@ Document.__prototype__ = function() {
       var text = node.content.slice(startOffset, endOffset);
       var r = [startOffset, -text.length];
       // remove trailing text from first node at the beginning of the selection
-      ops.push(Data.Graph.Update([node.id, "content"], ot.TextOperation.fromOT(node.content, r)));
+      ops.push(Data.Graph.Update([node.id, "content"], Operator.TextOperation.fromOT(node.content, r)));
     }
 
     this.exec(Data.Graph.Compound(this, ops));
@@ -376,7 +374,7 @@ Document.__prototype__ = function() {
     var endOffset = this.selection.end[1];
     var nodes = this.selection.getNodes(this);
 
-    var clipboard = new Substance.Document({id: "clipboard"});
+    var clipboard = new Document({id: "clipboard"});
 
     if (nodes.length > 1) {
       // Remove trailing stuff
@@ -395,7 +393,7 @@ Document.__prototype__ = function() {
               content: trailingText
             }));
             // and the clipboards content view
-            clipboard.exec(Data.Graph.Update(["content", "nodes"], ot.ArrayOperation.Insert(index, nodeId)));
+            clipboard.exec(Data.Graph.Update(["content", "nodes"], Operator.ArrayOperation.Insert(index, nodeId)));
           } else if (index === nodes.length-1) {
             // Last node of selection
             var text = node.content.slice(0, endOffset);
@@ -408,13 +406,13 @@ Document.__prototype__ = function() {
               type: "text",
               content: text
             }));
-            clipboard.exec(Data.Graph.Update(["content", "nodes"], ot.ArrayOperation.Insert(index, nodeId)));
+            clipboard.exec(Data.Graph.Update(["content", "nodes"], Operator.ArrayOperation.Insert(index, nodeId)));
           } else {
             var nodeId = util.uuid();
             // Insert node in clipboard document
             clipboard.exec(Data.Graph.Create(_.extend(_.clone(node), {id: nodeId})));
             // ... and view
-            clipboard.exec(Data.Graph.Update(["content", "nodes"], ot.ArrayOperation.Insert(index, nodeId)));
+            clipboard.exec(Data.Graph.Update(["content", "nodes"], Operator.ArrayOperation.Insert(index, nodeId)));
           }
         }
       }, this);
@@ -428,7 +426,7 @@ Document.__prototype__ = function() {
         type: "text",
         content: text
       }));
-      clipboard.exec(Data.Graph.Update(["content", "nodes"], ot.ArrayOperation.Insert(0, nodeId)));
+      clipboard.exec(Data.Graph.Update(["content", "nodes"], Operator.ArrayOperation.Insert(0, nodeId)));
     }
 
     return clipboard;
@@ -442,7 +440,7 @@ Document.__prototype__ = function() {
 
     if (!content) return;
 
-    // After delete selection we can be sure 
+    // After delete selection we can be sure
     // that the collection is collapsed
     var startNode = this.selection.start[0];
     var startOffset = this.selection.start[1];
@@ -464,7 +462,7 @@ Document.__prototype__ = function() {
             var r = [startOffset, -trailingText.length, node.content];
 
             // remove trailing text from first node at the beginning of the selection
-            ops.push(Data.Graph.Update([referenceNode.id, "content"], ot.TextOperation.fromOT(referenceNode.content, r)));
+            ops.push(Data.Graph.Update([referenceNode.id, "content"], Operator.TextOperation.fromOT(referenceNode.content, r)));
 
             // Move the trailing text into a new node
             var nodeId = util.uuid();
@@ -475,17 +473,17 @@ Document.__prototype__ = function() {
             }));
 
             // and the clipboards content view
-            ops.push(Data.Graph.Update(["content", "nodes"], ot.ArrayOperation.Insert(startNode+index+1, nodeId)));
+            ops.push(Data.Graph.Update(["content", "nodes"], Operator.ArrayOperation.Insert(startNode+index+1, nodeId)));
           } else if (index === nodes.length-1) {
             // Skip
           } else {
             ops.push(Data.Graph.Create(node));
-            ops.push(Data.Graph.Update(["content", "nodes"], ot.ArrayOperation.Insert(startNode+index, node.id)));
+            ops.push(Data.Graph.Update(["content", "nodes"], Operator.ArrayOperation.Insert(startNode+index, node.id)));
           }
         }
       }, this);
     } else {
-      ops.push(Data.Graph.Update([referenceNode.id, "content"], ot.TextOperation.Insert(startOffset, node.content)));
+      ops.push(Data.Graph.Update([referenceNode.id, "content"], Operator.TextOperation.Insert(startOffset, node.content)));
     }
 
     this.exec(Data.Graph.Compound(this, ops));
@@ -584,10 +582,10 @@ Converter = function() {
     indices = indices.sort().reverse();
 
     var ops = _.map(indices, function(index) {
-      return ot.ArrayOperation.Delete(index, view[index]);
+      return Operator.ArrayOperation.Delete(index, view[index]);
     });
 
-    return Data.Graph.Update(path, ot.ArrayOperation.Compound(ops));
+    return Data.Graph.Update(path, Operator.ArrayOperation.Compound(ops));
   };
 
   // Position nodes in document
@@ -619,7 +617,7 @@ Converter = function() {
       var id = seq.pop();
       idx = view.indexOf(id);
       if (idx >= 0) {
-        ops.push(ot.ArrayOperation.Delete(idx, id));
+        ops.push(Operator.ArrayOperation.Delete(idx, id));
         l--;
       }
     }
@@ -629,10 +627,10 @@ Converter = function() {
     if (target<0) target = Math.max(0, l+target+1);
 
     for (idx = 0; idx < nodes.length; idx++) {
-      ops.push(ot.ArrayOperation.Insert(target + idx, nodes[idx]));
+      ops.push(Operator.ArrayOperation.Insert(target + idx, nodes[idx]));
     }
 
-    var compound = ot.ArrayOperation.Compound(ops);
+    var compound = Operator.ArrayOperation.Compound(ops);
 
     // TODO: We pack multiple array commands into a compound
 
@@ -655,13 +653,13 @@ Converter = function() {
     var update;
 
     if (valueType === 'string') {
-      update = ot.TextOperation.fromOT(val, command.args);
+      update = Operator.TextOperation.fromOT(val, command.args);
     }
     else if (valueType === 'array') {
       update = command.args;
     }
     else if (valueType === 'object') {
-      update = ot.ObjectOperation.Extend(val, command.args);
+      update = Operator.ObjectOperation.Extend(val, command.args);
     }
     else {
       throw new Error("Unsupported type for update: " + valueType);
@@ -815,7 +813,7 @@ AnnotatedText.__prototype__ = function() {
     } else {
       a = util.deepclone(a);
     }
-    ot.TextOperation.Range.transform(a.range, op, expand);
+    Operator.TextOperation.Range.transform(a.range, op, expand);
     this.cache.annotations[a.id] = a;
   };
 
@@ -852,7 +850,7 @@ AnnotatedText.__prototype__ = function() {
     // Text diff computation
     if (this.cache.content !== null) {
       var delta = _.extractOperation(this.property.get(), this.cache.content);
-      cmds.push(Data.Graph.Update(this.path, ot.TextOperation.fromOT(delta)));
+      cmds.push(Data.Graph.Update(this.path, Operator.TextOperation.fromOT(delta)));
     }
 
     _.each(cmds, function(c) {
@@ -878,10 +876,10 @@ Object.defineProperties(AnnotatedText.prototype, {
 
 // Document Range
 // --------
-// 
+//
 // Can refer to a view range
 // Or alternatively to a text range within a textnode
-// 
+//
 // [:startnode, :startpos, :endnode, :endpos]
 
 var Range = function(doc, range) {
@@ -957,7 +955,7 @@ Range.__prototype__ = function() {
         } else if (index === nodes.length-1) {
           text += nodes[index].content.slice(0, this.end[1]);
         } else {
-          text += n.content  
+          text += n.content;
         }
       }
     }, this);
@@ -1010,7 +1008,6 @@ _.extend(Document.prototype, util.Events);
 Document.SCHEMA = SCHEMA;
 Document.AnnotatedText = AnnotatedText;
 Document.Range = Range;
-
 
 // Export
 // ========
