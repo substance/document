@@ -7,7 +7,7 @@
   "contributors"  : ["Oliver Buchtala", "Victor Saiz"],
   "dependencies"  : ["underscore", "operational-transformation"],
   "engines": {
-      "node": ">=0.8.0"
+    "node": "0.8.x"
   },
   "repository": {
       "type": "git",
@@ -16,15 +16,14 @@
   "dependencies": {
     "underscore":   "1.4.x",
     "mocha":        "1.12.x",
-    "substance-util": "https://github.com/substance/util/archive/master.tar.gz",
-    "substance-test": "https://github.com/substance/test/archive/master.tar.gz",
-    "substance-operator": "https://github.com/substance/operator/archive/master.tar.gz",
-    "substance-chronicle": "https://github.com/substance/chronicle/archive/master.tar.gz",
-    "substance-data": "https://github.com/substance/data/archive/master.tar.gz"
+    "substance-util": "0.1.0",
+    "substance-test": "0.1.0",
+    "substance-operator": "0.1.0",
+    "substance-chronicle": "0.1.0",
+    "substance-data": "0.7.0"
   },
-  "lib"           : ".",
   "main"          : "document",
-  "version"       : "0.3.0",
+  "version"       : "0.4.0",
   "scripts": {
     "test": "mocha -R spec tests/tests.js"
   }
