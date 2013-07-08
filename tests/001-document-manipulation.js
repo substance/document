@@ -1,10 +1,22 @@
 (function(root) {
 
-var _ = root._;
-var assert = root.Substance.assert;
-//var util = root.Substance.util;
-var Document = root.Substance.Document;
-//var Data = root.Substance.Data;
+var _,
+    assert,
+    Document,
+    registerTest;
+
+if (typeof exports !== 'undefined') {
+  _    = require('underscore');
+  assert = require('substance-test/assert');
+  Document = require('..');
+  registerTest = require('substance-test').registerTest;
+} else {
+  _ = root._;
+  assert = root.Substance.assert;
+  Document = root.Substance.Document;
+  registerTest = root.Substance.registerTest;
+}
+
 
 var test = {};
 
@@ -283,6 +295,6 @@ test.actions = [
   // }
 ];
 
-root.Substance.registerTest(['Document', 'Document Manipulation'], test);
+registerTest(['Document', 'Document Manipulation'], test);
 
 })(this);

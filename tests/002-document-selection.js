@@ -1,16 +1,41 @@
 (function(root) {
 
-var _ = root._;
-var assert = root.Substance.assert;
-//var util = root.Substance.util;
-var Document = root.Substance.Document;
-var Session = root.Substance.Session;
-var Data = root.Substance.Data;
+var _,
+    assert,
+    Data,
+    Document,
+    registerTest,
+    getSession;
+
+if (typeof exports !== 'undefined') {
+  _    = require('underscore');
+  assert = require('substance-test/assert');
+  Data = require('substance-data');
+  Document = require('..');
+  registerTest = require('substance-test').registerTest;
+
+  // TODO: we need a Test Session for running offline
+  getSession = function() {};
+
+} else {
+  _ = root._;
+  assert = root.Substance.assert;
+  Data = root.Substance.Document;
+  Document = root.Substance.Document;
+  registerTest = root.Substance.registerTest;
+  getSession = function() { return root.Substance.session; };
+}
+
 
 var test = {};
 
 test.setup = function() {
-  this.session = Substance.session;
+  this.session = getSession();
+
+  if (this.session === undefined) {
+    throw "FIXME: need a test session for offline testing.";
+  }
+
   this.session.createDocument();
   this.doc = this.session.document;
 
@@ -30,7 +55,6 @@ test.setup = function() {
 };
 
 test.actions = [
-
   "Select text in a single text node", function() {
     var selection = this.doc.select({start: [0, 4], end: [0, 9]});
     assert.isEqual(1, selection.getNodes().length);
@@ -168,6 +192,6 @@ test.actions = [
   }
 ];
 
-root.Substance.registerTest(['Document', 'Document Selection'], test);
+registerTest(['Document', 'Document Selection'], test);
 
 })(this);
