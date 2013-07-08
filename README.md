@@ -1,4 +1,4 @@
-# Document
+# Document       [![Build Status](https://travis-ci.org/substance/document.png)](https://travis-ci.org/substance/document)
 
 Substance Document helps with the creation and transformation of digital documents. It ensures consistency, separates content from presentation and provides an easy to use API. It depicts the heart of the Substance Platform, a set of tools for content creation and distribution.
 
