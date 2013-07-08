@@ -1001,7 +1001,6 @@ Document.COMMANDS = _.extend({}, Data.COMMANDS, {
   }
 });
 
-
 // Add event support
 _.extend(Document.prototype, util.Events);
 

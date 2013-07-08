@@ -13,31 +13,19 @@ if (typeof exports !== 'undefined') {
   Data = require('substance-data');
   Document = require('..');
   registerTest = require('substance-test').registerTest;
-
-  // TODO: we need a Test Session for running offline
-  getSession = function() {};
-
 } else {
   _ = root._;
   assert = root.Substance.assert;
   Data = root.Substance.Document;
   Document = root.Substance.Document;
   registerTest = root.Substance.registerTest;
-  getSession = function() { return root.Substance.session; };
 }
 
 
 var test = {};
 
 test.setup = function() {
-  this.session = getSession();
-
-  if (this.session === undefined) {
-    throw "FIXME: need a test session for offline testing.";
-  }
-
-  this.session.createDocument();
-  this.doc = this.session.document;
+  this.doc = new Document({});
 
   this.doc.exec(Data.Graph.Create({
     "id": "t1",
