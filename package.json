@@ -1,29 +1,28 @@
 {
-  "name"          : "substance-document",
-  "description"   : "A document representation and transformation toolkit.",
-  "url"           : "http://github.com/substance/document/",
-  "keywords"      : ["document", "substance", "server", "client", "browser", "realtime", "git"],
-  "author"        : "Michael Aufreiter",
-  "contributors"  : ["Oliver Buchtala", "Victor Saiz"],
-  "dependencies"  : ["underscore", "operational-transformation"],
+  "name": "substance-document",
+  "description": "A document representation and transformation toolkit.",
+  "url": "http://github.com/substance/document",
+  "keywords": ["document", "substance", "server", "client", "browser", "realtime", "git"],
+  "author": "Michael Aufreiter",
+  "contributors": ["Oliver Buchtala", "Victor Saiz"],
+  "version": "0.4.0",
   "engines": {
-    "node": "0.8.x"
+    "node": ">=0.8.x"
   },
   "repository": {
-      "type": "git",
-      "url": "https://github.com/substance/document.git"
+    "type": "git",
+    "url": "https://github.com/substance/document.git"
   },
   "dependencies": {
-    "underscore":   "1.4.x",
-    "mocha":        "1.12.x",
+    "underscore": "1.4.x",
+    "mocha": "1.12.x",
     "substance-util": "0.1.0",
     "substance-test": "0.1.0",
     "substance-operator": "0.1.0",
     "substance-chronicle": "0.1.0",
     "substance-data": "0.7.0"
   },
-  "main"          : "document",
-  "version"       : "0.4.0",
+  "main": "document",
   "scripts": {
     "test": "mocha -R spec tests/tests.js"
   }
