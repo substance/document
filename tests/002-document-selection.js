@@ -21,25 +21,24 @@ if (typeof exports !== 'undefined') {
   registerTest = root.Substance.registerTest;
 }
 
-
 var test = {};
 
 test.setup = function() {
   this.doc = new Document({});
 
-  this.doc.exec(Data.Graph.Create({
+  this.doc.apply(Data.Graph.Create({
     "id": "t1",
     "type": "text",
     "content": "The quick brown fox jumps over the lazy dog."
   }));
 
-  this.doc.exec(Data.Graph.Create({
+  this.doc.apply(Data.Graph.Create({
     "id": "t2",
     "type": "text",
     "content": "Lorem ipsum dolor sit amet, consectetur adipiscing elit."
   }));
 
-  this.doc.exec(["position", "content", {"nodes": ["t1", "t2"], "target": -1}]);
+  this.doc.apply(["position", "content", {"nodes": ["t1", "t2"], "target": -1}]);
 };
 
 test.actions = [
@@ -100,7 +99,7 @@ test.actions = [
       "update", this.freshNode.id, "content", ["Hello Worrrrld!"]
     ];
 
-    this.doc.exec(op);
+    this.doc.apply(op);
     assert.isEqual("Hello Worrrrld!", this.freshNode.content);
   },
 

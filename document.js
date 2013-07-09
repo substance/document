@@ -67,7 +67,7 @@ var SCHEMA = {
     "document": {
       "properties": {
         "views": ["array", "view"],
-        "docId": "string",
+        "id": "string",
         "creator": "string",
         "title": "string",
         "abstract": "string",
@@ -309,7 +309,7 @@ Document.__prototype__ = function() {
     ops.push(Data.Graph.Update(["content", "nodes"], Operator.ArrayOperation.Insert(nodePos+1, id1)));
 
     // Execute all steps at once
-    this.exec(Data.Graph.Compound(this, ops));
+    this.apply(Data.Graph.Compound(this, ops));
 
     return this;
   };
@@ -363,7 +363,7 @@ Document.__prototype__ = function() {
       ops.push(Data.Graph.Update([node.id, "content"], Operator.TextOperation.fromOT(node.content, r)));
     }
 
-    this.exec(Data.Graph.Compound(this, ops));
+    this.apply(Data.Graph.Compound(this, ops));
   };
 
   this.copy = function() {
@@ -387,13 +387,13 @@ Document.__prototype__ = function() {
 
             // Add trailing text to clipboard
             var nodeId = util.uuid();
-            clipboard.exec(Data.Graph.Create({
+            clipboard.apply(Data.Graph.Create({
               id: nodeId,
               type: "text",
               content: trailingText
             }));
             // and the clipboards content view
-            clipboard.exec(Data.Graph.Update(["content", "nodes"], Operator.ArrayOperation.Insert(index, nodeId)));
+            clipboard.apply(Data.Graph.Update(["content", "nodes"], Operator.ArrayOperation.Insert(index, nodeId)));
           } else if (index === nodes.length-1) {
             // Last node of selection
             var text = node.content.slice(0, endOffset);
@@ -401,18 +401,18 @@ Document.__prototype__ = function() {
 
             // Add selected text from last node to clipboard
             var nodeId = util.uuid();
-            clipboard.exec(Data.Graph.Create({
+            clipboard.apply(Data.Graph.Create({
               id: nodeId,
               type: "text",
               content: text
             }));
-            clipboard.exec(Data.Graph.Update(["content", "nodes"], Operator.ArrayOperation.Insert(index, nodeId)));
+            clipboard.apply(Data.Graph.Update(["content", "nodes"], Operator.ArrayOperation.Insert(index, nodeId)));
           } else {
             var nodeId = util.uuid();
             // Insert node in clipboard document
-            clipboard.exec(Data.Graph.Create(_.extend(_.clone(node), {id: nodeId})));
+            clipboard.apply(Data.Graph.Create(_.extend(_.clone(node), {id: nodeId})));
             // ... and view
-            clipboard.exec(Data.Graph.Update(["content", "nodes"], Operator.ArrayOperation.Insert(index, nodeId)));
+            clipboard.apply(Data.Graph.Update(["content", "nodes"], Operator.ArrayOperation.Insert(index, nodeId)));
           }
         }
       }, this);
@@ -421,12 +421,12 @@ Document.__prototype__ = function() {
       var text = node.content.slice(startOffset, endOffset);
 
       var nodeId = util.uuid();
-      clipboard.exec(Data.Graph.Create({
+      clipboard.apply(Data.Graph.Create({
         id: nodeId,
         type: "text",
         content: text
       }));
-      clipboard.exec(Data.Graph.Update(["content", "nodes"], Operator.ArrayOperation.Insert(0, nodeId)));
+      clipboard.apply(Data.Graph.Update(["content", "nodes"], Operator.ArrayOperation.Insert(0, nodeId)));
     }
 
     return clipboard;
@@ -486,14 +486,14 @@ Document.__prototype__ = function() {
       ops.push(Data.Graph.Update([referenceNode.id, "content"], Operator.TextOperation.Insert(startOffset, node.content)));
     }
 
-    this.exec(Data.Graph.Compound(this, ops));
+    this.apply(Data.Graph.Compound(this, ops));
   };
 
   // Executes a document manipulation command.
   // --------
   // The command is converted into a sequence of graph commands
 
-  this.exec = function(command) {
+  this.apply = function(command) {
 
     var graphCommand = command;
 
@@ -511,7 +511,7 @@ Document.__prototype__ = function() {
 
     // Note: Data.Graph converts everything into ObjectOperations
     // We will pass this also back to the caller.
-    var op = __super__.exec.call(this, graphCommand);
+    var op = __super__.apply.call(this, graphCommand);
 
     var cmds = (graphCommand.type === Data.Graph.COMPOUND) ? graphCommand.ops : [graphCommand];
     _.each(cmds, function(c) {
@@ -854,7 +854,7 @@ AnnotatedText.__prototype__ = function() {
     }
 
     _.each(cmds, function(c) {
-      this.doc.exec(c);
+      this.doc.apply(c);
     }, this);
     this.resetCache();
   };

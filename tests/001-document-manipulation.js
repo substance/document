@@ -43,7 +43,7 @@ test.actions = [
       }
     ];
 
-    this.doc.exec(op);
+    this.doc.apply(op);
     assert.isEqual(op[1].content, this.doc.get('h1').content);
 
     // h1.level should be automatically initialized with 0
@@ -67,8 +67,8 @@ test.actions = [
       }
     ];
 
-    this.doc.exec(op);
-    this.doc.exec(op2);
+    this.doc.apply(op);
+    this.doc.apply(op2);
 
     assert.isDefined(this.doc.get('t1'));
     assert.isDefined(this.doc.get('t2'));
@@ -78,7 +78,7 @@ test.actions = [
     var op = [
       "position", "content", {"nodes": ["t2", "h1", "t1"], "target": -1}
     ];
-    this.doc.exec(op);
+    this.doc.apply(op);
     assert.isArrayEqual(["t2", "h1", "t1"], this.doc.get('content').nodes);
   },
 
@@ -86,7 +86,7 @@ test.actions = [
     var op = [
       "position", "content", {"nodes": ["t2", "h1", "t1"], "target": -1}
     ];
-    this.doc.exec(op);
+    this.doc.apply(op);
     assert.isArrayEqual(["t2", "h1", "t1"], this.doc.get('content').nodes);
   },
 
@@ -94,7 +94,7 @@ test.actions = [
     var op = [
       "position", "content", {"nodes": ["h1", "t1", "t2"], "target": 0}
     ];
-    this.doc.exec(op);
+    this.doc.apply(op);
     assert.isArrayEqual(["h1", "t1", "t2"], this.doc.get('content').nodes);
   },
 
@@ -102,7 +102,7 @@ test.actions = [
     var op = [
       "position", "content", {"nodes": ["h1"], "target": 1}
     ];
-    this.doc.exec(op);
+    this.doc.apply(op);
     assert.isArrayEqual(["t1", "h1", "t2"], this.doc.get('content').nodes);
   },
 
@@ -110,7 +110,7 @@ test.actions = [
     var op = [
       "position", "content", {"nodes": ["h1"], "target": 2}
     ];
-    this.doc.exec(op);
+    this.doc.apply(op);
     assert.isArrayEqual(["t1", "t2", "h1"], this.doc.get('content').nodes);
   },
 
@@ -119,7 +119,7 @@ test.actions = [
       "update", "h1", "content", [4, "ING", -3]
     ];
 
-    this.doc.exec(op);
+    this.doc.apply(op);
     assert.isEqual("HeadING 1", this.doc.get("h1").content);
   },
 
@@ -130,7 +130,7 @@ test.actions = [
       }
     ];
 
-    this.doc.exec(op);
+    this.doc.apply(op);
 
     // Get comments for t1
     var comments = this.doc.find("comments", "t1");
@@ -146,7 +146,7 @@ test.actions = [
       }
     ];
 
-    this.doc.exec(op);
+    this.doc.apply(op);
 
     // Get annotations for text:1
     var annotations = this.doc.find("annotations", "t1");
@@ -163,7 +163,7 @@ test.actions = [
     var op = [
       "update", "t1", "content", [2, "EEE"]
     ];
-    this.doc.exec(op);
+    this.doc.apply(op);
 
     var a1 = this.doc.get('a1');
     assert.isEqual(1, a1.range.start);
@@ -178,7 +178,7 @@ test.actions = [
       }
     ];
 
-    this.doc.exec(op);
+    this.doc.apply(op);
 
     // Get comments for annotation:1
     var comments = this.doc.find("comments", "a1");
@@ -188,7 +188,7 @@ test.actions = [
 
   "Replace old property value with a new value (string)", function() {
     var op = ["set", "c2", "content", "Meeh"];
-    this.doc.exec(op);
+    this.doc.apply(op);
 
     assert.equal(this.doc.get('c2').content, "Meeh");
   },
@@ -199,7 +199,7 @@ test.actions = [
     }];
 
     // Delete element, then check indexes again
-    this.doc.exec(op);
+    this.doc.apply(op);
 
     // Get comments for annotation:1
     var comments = this.doc.find("comments", "a1");
@@ -217,7 +217,7 @@ test.actions = [
 
     var op = ["set", "a1", "node", "t2"];
 
-    this.doc.exec(op);
+    this.doc.apply(op);
 
     // Annotation no longer sticks on t1
     var annotations = this.doc.find('annotations', 't1');
@@ -232,7 +232,7 @@ test.actions = [
   "Update Annotation Range", function() {
 
     var op = ["update", "a1", "range", {start: 1, length: 4}];
-    this.doc.exec(op);
+    this.doc.apply(op);
 
     var a1 = this.doc.get('a1');
     assert.isEqual(1, a1.range.start);
@@ -244,27 +244,27 @@ test.actions = [
       "update", "t2", "content", [5, -1, "Zwei"]
     ];
 
-    this.doc.exec(op);
+    this.doc.apply(op);
     assert.isEqual("Text Zwei", this.doc.get('t2').content);
   },
 
   "Update numeric value of a heading", function() {
     var op = ["set", "h1", "level", 2];
-    this.doc.exec(op);
+    this.doc.apply(op);
     assert.isEqual(2, this.doc.nodes["h1"].level);
   },
 
   "Hide nodes from view", function() {
     var op = ["hide", "content", {"nodes": ["t1", "t2"]}];
 
-    this.doc.exec(op);
+    this.doc.apply(op);
     assert.isArrayEqual(["h1"], this.doc.get('content').nodes);
   },
 
   "Delete nodes from graph and view(s)", function() {
     var op = ["delete", {"nodes": ["t1", "t2"]}];
 
-    this.doc.exec(op);
+    this.doc.apply(op);
     assert.isUndefined(this.doc.get('t1'));
     assert.isUndefined(this.doc.get('t2'));
     assert.isArrayEqual(["h1"], this.doc.get('content').nodes);
@@ -278,21 +278,17 @@ test.actions = [
       }
     ];
 
-    this.doc.exec(op);
+    this.doc.apply(op);
 
     assert.isDefined(this.doc.get('t3'));
 
     op = [
       "position", "content", {"nodes": ["t3"], "target": -1}
     ];
-    this.doc.exec(op);
+    this.doc.apply(op);
 
     assert.isArrayEqual(["h1", "t3"], this.doc.get('content').nodes);
   }
-
-  // "Revert the latest change", function() {
-  //   // this.doc.rewind();
-  // }
 ];
 
 registerTest(['Document', 'Document Manipulation'], test);
