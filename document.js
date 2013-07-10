@@ -536,6 +536,30 @@ Document.__prototype__ = function() {
     return op;
   };
 
+  // inserts text at the current position
+  this.write = function(text) {
+    if (this.selection.isNull()) {
+      console.log("Can not write, as no position has been selected.")
+      return;
+    }
+
+    if (!this.selection.isCollapsed()) {
+      this.delete();
+    }
+
+    var node = this.selection.getNodes()[0];
+    var nodeIdx = this.selection.start[0];
+    var pos = this.selection.start[1];
+
+    // TODO: future. This only works for text nodes....
+    var cmd = Data.Graph.Update([node.id, "content"], [pos, text]);
+    this.apply(cmd);
+    this.select({
+      start: [nodeIdx, pos+text.length],
+      end: [nodeIdx, pos+text.length]
+    });
+  };
+
   this.toJSON = function() {
     var res = __super__.toJSON.call(this);
     res.id = this.id;
