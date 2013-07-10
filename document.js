@@ -246,6 +246,7 @@ Document.__prototype__ = function() {
 
   this.select = function(range) {
     this.selection = new Document.Range(this, range);
+    this.trigger('selection:changed', this.selection);
     return this.selection;
   };
 
@@ -364,6 +365,11 @@ Document.__prototype__ = function() {
     }
 
     this.apply(Data.Graph.Compound(this, ops));
+
+    this.select({
+      start: [startNode, startOffset],
+      end: [startNode, startOffset]
+    });
   };
 
   this.copy = function() {
