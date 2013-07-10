@@ -67,7 +67,7 @@ var SCHEMA = {
     "document": {
       "properties": {
         "views": ["array", "view"],
-        "id": "string",
+        "guid": "string",
         "creator": "string",
         "title": "string",
         "abstract": "string",
@@ -185,7 +185,7 @@ var SEED = function(options) {
     Data.Graph.Create({
       id: "document",
       type: "document",
-      docId: options.id,
+      guid: options.id, // external global document id
       creator: options.creator,
       created_at: options.created_at,
       views: ["content", "figures", "publications"],
@@ -530,6 +530,11 @@ Document.__prototype__ = function() {
     return op;
   };
 
+  this.toJSON = function() {
+    var res = __super__.toJSON.call(this);
+    res.id = this.id;
+    return res;
+  }
 };
 
 // Command Converter
@@ -713,7 +718,10 @@ Document.prototype = new Document.__prototype__();
 Object.defineProperties(Document.prototype, {
   id: {
     get: function () {
-      return this.get("document").docId;
+      return this.get("document").guid;
+    },
+    set: function() {
+      throw "doc.id is immutable";
     }
   },
   creator: {

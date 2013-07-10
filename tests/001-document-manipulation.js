@@ -22,7 +22,7 @@ var test = {};
 
 test.setup = function() {
   this.doc = new Document({
-    id: "substance-doc",
+    id: "substance_doc",
     creator: "michael",
     created_at: new Date()
   });
@@ -33,6 +33,8 @@ test.actions = [
   "Check if valid document has been constructed", function() {
     assert.isArrayEqual(["content", "figures", "publications"], this.doc.get('document').views);
     assert.isTrue(_.isArray(this.doc.get('content').nodes));
+    assert.isEqual("substance_doc", this.doc.get('document').guid);
+    assert.isEqual("substance_doc", this.doc.id);
   },
 
   "Create a new heading node", function() {
