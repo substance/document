@@ -271,7 +271,7 @@ Document.__prototype__ = function() {
       throw new Error('Not yet implemented for actual ranges');
     }
 
-    var nodes = this.selection.getNodes(this);
+    var nodes = this.selection.getNodes();
     var node = nodes[0];
 
     var ops = [];
@@ -326,7 +326,7 @@ Document.__prototype__ = function() {
     var startOffset = this.selection.start[1];
     var endNode = this.selection.end[0];
     var endOffset = this.selection.end[1];
-    var nodes = this.selection.getNodes(this);
+    var nodes = this.selection.getNodes();
 
     var ops = []; // operations transforming the original doc
 
@@ -367,8 +367,8 @@ Document.__prototype__ = function() {
     this.apply(Data.Graph.Compound(this, ops));
 
     this.select({
-      start: [startNode, startOffset],
-      end: [startNode, startOffset]
+      start: [startNode, startOffset-1],
+      end: [startNode, startOffset-1]
     });
   };
 
@@ -378,7 +378,7 @@ Document.__prototype__ = function() {
     var startOffset = this.selection.start[1];
     var endNode = this.selection.end[0];
     var endOffset = this.selection.end[1];
-    var nodes = this.selection.getNodes(this);
+    var nodes = this.selection.getNodes();
 
     var clipboard = new Document({id: "clipboard"});
 
@@ -552,7 +552,7 @@ Document.__prototype__ = function() {
     var pos = this.selection.start[1];
 
     // TODO: future. This only works for text nodes....
-    var cmd = Data.Graph.Update([node.id, "content"], [pos, text]);
+    var cmd = Data.Graph.Update([node.id, "content"], [pos+1, text]);
     this.apply(cmd);
     this.select({
       start: [nodeIdx, pos+text.length],
