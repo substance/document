@@ -910,6 +910,8 @@ var Range = function(doc, range) {
     this.start = _.clone(range.start);
     this.end = _.clone(range.end);
   }
+
+  Object.freeze(this);
 };
 
 
