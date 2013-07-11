@@ -12,7 +12,7 @@ if (typeof exports !== 'undefined') {
   assert = require('substance-test/assert');
   Data = require('substance-data');
   Document = require('..');
-  registerTest = require('substance-test').registerTest;
+  registerTest = require('substance-test').Test.registerTest;
 } else {
   _ = root._;
   assert = root.Substance.assert;
@@ -94,7 +94,7 @@ test.actions = [
 
     // Pull out the fresh node to be updated
     this.freshNode = this.doc.selection.getNodes()[0];
-  
+
     var op = [
       "update", this.freshNode.id, "content", ["Hello Worrrrld!"]
     ];
@@ -172,7 +172,7 @@ test.actions = [
 
     assert.isEqual("The", this.doc.get(contentView[0]).content);
     assert.isEqual(" fox jumps over the lazy dog.", this.doc.get(contentView[1]).content);
-    
+
     // was "Lorem ipsum  " - please check!
     assert.isEqual("Lorem ipsum ", this.doc.get(contentView[2]).content);
 

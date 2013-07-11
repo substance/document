@@ -9,12 +9,12 @@ if (typeof exports !== 'undefined') {
   _    = require('underscore');
   assert = require('substance-test/assert');
   Document = require('..');
-  registerTest = require('substance-test').registerTest;
+  registerTest = require('substance-test').Test.registerTest;
 } else {
   _ = root._;
   assert = root.Substance.assert;
   Document = root.Substance.Document;
-  registerTest = root.Substance.registerTest;
+  registerTest = root.Substance.Test.registerTest;
 }
 
 
