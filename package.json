@@ -5,7 +5,7 @@
   "keywords": ["document", "substance", "server", "client", "browser", "realtime", "git"],
   "author": "Michael Aufreiter",
   "contributors": ["Oliver Buchtala", "Victor Saiz"],
-  "version": "0.4.0",
+  "version": "0.5.0",
   "engines": {
     "node": ">=0.8.x"
   },
@@ -16,11 +16,11 @@
   "dependencies": {
     "underscore": "1.4.x",
     "mocha": "1.12.x",
-    "substance-util": "0.1.0",
-    "substance-test": "0.1.0",
-    "substance-operator": "0.1.0",
-    "substance-chronicle": "0.1.0",
-    "substance-data": "0.7.0"
+    "substance-util": "0.2.0",
+    "substance-test": "0.2.0",
+    "substance-operator": "0.2.0",
+    "substance-chronicle": "0.2.0",
+    "substance-data": "0.8.0"
   },
   "main": "document",
   "scripts": {
