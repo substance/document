@@ -1,6 +1,6 @@
 var MochaTestRunner = require("substance-test").MochaTestRunner;
 
-require("./001-document-manipulation");
-require("./002-document-selection");
+require("./document_manipulation");
+require("./document_selection");
 
 new MochaTestRunner().run();

@@ -1,0 +1,7 @@
+{
+  "tests": [
+    "helpers/dom_helpers.js",
+    "document_manipulation.js",
+    "document_selection.js"
+  ]
+}

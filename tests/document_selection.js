@@ -16,9 +16,9 @@ if (typeof exports !== 'undefined') {
 } else {
   _ = root._;
   assert = root.Substance.assert;
-  Data = root.Substance.Document;
+  Data = root.Substance.Data;
   Document = root.Substance.Document;
-  registerTest = root.Substance.registerTest;
+  registerTest = root.Substance.Test.registerTest;
 }
 
 var test = {};
