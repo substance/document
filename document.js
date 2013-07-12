@@ -561,7 +561,7 @@ Document.__prototype__ = function() {
     var pos = this.selection.start[1];
 
     // TODO: future. This only works for text nodes....
-    var cmd = Data.Graph.Update([node.id, "content"], [pos+1, text]);
+    var cmd = Data.Graph.Update([node.id, "content"], [pos, text]);
     this.apply(cmd);
     this.select({
       start: [nodeIdx, pos+text.length],
