@@ -174,11 +174,11 @@ test.actions = [
     assert.isEqual(" fox jumps over the lazy dog.", this.doc.get(contentView[1]).content);
 
     // was "Lorem ipsum  " - please check!
-    assert.isEqual("Lorem ipsum ", this.doc.get(contentView[2]).content);
+    assert.isEqual("Lorem ipsum  ", this.doc.get(contentView[2]).content);
 
     assert.isEqual("Hello World!", this.doc.get(contentView[3]).content);
     // was "quick brown sit amet, consectetur adipiscing elit." - pls check
-    assert.isEqual("quick brown  sit amet, consectetur adipiscing elit.", this.doc.get(contentView[4]).content);
+    assert.isEqual("quick brown sit amet, consectetur adipiscing elit.", this.doc.get(contentView[4]).content);
   }
 ];
 

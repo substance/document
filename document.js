@@ -240,6 +240,15 @@ Document.__prototype__ = function() {
     }
   };
 
+
+  // Get node position for a given view and node id
+  // --------
+  //
+
+  this.getPosition = function(view, id) {
+    return this.get(view).nodes.indexOf(id);
+  };
+
   // Make a new selection on the document
   // --------
   //
@@ -367,8 +376,8 @@ Document.__prototype__ = function() {
     this.apply(Data.Graph.Compound(this, ops));
 
     this.select({
-      start: [startNode, startOffset-1],
-      end: [startNode, startOffset-1]
+      start: [startNode, startOffset],
+      end: [startNode, startOffset]
     });
   };
 
