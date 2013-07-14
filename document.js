@@ -367,6 +367,10 @@ Document.__prototype__ = function() {
       }, this);
     } else {
       var node = nodes[0];
+      // Backspace behavior (delete one char before current cursor position)
+      if (startOffset === endOffset) {
+        if (startOffset>0) startOffset = endOffset -1;
+      }
       var text = node.content.slice(startOffset, endOffset);
       var r = [startOffset, -text.length];
       // remove trailing text from first node at the beginning of the selection
@@ -374,6 +378,8 @@ Document.__prototype__ = function() {
     }
 
     this.apply(Data.Graph.Compound(this, ops));
+
+
 
     this.select({
       start: [startNode, startOffset],
