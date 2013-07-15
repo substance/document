@@ -278,12 +278,9 @@ Document.Prototype = function() {
   // TODO: move to controller?
 
   this.insertNode = function(type) {
-
     if (!this.selection.isCollapsed()) {
       throw new Error('Not yet implemented for actual ranges');
     }
-
-    console.log('inserting le nooode');
 
     var nodes = this.selection.getNodes();
     var node = nodes[0];
@@ -300,11 +297,13 @@ Document.Prototype = function() {
 
     if (trailingText.length > 0) {
       var r = [cursorPos, -trailingText.length];
+
       ops.push(Data.Graph.Update([node.id, "content"], Operator.TextOperation.fromOT(node.content, r)));
     }
 
     var id1 = type+"_"+util.uuid();
     var id2 = "text_"+util.uuid();
+    var sel
 
     // Insert new node for trailingText
     if (trailingText.length > 0) {
@@ -314,17 +313,36 @@ Document.Prototype = function() {
         content: trailingText
       }));
       ops.push(Data.Graph.Update(["content", "nodes"], Operator.ArrayOperation.Insert(nodePos+1, id2)));
+
+      // sel = {
+      //   start: [nodePos+1, 0],
+      //   end: [nodePos+1, 0]
+      // };
+    } else {
+      // sel = {
+      //   start: [nodePos, 0],
+      //   end: [nodePos, 0]
+      // }
     }
 
-    // Insert new empty node
-    ops.push(Data.Graph.Create({
-      id: id1,
-      type: type
-    }));
-    ops.push(Data.Graph.Update(["content", "nodes"], Operator.ArrayOperation.Insert(nodePos+1, id1)));
+    // DO WE NEED THIS CASE?
+    //  else {
+    //   // Insert new empty node
+    //   ops.push(Data.Graph.Create({
+    //     id: id1,
+    //     type: type
+    //   }));
+    //   ops.push(Data.Graph.Update(["content", "nodes"], Operator.ArrayOperation.Insert(nodePos+1, id1)));
+    // }
+
 
     // Execute all steps at once
     this.apply(Data.Graph.Compound(this, ops));
+
+    this.select({
+      start: [nodePos+1, 0],
+      end: [nodePos+1, 0]
+    });
 
     return this;
   };
@@ -375,23 +393,23 @@ Document.Prototype = function() {
 
     if (!prevNode) return;
 
-    // console.log('merging with previous...', node.content);
+    var prevText = prevNode.content;
     var txt = node.content;
 
     // 1. Delete original node from graph
     ops.push(Data.Graph.Delete(_.clone(node)));
+
     // ... and view
-    
     ops.push(Data.Graph.Update(["content", "nodes"], Operator.ArrayOperation.Delete(nodeOffset, node.id)));
 
     // 2. Update previous node and append text
     ops.push(Data.Graph.Update([prevNode.id, "content"], Operator.TextOperation.Insert(prevNode.content.length, txt)));
     
     this.apply(Data.Graph.Compound(this, ops));
-
+  
     this.select({
-      start: [nodeOffset-1, prevNode.content.length],
-      end: [nodeOffset-1, prevNode.content.length]
+      start: [nodeOffset-1, prevText.length],
+      end: [nodeOffset-1, prevText.length]
     });
 
     // Update selection
@@ -628,7 +646,6 @@ Document.Prototype = function() {
     // console.log('execing command', command);
     // TODO: maybe we could add events to Data.Graph?
     this.trigger('command:executed', command);
-
     return op;
   };
 

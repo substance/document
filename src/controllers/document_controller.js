@@ -62,6 +62,10 @@ DocumentController.Prototype = function() {
     this.__document.write(str);
   };
 
+  this.insertNode = function(type) {
+    this.__document.insertNode(type);
+  };
+
 
   // Move cursor to next pos(character)
   // --------
@@ -265,7 +269,6 @@ DocumentController.Prototype = function() {
       cb(null);
     });
   };
-
 };
 
 // Inherit the prototype of Substance.Document which extends util.Events
