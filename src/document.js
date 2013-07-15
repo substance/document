@@ -428,6 +428,9 @@ Document.Prototype = function() {
     var endOffset = this.selection.end[1];
     var nodes = this.selection.getNodes();
 
+    // console.log('DELETING', this.selection);
+    // return;
+
     var ops = []; // operations transforming the original doc
 
     if (nodes.length > 1) {
@@ -461,14 +464,16 @@ Document.Prototype = function() {
       // Backspace behavior (delete one char before current cursor position)
       if (startOffset === endOffset) {
         if (startOffset>0) {
-          startOffset = endOffset - 1;
+          startOffset -= 1;
         } else {
           // Merge with previous text node if possible
           return this.mergeWithPrevious();
         }
       }
+
       var text = node.content.slice(startOffset, endOffset);
       var r = [startOffset, -text.length];
+
       // remove trailing text from first node at the beginning of the selection
       ops.push(Data.Graph.Update([node.id, "content"], Operator.TextOperation.fromOT(node.content, r)));
     }

@@ -284,19 +284,19 @@ Object.defineProperties(DocumentController.prototype, {
   },
   title: {
     get: function() {
-      return this.__document.title;
+      return this.__document.get('document').title;
     },
     set: function() { throw "immutable property"}
   },
   updated_at: {
     get: function() {
-      return this.__document.updated_at;
+      return this.__document.get('document').updated_at;
     },
     set: function() { throw "immutable property"}
   },
   creator: {
     get: function() {
-      return this.__library.query([this.__document.id, "creator"]);
+      return this.__document.get('document').creator;
     },
     set: function() { throw "immutable property"}
   },
