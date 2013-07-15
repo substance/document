@@ -224,7 +224,7 @@ var Document = function(options) {
   this.selection = new Document.Range(this, null);
 };
 
-Document.__prototype__ = function() {
+Document.Prototype = function() {
   var __super__ = util.prototype(this);
   var converter = new Converter();
 
@@ -249,6 +249,7 @@ Document.__prototype__ = function() {
     return this.get(view).nodes.indexOf(id);
   };
 
+
   // Make a new selection on the document
   // --------
   //
@@ -270,15 +271,19 @@ Document.__prototype__ = function() {
     return content;
   };
 
+
   // Based on current selection, insert new node
   // --------
   //
+  // TODO: move to controller?
 
   this.insertNode = function(type) {
 
     if (!this.selection.isCollapsed()) {
       throw new Error('Not yet implemented for actual ranges');
     }
+
+    console.log('inserting le nooode');
 
     var nodes = this.selection.getNodes();
     var node = nodes[0];
@@ -324,6 +329,74 @@ Document.__prototype__ = function() {
     return this;
   };
 
+  // Based on selection get predecessor node, if available
+  // --------
+  // 
+  // FIXME: currently assumes there are only text nodes!
+
+  this.getPreviousNode = function() {
+    var sel = this.selection;
+    var node = this.selection.getNodes()[0];
+    var nodeOffset = sel.start[0];
+    var view = this.get('content').nodes;
+
+    if (nodeOffset === 0) return null;
+    return this.get(view[nodeOffset-1]);
+  };
+
+
+  // Based on selection get successor node, if available
+  // --------
+  // 
+  // FIXME: currently assumes there are only text nodes!
+
+  this.getNextNode = function() {
+    var sel = this.selection;
+    var node = this.selection.getNodes()[0];
+    var nodeOffset = sel.end[0];
+    var view = this.get('content').nodes;
+
+    if (nodeOffset > view.length) return null;
+    return this.get(view[nodeOffset+1]);
+  };
+
+
+  // Merge with previous node
+  // --------
+  // 
+  // FIX: currently assumes there are only text nodes!
+
+  this.mergeWithPrevious = function() {
+    var sel = this.selection;
+    var node = this.selection.getNodes()[0];
+    var nodeOffset = sel.start[0];
+    var prevNode = this.getPreviousNode();
+    var ops = [];
+
+    if (!prevNode) return;
+
+    // console.log('merging with previous...', node.content);
+    var txt = node.content;
+
+    // 1. Delete original node from graph
+    ops.push(Data.Graph.Delete(_.clone(node)));
+    // ... and view
+    
+    ops.push(Data.Graph.Update(["content", "nodes"], Operator.ArrayOperation.Delete(nodeOffset, node.id)));
+
+    // 2. Update previous node and append text
+    ops.push(Data.Graph.Update([prevNode.id, "content"], Operator.TextOperation.Insert(prevNode.content.length, txt)));
+    
+    this.apply(Data.Graph.Compound(this, ops));
+
+    this.select({
+      start: [nodeOffset-1, prevNode.content.length],
+      end: [nodeOffset-1, prevNode.content.length]
+    });
+
+    // Update selection
+    // find last pos
+  };
 
   // Delete current selection
   // --------
@@ -369,7 +442,12 @@ Document.__prototype__ = function() {
       var node = nodes[0];
       // Backspace behavior (delete one char before current cursor position)
       if (startOffset === endOffset) {
-        if (startOffset>0) startOffset = endOffset -1;
+        if (startOffset>0) {
+          startOffset = endOffset - 1;
+        } else {
+          // Merge with previous text node if possible
+          return this.mergeWithPrevious();
+        }
       }
       var text = node.content.slice(startOffset, endOffset);
       var r = [startOffset, -text.length];
@@ -379,13 +457,16 @@ Document.__prototype__ = function() {
 
     this.apply(Data.Graph.Compound(this, ops));
 
-
-
     this.select({
       start: [startNode, startOffset],
       end: [startNode, startOffset]
     });
   };
+
+
+  // Copy current selection
+  // --------
+  //
 
   this.copy = function() {
     // Convenience vars
@@ -756,8 +837,8 @@ Converter = function() {
     return Data.Graph.Create(comment);
   };
 };
-Document.__prototype__.prototype = Data.Graph.prototype;
-Document.prototype = new Document.__prototype__();
+Document.Prototype.prototype = Data.Graph.prototype;
+Document.prototype = new Document.Prototype();
 
 // Add convenience accessors for builtin document attributes
 Object.defineProperties(Document.prototype, {
@@ -816,7 +897,7 @@ var AnnotatedText = function(doc, path) {
   this.resetCache();
 };
 
-AnnotatedText.__prototype__ = function() {
+AnnotatedText.Prototype = function() {
 
   this.setAnnotation = function(annotation) {
     this.cache.annotations[annotation.id] = annotation;
@@ -913,7 +994,7 @@ AnnotatedText.__prototype__ = function() {
   };
 };
 
-AnnotatedText.prototype = new AnnotatedText.__prototype__();
+AnnotatedText.prototype = new AnnotatedText.Prototype();
 
 Object.defineProperties(AnnotatedText.prototype, {
   content: {
@@ -954,7 +1035,7 @@ var Range = function(doc, range) {
 };
 
 
-Range.__prototype__ = function() {
+Range.Prototype = function() {
   this.toJSON = function() {
     return {
       "start": this.start,
@@ -1018,7 +1099,7 @@ Range.__prototype__ = function() {
   };
 };
 
-Range.prototype = new Range.__prototype__();
+Range.prototype = new Range.Prototype();
 
 
 // Command Factories

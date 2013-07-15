@@ -8,7 +8,7 @@ var _,
 if (typeof exports !== 'undefined') {
   _    = require('underscore');
   assert = require('substance-test/assert');
-  Document = require('..');
+  Document = require('../src/document');
   registerTest = require('substance-test').Test.registerTest;
 } else {
   _ = root._;
