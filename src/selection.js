@@ -5,7 +5,6 @@ var util = Substance.util;
 var _ = root._;
 var Document = Substance.Document;
 
-
 // Document.Selection
 // ================
 //
@@ -135,6 +134,7 @@ Selection.Prototype = function() {
 
   this.nextWord = function() {
     throw new Error('Not implemented');
+    // Consider regex: "aasdf,sdfa$sdf.".match(/(.+?)\b/)
   };
 
 

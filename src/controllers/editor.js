@@ -49,27 +49,11 @@ Editor.Prototype = function() {
     return this.__document.getPosition('content', id);
   };
 
-  // Get node from position in contnet view
-  // --------
-  //
-
-  this.getNodeAtPosition = function(pos) {
-    var doc = this.__document;
-    var view = doc.get('content').nodes;
-    return doc.get(view[pos]);
-  };
-
-  // this.select = function() {
-  //   this.__document.select.apply(this.__document, arguments);
-  // };
-
-
-
-
   // Based on selection get predecessor node, if available
   // --------
   // 
   // FIXME: currently assumes there are only text nodes!
+  // TODO: use Selection.find('left', 'node') instead
 
   this.getPreviousNode = function() {
     var sel = this.selection;
@@ -86,6 +70,7 @@ Editor.Prototype = function() {
   // --------
   // 
   // FIXME: currently assumes there are only text nodes!
+  // TODO: use Selection.find('right', 'node') instead
 
   this.getNextNode = function() {
     var sel = this.selection;
@@ -97,7 +82,6 @@ Editor.Prototype = function() {
     return this.get(view[nodeOffset+1]);
   };
 
-
   // Merge with previous node
   // --------
   // 
@@ -107,7 +91,11 @@ Editor.Prototype = function() {
     var sel = this.selection;
     var node = this.selection.getNodes()[0];
     var nodeOffset = sel.start[0];
+
+    // TODO: Use convenience API one implemented
+    // var prevNode = sel.find('left', node);
     var prevNode = this.getPreviousNode();
+    var doc = this.__document;
     var ops = [];
 
     if (!prevNode) return;
@@ -124,9 +112,9 @@ Editor.Prototype = function() {
     // 2. Update previous node and append text
     ops.push(Data.Graph.Update([prevNode.id, "content"], Operator.TextOperation.Insert(prevNode.content.length, txt)));
     
-    this.apply(Data.Graph.Compound(this, ops));
+    doc.apply(Data.Graph.Compound(doc, ops));
   
-    this.select({
+    this.selection.set({
       start: [nodeOffset-1, prevText.length],
       end: [nodeOffset-1, prevText.length]
     });
@@ -143,6 +131,7 @@ Editor.Prototype = function() {
     var endNode = this.selection.end[0];
     var endOffset = this.selection.end[1];
     var nodes = this.selection.getNodes();
+    var doc = this.__document;
 
 
     var ops = []; // operations transforming the original doc
@@ -167,7 +156,7 @@ Editor.Prototype = function() {
           } else {
             // Delete node from document
             ops.push(Data.Graph.Delete(_.clone(node)));
-            var pos = this.get('content').nodes.indexOf(node.id);
+            var pos = doc.get('content').nodes.indexOf(node.id);
             // ... and from view
             ops.push(Data.Graph.Update(["content", "nodes"], Operator.ArrayOperation.Delete(pos, node.id)));
           }
@@ -192,7 +181,7 @@ Editor.Prototype = function() {
       ops.push(Data.Graph.Update([node.id, "content"], Operator.TextOperation.fromOT(node.content, r)));
     }
 
-    this.__document.apply(Data.Graph.Compound(this.__document, ops));
+    doc.apply(Data.Graph.Compound(doc, ops));
 
     this.selection.set({
       start: [startNode, startOffset],
@@ -345,7 +334,6 @@ Editor.Prototype = function() {
   };
 
 
-
   // Based on current selection, insert new node
   // --------
   //
@@ -386,27 +374,7 @@ Editor.Prototype = function() {
         content: trailingText
       }));
       ops.push(Data.Graph.Update(["content", "nodes"], Operator.ArrayOperation.Insert(nodePos+1, id2)));
-
-      // sel = {
-      //   start: [nodePos+1, 0],
-      //   end: [nodePos+1, 0]
-      // };
-    } else {
-      // sel = {
-      //   start: [nodePos, 0],
-      //   end: [nodePos, 0]
-      // }
     }
-
-    // DO WE NEED THIS CASE?
-    //  else {
-    //   // Insert new empty node
-    //   ops.push(Data.Graph.Create({
-    //     id: id1,
-    //     type: type
-    //   }));
-    //   ops.push(Data.Graph.Update(["content", "nodes"], Operator.ArrayOperation.Insert(nodePos+1, id1)));
-    // }
 
     // Execute all steps at once
     this.__document.apply(Data.Graph.Compound(this.__document, ops));
@@ -448,80 +416,6 @@ Editor.Prototype = function() {
   };
   
 
-  // this.insertNode = function(type) {
-  //   this.__document.insertNode(type);
-  // };
-
-
-  // this.narrowRight = function() {
-  //   var doc = this.__document,
-  //       sel = doc.selection;
-  //   if (sel.isCollapsed()) return;
-
-
-  //   doc.select({
-  //     start: sel.start,
-  //     end: this.prevChar(sel.end) || sel.end
-  //   });
-  // };
-
-
-
-  // this.prevWord = function() {
-
-  // };
-
-  // this.nextWord = function() {
-
-  // };
-
-  // this.expandRightNextWord = function() {
-  // };
-
-  // this.expandLeftNextWord = function() {
-  // };
-
-  // "aasdf,sdfa$sdf.".match(/(.+?)\b/)
-
-
-
-
-
-
-
-  // Move cursor to previous position(character)
-  // --------
-  // 
-  // 1) Collapsed selection (single cursor)
-  //    a) When cursor is at start position
-  //       -> move after last char of prev paragraph (if there is any)
-  //    b) Decrement char offset by one
-  //    
-  // 2) Multi-chars selected
-  //    -> Collapse selection at first pos of selection
-
-  // this.previous = function() {
-  //   var doc = this.__document,
-  //       sel = doc.selection,
-  //       prevChar;
-
-  //   if (sel.isNull()) return; // skip if there's no active selection
-
-  //   // Move single cursor to next position
-  //   if (sel.isCollapsed()) {
-  //     prevChar = this.prevChar(sel.start) || sel.start;
-  //     doc.select({start: prevChar, end: prevChar});
-  //   } else {
-  //     // Case 2: When multiple chars are selected, move to last pos
-  //     // of selection
-  //     doc.select({
-  //       start: [sel.start[0], sel.start[1]],
-  //       end: [sel.start[0], sel.start[1]]
-  //     });
-  //   }
-  // };
-
-
   // Note: as there are events of different types it is quite messy currently.
   // We should consider defining controller specific events here
   // and do event mapping properly
@@ -557,7 +451,6 @@ Editor.Prototype = function() {
       this.__document.unbind(name, handler);
     }
   };
-
 };
 
 // Inherit the prototype of Substance.Document which extends util.Events
