@@ -11,11 +11,11 @@ var Document = Substance.Document;
 // A selection refers to a sub-fragment of a Substance.Document. It holds
 // start/end positions for node and character offsets as well as a direction.
 //   
-// {
-//   start: [NODE_POS, CHAR_POS]
-//   end: [NODE_POS, CHAR_POS]
-//   direction: "left"|"right"
-// }
+//     {
+//       start: [NODE_POS, CHAR_POS]
+//       end: [NODE_POS, CHAR_POS]
+//       direction: "left"|"right"
+//     }
 // 
 // NODE_POS: Node offset in the document (0 = first node)
 // CHAR_POS: Character offset within a textnode (0 = first char)
