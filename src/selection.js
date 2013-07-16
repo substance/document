@@ -36,7 +36,6 @@ var Document = Substance.Document;
 // 
 // 
 // Create a selection operating on that document.
-// 
 //     var sel = new Substance.Document.Selection(doc);
 // 
 //     sel.set({
@@ -56,8 +55,8 @@ var Document = Substance.Document;
 //     P2: | o p q r s t u
 // 
 
-var Selection = function(doc, selection) {
-  this.doc = doc;
+var Selection = function(document, selection) {
+  this.document = document;
 
   if (!selection) {
     this.start = null;
@@ -71,11 +70,6 @@ var Selection = function(doc, selection) {
 
 Selection.Prototype = function() {
 
-
-  // Helpers
-  // var getNode = function(doc, node) {
-    
-  // };
 
   // Set selection
   // --------
@@ -109,23 +103,38 @@ Selection.Prototype = function() {
     return this;
   };
 
+  // Get node from position in contnet view
+  // --------
+  //
+
+  this.getNodeAtPosition = function(pos) {
+    var view = this.document.get('content').nodes;
+    return this.document.get(view[pos]);
+  };
 
   // Check if the given node has a successor
   // --------
   // 
 
   this.hasSuccessor = function(nodePos) {
-    var view = this.__document.get('content').nodes;
+    var view = this.document.get('content').nodes;
     return nodePos < view.length-1;
   };
 
+  // Return previous occuring word for a given node/character position
+  // --------
+  // 
+
+  this.prevWord = function() {
+    throw new Error('Not implemented');
+  };
 
   // Return next occuring word for a given node/character position
   // --------
   // 
 
   this.nextWord = function() {
-
+    throw new Error('Not implemented');
   };
 
 
@@ -228,50 +237,13 @@ Selection.Prototype = function() {
       }
     } else {
       // Collapsed: a b c|d e f g
-      this.setCursor(this.find(direction, granularity));
+      var next = this.find(direction, granularity);
+      this.setCursor(next);
       // After (direction=left):  a b|c d e f g
       // After (direction=right): a b c d|e f g
-
-      // Collapsed: a b c|d e f g
-      // if (direction === "left") {
-      //   this.setCursor(this.prevChar(this.start) || this.start);
-      //   // Collapsed: a b|c d e f g
-      // } else {
-      //   this.setCursor(this.nextChar(this.start) || this.start);
-      //   // Collapsed: a b c d|e f g
-      // }
     }
   };
 
-  // Move cursor to next pos(character)
-  // --------
-  // 
-  // 1) Collapsed selection (single cursor)
-  //    a) When cursor is at end position
-  //       -> move to first pos of next paragraph (if there is any)
-  //    b) Increment char offset by one
-  //    
-  // 2) Multi-chars selected
-  //    -> Collapse selection at last pos of selection
-
-  // this.next = function() {
-  //   var doc = this.__document;
-  //   var sel = this.__document.selection;
-  //   if (sel.isNull()) return; // skip if there's no active selection
-
-  //   // Move single cursor to next position
-  //   if (sel.isCollapsed()) {
-  //     var nextChar = this.nextChar(sel.end) || sel.end;
-  //     doc.select({start: nextChar, end: nextChar});
-  //   } else {
-  //     // Case 2: When multiple chars are selected, 
-  //     // move cursor to last pos of selection
-  //     // doc.select({
-  //     //   start: [sel.end[0], sel.end[1]],
-  //     //   end: [sel.end[0], sel.end[1]]
-  //     // });
-  //   }
-  // };
 
   // Expand current selection
   // ---------
@@ -327,7 +299,6 @@ Selection.Prototype = function() {
   };
 
 
-
   // JSON serialization
   // --------
   // 
@@ -345,11 +316,11 @@ Selection.Prototype = function() {
   // --------
 
   this.getNodes = function() {
-    var view = this.doc.get('content').nodes;
+    var view = this.document.get('content').nodes;
     if (this.isNull()) return [];
 
     return _.map(view.slice(this.start[0], this.end[0]+1), function(n) {
-      return this.doc.get(n);
+      return this.document.get(n);
     }, this);
   };
 
@@ -361,7 +332,7 @@ Selection.Prototype = function() {
   // over 1+ characters
 
   this.isNull = function() {
-    return !this.start || !this.end;
+    return !this.start || !this.end;
   };
 
 
