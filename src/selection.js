@@ -259,10 +259,10 @@ Selection.Prototype = function() {
       // Right bound: a > > d e f g
 
       if (direction === 'left') {
-        this.end = this.prevChar(this.end) || this.end;
+        this.end = this.prevChar(this.end) || this.end;
         // After: a > c d e f g
       } else {
-        this.end = this.nextChar(this.end) || this.end;
+        this.end = this.nextChar(this.end) || this.end;
         // After: a > > > e f g
       }
     }
@@ -270,19 +270,19 @@ Selection.Prototype = function() {
       // Left bound: a < < d e f g
       
       if (direction === 'left') {
-        this.start = this.prevChar(this.start) || this.start;
+        this.start = this.prevChar(this.start) || this.start;
         // After: < < < d e f g
       } else {
-        this.start = this.nextChar(this.start) || this.start;
+        this.start = this.nextChar(this.start) || this.start;
       }
     } else {
       // Collapsed: a|b c d e f g
 
       if (direction === 'left') {
-        this.start = this.prevChar(this.start) || this.start;
+        this.start = this.prevChar(this.start) || this.start;
         // After: < b c d e f g
       } else {
-        this.end = this.nextChar(this.end) || this.end;
+        this.end = this.nextChar(this.end) || this.end;
         // After: a > c d e f g
       }
     }
@@ -291,7 +291,7 @@ Selection.Prototype = function() {
     if (this.isCollapsed()) {
       this.direction = null;
     } else {
-      this.direction = this.direction || direction  
+      this.direction = this.direction || direction  
     }
 
     // Update selection
