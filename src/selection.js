@@ -225,12 +225,12 @@ Selection.Prototype = function() {
   // Convenience for placing the single cusor where start=end
 
   this.move = function(direction, granularity) {
-    direction = direction || "right";
-    granularity = granularity || 'char';
+    direction = direction || 'right';
+    granularity = granularity || 'char';
 
     if (!this.isCollapsed()) {
       // TODO: Does not yet consider granularity word
-      if (direction === "left") {
+      if (direction === 'left') {
         this.setCursor(this.start);
       } else {
         this.setCursor(this.end);
@@ -252,13 +252,13 @@ Selection.Prototype = function() {
   // They can either be right-bound or left-bound
 
   this.expand = function(direction, granularity) {
-    direction = direction || "right";
-    granularity = granularity || 'char';
+    direction = direction || 'right';
+    granularity = granularity || 'char';
 
-    if (this.direction === "right") {
+    if (this.direction === 'right') {
       // Right bound: a > > d e f g
 
-      if (direction === "left") {
+      if (direction === 'left') {
         this.end = this.prevChar(this.end) || this.end;
         // After: a > c d e f g
       } else {
@@ -266,10 +266,10 @@ Selection.Prototype = function() {
         // After: a > > > e f g
       }
     }
-    else if (this.direction === "left") {
+    else if (this.direction === 'left') {
       // Left bound: a < < d e f g
       
-      if (direction === "left") {
+      if (direction === 'left') {
         this.start = this.prevChar(this.start) || this.start;
         // After: < < < d e f g
       } else {
@@ -278,7 +278,7 @@ Selection.Prototype = function() {
     } else {
       // Collapsed: a|b c d e f g
 
-      if (direction === "left") {
+      if (direction === 'left') {
         this.start = this.prevChar(this.start) || this.start;
         // After: < b c d e f g
       } else {
