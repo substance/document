@@ -53,7 +53,6 @@ test.actions = [
     assert.isEqual(0, this.doc.get('h1').level);
   },
 
-
   "Create a new text nodes", function() {
     var op = ["create", {
         "id": "t1",
