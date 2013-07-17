@@ -124,17 +124,53 @@ Selection.Prototype = function() {
   // --------
   // 
 
-  this.prevWord = function() {
-    throw new Error('Not implemented');
+  this.prevWord = function(pos) {
+    // throw new Error('Not implemented');
+    var nodePos = pos[0],
+        charPos = pos[1],
+        node = this.getNodeAtPosition(nodePos);
+
+    if (!node) throw new Error('Invalid node position');
+   
+    // Cursor is at first position -> move to prev paragraph if there is any
+    if (charPos === 0) return this.prevChar(pos);
+
+    var content = node.content;
+
+    // Matches all word boundaries in a string
+    var wordBounds = new Substance.RegExp(/\b\w/g).match(content);
+    var prevBounds = _.select(wordBounds, function(m) {
+      return m.index<charPos;
+    });
+
+    if (prevBounds.length === 0) return [nodePos, 0];
+    return [nodePos, _.last(prevBounds).index];
   };
 
   // Return next occuring word for a given node/character position
   // --------
   // 
 
-  this.nextWord = function() {
-    throw new Error('Not implemented');
-    // Consider regex: "aasdf,sdfa$sdf.".match(/(.+?)\b/)
+  this.nextWord = function(pos) {
+    var nodePos = pos[0],
+        charPos = pos[1],
+        node = this.getNodeAtPosition(nodePos);
+
+    if (!node) throw new Error('Invalid node position');
+   
+    // Cursor is a last position -> move to next paragraph if there is any
+    if (charPos >= node.content.length) return this.nextChar(pos);
+
+    var content = node.content;
+
+    // Matches all word boundaries in a string
+    var wordBounds = new Substance.RegExp(/\w\b/g).match(content);
+    var nextBound = _.find(wordBounds, function(m) {
+      return m.index>charPos;
+    });
+
+    if (!nextBound) return [nodePos, content.length];
+    return [nodePos, nextBound.index+1];
   };
 
 
@@ -152,11 +188,10 @@ Selection.Prototype = function() {
     
     // Last char in paragraph
     if (charPos >= node.content.length) {
-      
       if (this.hasSuccessor(nodePos)) {
         return [nodePos+1, 0];
       } else {
-        return null;
+        return pos;
       }
     } else {
       return [nodePos, charPos+1];
@@ -186,7 +221,7 @@ Selection.Prototype = function() {
         lastPos = prevNode.content.length;
         return [nodePos-1, lastPos];
       } else {
-        return null;
+        return pos;
       }
     } else {
       return [nodePos, charPos-1];
@@ -202,18 +237,22 @@ Selection.Prototype = function() {
   //     find('left', 'word');
   //     find('left', 'node');
 
-  this.find = function(direction, granularity) {
+  this.find = function(start, direction, granularity) {
     if (direction === "left") {
       if (granularity === "word") {
-        return this.prevWord(this.start);
-      } else {
-        return this.prevChar(this.start);
+        return this.prevWord(start);
+      } else if (granularity === "char") {
+        return this.prevChar(start);
+      } else if (granularity === "node") {
+        return this.prevNode(start);
       }
     } else {
       if (granularity === "word") {
-        return this.nextWord(this.end);
-      } else {
-        return this.nextChar(this.end);
+        return this.nextWord(start);
+      } else if (granularity === "char") {
+        return this.nextChar(start);
+      } else if (granularity === "node") {
+        return this.nextNode(start);
       }
     }
   };
@@ -237,7 +276,7 @@ Selection.Prototype = function() {
       }
     } else {
       // Collapsed: a b c|d e f g
-      var next = this.find(direction, granularity);
+      var next = this.find(this.start, direction, granularity);
       this.setCursor(next);
       // After (direction=left):  a b|c d e f g
       // After (direction=right): a b c d|e f g
@@ -259,30 +298,23 @@ Selection.Prototype = function() {
       // Right bound: a > > d e f g
 
       if (direction === 'left') {
-        this.end = this.prevChar(this.end) || this.end;
+        this.end = this.find(this.end, direction, granularity);
         // After: a > c d e f g
       } else {
-        this.end = this.nextChar(this.end) || this.end;
+        this.end = this.find(this.end, direction, granularity);
         // After: a > > > e f g
       }
     }
     else if (this.direction === 'left') {
-      // Left bound: a < < d e f g
-      
-      if (direction === 'left') {
-        this.start = this.prevChar(this.start) || this.start;
-        // After: < < < d e f g
-      } else {
-        this.start = this.nextChar(this.start) || this.start;
-      }
+      // Left bound: a < < d e f g      
+      this.start = this.find(this.start, direction, granularity);
     } else {
       // Collapsed: a|b c d e f g
-
       if (direction === 'left') {
-        this.start = this.prevChar(this.start) || this.start;
+        this.start = this.find(this.start, direction, granularity);
         // After: < b c d e f g
       } else {
-        this.end = this.nextChar(this.end) || this.end;
+        this.end = this.find(this.end, direction, granularity);
         // After: a > c d e f g
       }
     }
