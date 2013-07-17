@@ -15,12 +15,12 @@ var Selection = Document.Selection;
 //
 // Provides means for editing a Substance.Document. It introduces a Selection API
 // in order to move a cursor through the document, support copy and paste, etc.
-// 
+//
 // Note: it is quite intentional not to expose the full Substance.Document interface
 //       to force us to explicitely take care of model adaptations.
-// 
+//
 // Example usage:
-//     
+//
 //     var doc = new Substance.Document();
 //     var editor = new Substance.Document.Editor(doc);
 //     var editor.insert('Hello World');
@@ -43,7 +43,7 @@ Editor.Prototype = function() {
 
   // Given a node id, get position in the document
   // --------
-  // 
+  //
 
   this.getPosition = function(id) {
     return this.__document.getPosition('content', id);
@@ -51,7 +51,7 @@ Editor.Prototype = function() {
 
   // Based on selection get predecessor node, if available
   // --------
-  // 
+  //
   // FIXME: currently assumes there are only text nodes!
   // TODO: use Selection.find('left', 'node') instead
 
@@ -68,7 +68,7 @@ Editor.Prototype = function() {
 
   // Based on selection get successor node, if available
   // --------
-  // 
+  //
   // FIXME: currently assumes there are only text nodes!
   // TODO: use Selection.find('right', 'node') instead
 
@@ -84,7 +84,7 @@ Editor.Prototype = function() {
 
   // Merge with previous node
   // --------
-  // 
+  //
   // FIX: currently assumes there are only text nodes!
 
   this.mergeWithPrevious = function() {
@@ -111,9 +111,9 @@ Editor.Prototype = function() {
 
     // 2. Update previous node and append text
     ops.push(Data.Graph.Update([prevNode.id, "content"], Operator.TextOperation.Insert(prevNode.content.length, txt)));
-    
+
     doc.apply(Data.Graph.Compound(doc, ops));
-  
+
     this.selection.set({
       start: [nodeOffset-1, prevText.length],
       end: [nodeOffset-1, prevText.length]
@@ -275,7 +275,7 @@ Editor.Prototype = function() {
 
   // Paste content from clipboard at current position
   // --------
-  // 
+  //
 
   this.paste = function(content) {
 
@@ -389,7 +389,7 @@ Editor.Prototype = function() {
 
   // inserts text at the current position
   // --------
-  // 
+  //
 
   this.write = function(text) {
     if (this.selection.isNull()) {
@@ -408,13 +408,13 @@ Editor.Prototype = function() {
     // TODO: future. This only works for text nodes....
     var cmd = Data.Graph.Update([node.id, "content"], [pos, text]);
     this.__document.apply(cmd);
-  
+
     this.selection.set({
       start: [nodeIdx, pos+text.length],
       end: [nodeIdx, pos+text.length]
     });
   };
-  
+
 
   // Note: as there are events of different types it is quite messy currently.
   // We should consider defining controller specific events here
