@@ -67,7 +67,64 @@ var Selection = function(document, selection) {
 };
 
 
+
 Selection.Prototype = function() {
+
+  function compare(a, b) {
+    if (a[0]>b[0]) {
+      return 1;
+    } else if (a[0]<b[0]) {
+      return -1;
+    } else {
+      if (a[1]>b[1]) {
+        return 1;
+      } else if (a[1]<b[1]) {
+        return -1;
+      } else {
+        return 0;
+      }
+    }
+  }
+
+  // Return left if start > end
+  // Returns null if start === end
+  // Returns right if start < end
+  // Ensures start <= end afterwards
+
+  // Transformations which are equivalent
+  // but we want to ensure start < end
+
+  // ____2>>1___   -> ____1<<2___
+  // ____2<<1___   -> ____1>>2___
+
+  function normalize(sel) {
+    var res = util.deepclone(sel);
+    var signum = compare(sel.start, sel.end);
+
+    // Right-bound
+    if (signum === -1) {
+      // ooo>>oo
+      // ooo<<oo
+      // default case do nothing
+      if (!sel.direction) res.direction = 'right';
+
+    } else if (signum === 1) {
+      // ooo>>oo (start>end)
+      // ooo<<oo (start>end)
+        res.start = sel.end;
+        res.end = sel.start;
+
+        if (!sel.direction) {
+          res.direction = 'left';
+        } else {
+          res.direction = sel.direction === 'left' ? 'right' : 'left';          
+        }
+    } else {
+      // Collapsed
+      res.direction = null;
+    }
+    return res;
+  }
 
 
   // Set selection
@@ -76,6 +133,7 @@ Selection.Prototype = function() {
   // Direction defaults to right
 
   this.set = function(sel) {
+    sel = util.deepclone(sel);
     var dir = sel.direction || "right";
     if (_.isArray(sel)) {
       this.start = [sel[0], sel[1]];
@@ -257,7 +315,6 @@ Selection.Prototype = function() {
     }
   };
 
-
   // Move cursor to position
   // --------
   // 
@@ -283,52 +340,65 @@ Selection.Prototype = function() {
     }
   };
 
-
   // Expand current selection
   // ---------
   // 
   // Selections keep the direction as a state
   // They can either be right-bound or left-bound
+  // 
 
   this.expand = function(direction, granularity) {
     direction = direction || 'right';
     granularity = granularity || 'char';
 
+    // Create a copy to ensure consistency during transformation
+    var res = this.toJSON();
+
     if (this.direction === 'right') {
       // Right bound: a > > d e f g
 
       if (direction === 'left') {
-        this.end = this.find(this.end, direction, granularity);
+        res.end = this.find(this.end, direction, granularity);
         // After: a > c d e f g
       } else {
-        this.end = this.find(this.end, direction, granularity);
+        res.end = this.find(this.end, direction, granularity);
         // After: a > > > e f g
       }
     }
     else if (this.direction === 'left') {
       // Left bound: a < < d e f g      
-      this.start = this.find(this.start, direction, granularity);
+      res.start = this.find(this.start, direction, granularity);
     } else {
       // Collapsed: a|b c d e f g
-      if (direction === 'left') {
-        this.start = this.find(this.start, direction, granularity);
-        // After: < b c d e f g
-      } else {
-        this.end = this.find(this.end, direction, granularity);
-        // After: a > c d e f g
-      }
+      res.end = this.find(this.end, direction, granularity);
+      // After: < b c d e f g
+      // After: a > c d e f g
     }
 
-    // Compute new direction
-    if (this.isCollapsed()) {
-      this.direction = null;
-    } else {
-      this.direction = this.direction || direction  
-    }
+
+
+    // // Compute new direction
+    // if (this.isCollapsed()) {
+    //   this.direction = null;
+    // } else {
+    //   console.log('direction before', this.direction);
+    //   if (this.start[1]>this.end[1]) {
+    //     var help = this.start;
+    //     this.start = this.end;
+    //     this.end = help;
+
+    //     this.direction = direction;
+    //   } else {
+    //     this.direction = this.direction || direction;  
+    //   }
+    //   console.log('direction after', this.direction);
+    // }
+
 
     // Update selection
-    this.set(this.toJSON());
+    this.set(normalize(res));
   };
+
 
 
   // JSON serialization
