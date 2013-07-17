@@ -280,7 +280,7 @@ Editor.Prototype = function() {
   this.paste = function(content) {
 
     // First off, delete the selection
-    this.delete();
+    if (!this.selection.isCollapsed()) this.delete();
 
     if (!content) return;
 
