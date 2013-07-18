@@ -1,7 +1,7 @@
 (function(root) {
 
 var _,
-    Editor,
+    Writer,
     Document;
 
 if (typeof exports !== 'undefined') {
@@ -9,7 +9,7 @@ if (typeof exports !== 'undefined') {
 } else {
   _ = root._;
   Document = root.Substance.Document;
-  Editor = root.Substance.Document.Editor;
+  Writer = root.Substance.Document.Writer;
 }
 
 var ID_IDX = 1;
@@ -37,7 +37,7 @@ var DocumentTest = function() {
     ID_IDX = 1;
 
     this.__document = new Document({id: "surface_test"});
-    this.editor = new Editor(this.__document);
+    this.writer = new Writer(this.__document);
 
     this.fixture();
   };

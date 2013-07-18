@@ -454,7 +454,7 @@ Selection.Prototype = function() {
   this.getText = function() {
     var text = "";
 
-    if (this.isNull()) return "";
+    if (this.isNull()) return text;
 
     // start node
     var nodes = this.getNodes();

@@ -15,7 +15,7 @@
   var P3 = "Fix problem quickly with galvanized jets";
   var P4 = "Heavy boxes perform quick waltzes and jigs";
 
-  var EditorTest = function() {
+  var WriterTest = function() {
     DocumentTest.call(this);
 
     // deactivate the default fixture
@@ -378,8 +378,8 @@
     ];
   };
 
-  EditorTest.prototype = DocumentTest.prototype;
+  WriterTest.prototype = DocumentTest.prototype;
 
-  registerTest(['Document', 'Editor'], new EditorTest());
+  registerTest(['Document', 'Writer'], new WriterTest());
 
 })(this);

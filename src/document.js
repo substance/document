@@ -220,8 +220,24 @@ var Converter;
 
 var Document = function(options) {
   options.seed = options.seed || SEED(options);
-  Data.Graph.call(this, options.schema || SCHEMA, options);
-  
+  Data.Graph.call(this, options.schema || SCHEMA, options);  
+};
+
+
+// Factory method 
+// --------
+// 
+// TODO: Ensure the snapshot doesn't get chronicled
+
+Document.fromSnapshot = function(data, options) {
+  options.seed = [];
+  var doc = new Document(options);
+
+  _.each(data.nodes, function(n) {
+    doc.create(n);
+  });
+
+  return doc;
 };
 
 Document.Prototype = function() {
@@ -263,6 +279,7 @@ Document.Prototype = function() {
 
   // Executes a document manipulation command.
   // --------
+  // 
   // The command is converted into a sequence of graph commands
 
   this.apply = function(command) {
@@ -301,6 +318,10 @@ Document.Prototype = function() {
     return op;
   };
 
+  // Serialize to JSON
+  // --------
+  // 
+  // The command is converted into a sequence of graph commands
 
   this.toJSON = function() {
     var res = __super__.toJSON.call(this);

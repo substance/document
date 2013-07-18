@@ -10,7 +10,7 @@ var Operator = Substance.Operator;
 var Selection = Document.Selection;
 
 
-// Document.Editor
+// Document.Writer
 // -----------------
 //
 // Provides means for editing a Substance.Document. It introduces a Selection API
@@ -22,16 +22,16 @@ var Selection = Document.Selection;
 // Example usage:
 //
 //     var doc = new Substance.Document();
-//     var editor = new Substance.Document.Editor(doc);
+//     var editor = new Substance.Document.Writer(doc);
 //     var editor.insert('Hello World');
 
-var Editor = function(document) {
+var Writer = function(document) {
   this.__document = document;
   this.selection = new Selection(this.__document, null);
 };
 
 
-Editor.Prototype = function() {
+Writer.Prototype = function() {
 
   // Document Facette
   // --------
@@ -454,10 +454,10 @@ Editor.Prototype = function() {
 };
 
 // Inherit the prototype of Substance.Document which extends util.Events
-Editor.prototype = new Editor.Prototype();
+Writer.prototype = new Writer.Prototype();
 
 // Property accessors for convenient access of primary properties
-Object.defineProperties(Editor.prototype, {
+Object.defineProperties(Writer.prototype, {
   id: {
     get: function() {
       return this.__document.id;
@@ -484,6 +484,6 @@ Object.defineProperties(Editor.prototype, {
   }
 });
 
-Document.Editor = Editor;
+Document.Writer = Writer;
 
 })(this);
