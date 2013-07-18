@@ -34,11 +34,11 @@
         this.insertContent(P2);
         this.insertContent(P3);
 
-        console.log("EDITOR", this.editor);
+        console.log("writer", this.writer);
       },
 
       "Set single cursor", function() {
-        this.editor.selection.set({
+        this.writer.selection.set({
           start: [1,2],
           end: [1,2]
         });
