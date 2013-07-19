@@ -7,7 +7,7 @@ var _ = require("underscore");
 var Test = require('substance-test');
 var assert = Test.assert;
 var registerTest = Test.registerTest;
-var Document = require('..');
+var Document = require('../index');
 
 
 // Test
