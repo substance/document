@@ -3,9 +3,9 @@
 // Import
 // ========
 
-var substance_test = require('substance-test');
-var assert = substance_test.assert;
-var registerTest = substance_test.registerTest;
+var Test = require('substance-test');
+var assert = Test.assert;
+var registerTest = Test.registerTest;
 var Data = require('substance-data');
 var Document = require('..');
 

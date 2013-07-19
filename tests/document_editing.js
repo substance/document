@@ -3,8 +3,8 @@
 // Import
 // ========
 
-var substance_test = require('substance-test');
-var registerTest = substance_test.registerTest;
+var Test = require('substance-test');
+var registerTest = Test.registerTest;
 var DocumentTest = require("./document_test.js");
 
 
