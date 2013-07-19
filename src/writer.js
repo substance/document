@@ -489,4 +489,5 @@ Object.defineProperties(Writer.prototype, {
   }
 });
 
-Document.Writer = Writer;
+module.exports = Writer;
+
