@@ -20,10 +20,11 @@
     "substance-test": "0.2.0",
     "substance-operator": "0.2.0",
     "substance-chronicle": "0.2.0",
-    "substance-data": "0.8.0"
+    "substance-data": "0.8.0",
+    "substance-regexp": "0.1.0"
   },
   "main": "document",
   "scripts": {
-    "test": "mocha -R spec tests/tests.js"
+    "test": "mocha -R spec tests/run.js"
   }
 }

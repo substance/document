@@ -1,3 +1,17 @@
+"use strict";
+
+// Import
+// ========
+
+var _ = require("underscore");
+var util = require("substance-util");
+var Data = require("substance-data");
+var Document = require("./document");
+var Operator = require("substance-operator");
+
+// Module
+// ========
+
 // AnnotatedText
 // --------
 //
@@ -122,3 +136,8 @@ Object.defineProperties(AnnotatedText.prototype, {
     }
   }
 });
+
+// Export
+// ========
+
+module.exports = AnnotatedText;

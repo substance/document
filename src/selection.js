@@ -1,30 +1,29 @@
-(function(root) {
+"use strict";
 
-var Substance = root.Substance;
-var util = Substance.util;
-var _ = root._;
-var Document = Substance.Document;
+var _ = require("underscore");
+var util = require("substance-util");
+var SRegExp = require("substance-regexp");
 
 // Document.Selection
 // ================
 //
 // A selection refers to a sub-fragment of a Substance.Document. It holds
 // start/end positions for node and character offsets as well as a direction.
-//   
+//
 //     {
 //       start: [NODE_POS, CHAR_POS]
 //       end: [NODE_POS, CHAR_POS]
 //       direction: "left"|"right"
 //     }
-// 
+//
 // NODE_POS: Node offset in the document (0 = first node)
 // CHAR_POS: Character offset within a textnode (0 = first char)
-// 
+//
 // Example
 // --------
-// 
+//
 // Consider a document `doc` consisting of 3 paragraphs.
-// 
+//
 //           0 1 2 3 4 5 6
 //     -------------------
 //     P0  | a b c d e f g
@@ -32,19 +31,19 @@ var Document = Substance.Document;
 //     P1: | h i j k l m n
 //     -------------------
 //     P2: | o p q r s t u
-// 
-// 
+//
+//
 // Create a selection operating on that document.
 //     var sel = new Substance.Document.Selection(doc);
-// 
+//
 //     sel.set({
 //       start: [0, 4],
 //       end: [1, 2],
 //       direction: "right"
 //     });
-// 
+//
 // This call results in the following selection:
-//     
+//
 //           0 1 2 3 4 5 6
 //     -------------------
 //     P0  | a b c d > > >
@@ -52,7 +51,7 @@ var Document = Substance.Document;
 //     P1: | > > > k l m n
 //     -------------------
 //     P2: | o p q r s t u
-// 
+//
 
 var Selection = function(document, selection) {
   this.document = document;
@@ -117,7 +116,7 @@ Selection.Prototype = function() {
         if (!sel.direction) {
           res.direction = 'left';
         } else {
-          res.direction = sel.direction === 'left' ? 'right' : 'left';          
+          res.direction = sel.direction === 'left' ? 'right' : 'left';
         }
     } else {
       // Collapsed
@@ -129,7 +128,7 @@ Selection.Prototype = function() {
 
   // Set selection
   // --------
-  // 
+  //
   // Direction defaults to right
 
   this.set = function(sel) {
@@ -150,7 +149,7 @@ Selection.Prototype = function() {
 
   // Set cursor to position
   // --------
-  // 
+  //
   // Convenience for placing the single cusor where start=end
 
   this.setCursor = function(pos) {
@@ -171,7 +170,7 @@ Selection.Prototype = function() {
 
   // Check if the given node has a successor
   // --------
-  // 
+  //
 
   this.hasSuccessor = function(nodePos) {
     var view = this.document.get('content').nodes;
@@ -180,7 +179,7 @@ Selection.Prototype = function() {
 
   // Return previous occuring word for a given node/character position
   // --------
-  // 
+  //
 
   this.prevWord = function(pos) {
     // throw new Error('Not implemented');
@@ -189,14 +188,14 @@ Selection.Prototype = function() {
         node = this.getNodeAtPosition(nodePos);
 
     if (!node) throw new Error('Invalid node position');
-   
+
     // Cursor is at first position -> move to prev paragraph if there is any
     if (charPos === 0) return this.prevChar(pos);
 
     var content = node.content;
 
     // Matches all word boundaries in a string
-    var wordBounds = new Substance.RegExp(/\b\w/g).match(content);
+    var wordBounds = new SRegExp(/\b\w/g).match(content);
     var prevBounds = _.select(wordBounds, function(m) {
       return m.index<charPos;
     });
@@ -207,7 +206,7 @@ Selection.Prototype = function() {
 
   // Return next occuring word for a given node/character position
   // --------
-  // 
+  //
 
   this.nextWord = function(pos) {
     var nodePos = pos[0],
@@ -215,14 +214,14 @@ Selection.Prototype = function() {
         node = this.getNodeAtPosition(nodePos);
 
     if (!node) throw new Error('Invalid node position');
-   
+
     // Cursor is a last position -> move to next paragraph if there is any
     if (charPos >= node.content.length) return this.nextChar(pos);
 
     var content = node.content;
 
     // Matches all word boundaries in a string
-    var wordBounds = new Substance.RegExp(/\w\b/g).match(content);
+    var wordBounds = new SRegExp(/\w\b/g).match(content);
     var nextBound = _.find(wordBounds, function(m) {
       return m.index>charPos;
     });
@@ -234,7 +233,7 @@ Selection.Prototype = function() {
 
   // Return next char, for a given node/character position
   // --------
-  // 
+  //
   // Useful when navigating over paragraph boundaries
 
   this.nextChar = function(pos) {
@@ -243,7 +242,7 @@ Selection.Prototype = function() {
         node = this.getNodeAtPosition(nodePos);
 
     if (!node) throw new Error('Invalid node position');
-    
+
     // Last char in paragraph
     if (charPos >= node.content.length) {
       if (this.hasSuccessor(nodePos)) {
@@ -259,7 +258,7 @@ Selection.Prototype = function() {
 
   // Return next char, for a given node/character position
   // --------
-  // 
+  //
   // Useful when navigating over paragraph boundaries
 
   this.prevChar = function(pos) {
@@ -286,11 +285,11 @@ Selection.Prototype = function() {
     }
   };
 
-  // Find 
+  // Find
   // --------
-  // 
+  //
   // Useful helper to find char,word and node boundaries
-  // 
+  //
   //     find('right', 'char');
   //     find('left', 'word');
   //     find('left', 'node');
@@ -317,7 +316,7 @@ Selection.Prototype = function() {
 
   // Move cursor to position
   // --------
-  // 
+  //
   // Convenience for placing the single cusor where start=end
 
   this.move = function(direction, granularity) {
@@ -342,10 +341,10 @@ Selection.Prototype = function() {
 
   // Expand current selection
   // ---------
-  // 
+  //
   // Selections keep the direction as a state
   // They can either be right-bound or left-bound
-  // 
+  //
 
   this.expand = function(direction, granularity) {
     direction = direction || 'right';
@@ -366,7 +365,7 @@ Selection.Prototype = function() {
       }
     }
     else if (this.direction === 'left') {
-      // Left bound: a < < d e f g      
+      // Left bound: a < < d e f g
       res.start = this.find(this.start, direction, granularity);
     } else {
       // Collapsed: a|b c d e f g
@@ -389,7 +388,7 @@ Selection.Prototype = function() {
 
     //     this.direction = direction;
     //   } else {
-    //     this.direction = this.direction || direction;  
+    //     this.direction = this.direction || direction;
     //   }
     //   console.log('direction after', this.direction);
     // }
@@ -403,7 +402,7 @@ Selection.Prototype = function() {
 
   // JSON serialization
   // --------
-  // 
+  //
 
   this.toJSON = function() {
     return {
@@ -429,7 +428,7 @@ Selection.Prototype = function() {
 
   // No selection
   // --------
-  // 
+  //
   // Returns true if there's just a single cursor not a selection spanning
   // over 1+ characters
 
@@ -440,7 +439,7 @@ Selection.Prototype = function() {
 
   // Collapsed
   // --------
-  // 
+  //
   // Returns true if there's just a single cursor not a selection spanning
   // over 1+ characters
 
@@ -486,10 +485,4 @@ _.extend(Selection.prototype, util.Events);
 // Export
 // ========
 
-if (typeof exports !== 'undefined') {
-  module.exports = Selection;
-} else {
-  Document.Selection = Selection;
-}
-
-})(this);
+module.exports = Selection;

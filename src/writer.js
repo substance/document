@@ -1,13 +1,18 @@
-(function(root) {
+"use strict";
 
-var Substance = root.Substance;
-var util = Substance.util;
-var _ = root._;
-var Data = root.Substance.Data;
-var Library = root.Substance.Library;
-var Document = Substance.Document;
-var Operator = Substance.Operator;
-var Selection = Document.Selection;
+// Import
+// ========
+
+var _ = require("underscore");
+var util = require("substance-util");
+var Data = require("substance-data");
+var Document = require("./document");
+var Operator = require("substance-operator");
+var Selection = require("./selection");
+
+// Module
+// ========
+
 
 
 // Document.Writer
@@ -393,7 +398,7 @@ Writer.Prototype = function() {
 
   this.write = function(text) {
     if (this.selection.isNull()) {
-      console.log("Can not write, as no position has been selected.")
+      console.log("Can not write, as no position has been selected.");
       return;
     }
 
@@ -462,28 +467,26 @@ Object.defineProperties(Writer.prototype, {
     get: function() {
       return this.__document.id;
     },
-    set: function() { throw "immutable property"}
+    set: function() { throw "immutable property"; }
   },
   title: {
     get: function() {
       return this.__document.get('document').title;
     },
-    set: function() { throw "immutable property"}
+    set: function() { throw "immutable property"; }
   },
   updated_at: {
     get: function() {
       return this.__document.get('document').updated_at;
     },
-    set: function() { throw "immutable property"}
+    set: function() { throw "immutable property"; }
   },
   creator: {
     get: function() {
       return this.__document.get('document').creator;
     },
-    set: function() { throw "immutable property"}
+    set: function() { throw "immutable property"; }
   }
 });
 
 Document.Writer = Writer;
-
-})(this);

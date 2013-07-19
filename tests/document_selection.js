@@ -1,25 +1,17 @@
-(function(root) {
+"use strict";
 
-var _,
-    assert,
-    Data,
-    Document,
-    registerTest,
-    getSession;
+// Import
+// ========
 
-if (typeof exports !== 'undefined') {
-  _    = require('underscore');
-  assert = require('substance-test/assert');
-  Data = require('substance-data');
-  Document = require('../src/document');
-  registerTest = require('substance-test').Test.registerTest;
-} else {
-  _ = root._;
-  assert = root.Substance.assert;
-  Data = root.Substance.Data;
-  Document = root.Substance.Document;
-  registerTest = root.Substance.Test.registerTest;
-}
+var substance_test = require('substance-test');
+var assert = substance_test.assert;
+var registerTest = substance_test.registerTest;
+var Data = require('substance-data');
+var Document = require('..');
+
+
+// Test
+// ========
 
 var test = {};
 
@@ -186,5 +178,3 @@ test.actions = [
 ];
 
 registerTest(['Document', 'Document Selection'], test);
-
-})(this);

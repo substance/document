@@ -1,36 +1,21 @@
+"use strict";
 // Substance.Document 0.5.0
 // (c) 2010-2013 Michael Aufreiter
 // Substance.Document may be freely distributed under the MIT license.
 // For all details and documentation:
 // http://interior.substance.io/modules/document.html
 
-(function(root) {
-
 // Import
 // ========
 
-var _,
-    util,
-    errors,
-    Chronicle,
-    Operator,
-    Data;
+var _ = require("underscore");
+var util = require("substance-util");
+var Data = require("substance-data");
+var Operator = require("substance-operator");
 
-if (typeof exports !== 'undefined') {
-  _    = require('underscore');
-  util   = require('substance-util');
-  errors   = require('substance-util/errors');
-  Chronicle = require('substance-chronicle');
-  Operator = require('substance-operator');
-  Data = require('substance-data');
-} else {
-  _ = root._;
-  util = root.Substance.util;
-  errors   = root.Substance.errors;
-  Chronicle = root.Substance.Chronicle;
-  Operator = root.Substance.Operator;
-  Data = root.Substance.Data;
-}
+// Module
+// ========
+
 
 // Default Document Schema
 // --------
@@ -220,13 +205,13 @@ var Converter;
 
 var Document = function(options) {
   options.seed = options.seed || SEED(options);
-  Data.Graph.call(this, options.schema || SCHEMA, options);  
+  Data.Graph.call(this, options.schema || SCHEMA, options);
 };
 
 
-// Factory method 
+// Factory method
 // --------
-// 
+//
 // TODO: Ensure the snapshot doesn't get chronicled
 
 Document.fromSnapshot = function(data, options) {
@@ -279,7 +264,7 @@ Document.Prototype = function() {
 
   // Executes a document manipulation command.
   // --------
-  // 
+  //
   // The command is converted into a sequence of graph commands
 
   this.apply = function(command) {
@@ -320,14 +305,14 @@ Document.Prototype = function() {
 
   // Serialize to JSON
   // --------
-  // 
+  //
   // The command is converted into a sequence of graph commands
 
   this.toJSON = function() {
     var res = __super__.toJSON.call(this);
     res.id = this.id;
     return res;
-  }
+  };
 };
 
 // Command Converter
@@ -601,10 +586,4 @@ Document.SCHEMA = SCHEMA;
 // Export
 // ========
 
-if (typeof exports !== 'undefined') {
-  module.exports = Document;
-} else {
-  root.Substance.Document = Document;
-}
-
-})(this);
+module.exports = Document;
