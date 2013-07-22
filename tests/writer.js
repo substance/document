@@ -7,7 +7,6 @@ var Test = require('substance-test');
 var registerTest = Test.registerTest;
 var util = require('substance-util');
 var Document = require('substance-document');
-var DocumentTest = require("./document_test.js");
 
 
 // Test
