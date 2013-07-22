@@ -35,9 +35,9 @@ test.setup = function() {
 
 test.actions = [
   "Select text in a single text node", function() {
-    // var selection = this.doc.select({start: [0, 4], end: [0, 9]});
-    // assert.isEqual(1, selection.getNodes().length);
-    // assert.isEqual("quick", selection.getText());
+    var selection = this.doc.select({start: [0, 4], end: [0, 9]});
+    assert.isEqual(1, selection.getNodes().length);
+    assert.isEqual("quick", selection.getText());
   },
 
   "Select text spanning over multiple text nodes", function() {
