@@ -237,7 +237,10 @@ Document.Prototype = function() {
       return a.property === property;
     });
     for (var idx = 0; idx < annotations.length; idx++) {
-      Operator.TextOperation.Range.transform(annotations[idx].range, change);
+      var a = annotations[idx];
+      var changed = Operator.TextOperation.Range.transform(a.range, change);
+      // TODO: here we could check if the range is collapsed and remove the annotation.
+      if (changed) this.trigger("annotation:changed", a);
     }
   };
 
