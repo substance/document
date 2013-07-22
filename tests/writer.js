@@ -5,6 +5,8 @@
 
 var Test = require('substance-test');
 var registerTest = Test.registerTest;
+var util = require('substance-util');
+var Document = require('substance-document');
 var DocumentTest = require("./document_test.js");
 
 
@@ -18,10 +20,14 @@ var DocumentTest = require("./document_test.js");
 var P1 = "The quick brown fox jumps over the lazy dog.";
 var P2 = "Pack my box with five dozen liquor jugs";
 var P3 = "Fix problem quickly with galvanized jets";
-//var P4 = "Heavy boxes perform quick waltzes and jigs";
+var P4 = "Heavy boxes perform quick waltzes and jigs";
 
 var WriterTest = function() {
-  DocumentTest.call(this);
+
+  this.uuid = util.uuidGen('node_');
+
+  this.__document = new Document({id: "writer_test"});
+  this.writer = new Document.Writer(this.__document);
 
   // deactivate the default fixture
   // for testing basic behavior
@@ -31,15 +37,12 @@ var WriterTest = function() {
 
   this.actions = [
     "Insert some text", function() {
-      console.log('inserting some text');
       this.insertContent(P1);
     },
 
     "Insert some more text", function() {
       this.insertContent(P2);
       this.insertContent(P3);
-
-      console.log("writer", this.writer);
     },
 
     "Set single cursor", function() {
@@ -47,6 +50,8 @@ var WriterTest = function() {
         start: [1,2],
         end: [1,2]
       });
+
+      assert.True([1,2], this.writer.selection.start);
     },
 
     // "Edge case: Select last char of text node", function() {
@@ -383,6 +388,27 @@ var WriterTest = function() {
   ];
 };
 
-WriterTest.prototype = DocumentTest.prototype;
+
+// General aid for the writertest
+WriterTest.Prototype = function() {
+
+  // Inserts content 
+
+  this.insertContent = function(content) {
+    var id = this.uuid("text_");
+    this.__document.apply(["create", {
+      "id": id,
+      "type": "text",
+      "content": content
+    }]);
+    this.__document.apply(["position", "content", {
+      "nodes": [id],
+      "target": -1
+    }]);
+  };
+};
+
+WriterTest.prototype = new WriterTest.Prototype();
+
 
 registerTest(['Document', 'Writer'], new WriterTest());
