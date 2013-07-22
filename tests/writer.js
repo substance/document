@@ -25,8 +25,10 @@ var WriterTest = function() {
 
   this.uuid = util.uuidGen('node_');
 
-  this.__document = new Document({id: "writer_test"});
-  this.writer = new Document.Writer(this.__document);
+  this.setup = function() {
+    this.__document = new Document({id: "writer_test"});
+    this.writer = new Document.Writer(this.__document);
+  }
 
   // deactivate the default fixture
   // for testing basic behavior
