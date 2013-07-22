@@ -346,7 +346,7 @@ Writer.Prototype = function() {
 
   this.insertNode = function(type) {
     if (!this.selection.isCollapsed()) {
-      throw new Error('Not yet implemented for actual ranges');
+      this.delete();
     }
 
     var nodes = this.selection.getNodes();
