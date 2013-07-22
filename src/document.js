@@ -287,18 +287,16 @@ Document.Prototype = function() {
     // We will pass this also back to the caller.
     var op = __super__.apply.call(this, graphCommand);
 
-    var cmds = (graphCommand.type === Data.Graph.COMPOUND) ? graphCommand.ops : [graphCommand];
-    _.each(cmds, function(c) {
+    var ops = (op.type === Operator.Compound.TYPE) ? op.ops : [op];
+    _.each(ops, function(c) {
       if (c.type === "update") {
         var node = this.get(c.path[0]);
         var property = c.path[1];
-        var change = c.args;
-        updateAnnotations.call(this, node, property, change);
+        var diff = c.diff;
+        updateAnnotations.call(this, node, property, diff);
       }
     }, this);
 
-    // console.log('execing command', command);
-    // TODO: maybe we could add events to Data.Graph?
     this.trigger('command:executed', command);
     return op;
   };
