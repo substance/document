@@ -7,7 +7,7 @@ var Test = require('substance-test');
 var assert = Test.assert;
 var registerTest = Test.registerTest;
 var util = require('substance-util');
-var Document = require('substance-document');
+var Document = require('../index');
 
 
 
