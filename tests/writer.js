@@ -52,7 +52,7 @@ var WriterTest = function() {
         end: [1,2]
       });
 
-      assert.isEqual([1,2], this.writer.selection.start);
+      assert.isArrayEqual([1,2], this.writer.selection.start);
     },
 
     // "Edge case: Select last char of text node", function() {
