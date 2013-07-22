@@ -392,6 +392,55 @@ Writer.Prototype = function() {
     return this;
   };
 
+  // Creates an annotation based on the current position
+  // --------
+  //
+
+  this.annotate = function(type) {
+    var sel = this.selection;
+
+    if (sel.start[0] !== sel.end[0]) throw new Error('Multi-node annotations are not supported.');
+
+    var node = this.selection.getNodes()[0];
+    var pos = [sel.start[1], sel.end[1]];
+
+    var id = util.uuid(type+"_");
+    this.__document.apply(["annotate", node.id, "content", {
+      "id": id, 
+      "type": type,
+      range: pos
+    }]);
+
+    return this.__document.get(id);
+  };
+
+
+  // Get all annotations stored on the document
+  // --------
+  //
+  // TODO: implement type filter
+  // TODO: make smart
+
+  this.getAnnotations = function(type) {
+    var annotations = [];
+    var doc = this.__document;
+
+    return _.select(doc.nodes, function(node) {
+      var baseType = doc.schema.baseType(node.type);
+      return baseType === 'annotation';
+    });
+
+  };
+
+
+  // For the current selection, get all matching annotations
+  // Step one: make it work for single-node selections
+
+  this.getAnnotationsForSelection = function() {
+    throw Error('Not implemented');
+  };
+
+
   // inserts text at the current position
   // --------
   //
@@ -490,4 +539,3 @@ Object.defineProperties(Writer.prototype, {
 });
 
 module.exports = Writer;
-

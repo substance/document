@@ -10,7 +10,6 @@ var util = require('substance-util');
 var Document = require('../index');
 
 
-
 // Test
 // ========
 
@@ -18,10 +17,9 @@ var Document = require('../index');
 // --------
 //
 
-var P1 = "The quick brown fox jumps over the lazy dog.";
-var P2 = "Pack my box with five dozen liquor jugs";
-var P3 = "Fix problem quickly with galvanized jets";
-var P4 = "Heavy boxes perform quick waltzes and jigs";
+var P1 = "The quick brown fox jumps over the lazy dog."; // 0..43
+var P2 = "Pack my box with five dozen liquor jugs"; // 0..38
+var P3 = "Fix problem quickly with galvanized jets"; // 0..39
 
 var WriterTest = function() {
 
@@ -53,33 +51,48 @@ var WriterTest = function() {
       });
 
       assert.isArrayEqual([1,2], this.writer.selection.start);
+      assert.isArrayEqual([1,2], this.writer.selection.end);
     },
 
-    // "Edge case: Select last char of text node", function() {
-    //   this.document.select({
-    //     start: [1,39],
-    //     end: [1,39]
-    //   });
-    // },
+    "Edge case: Select last char of text node", function() {
+      this.writer.selection.set({
+        start: [1,39],
+        end: [1,39]
+      });
+    },
 
-    // "Insert period after last char", function() {
-    //   this.document.write(".");
+    "Make a selection", function() {
+      this.writer.selection.set({
+        start: [0, 4],
+        end: [1, 21],
+      });
 
-    //   var nodeId = this.document.get('content').nodes[1];
-    //   var node = this.document.get(nodeId);
-    //   assert.isEqual(P2+".", node.content);
-    // },
+      var EXPECTED = "quick brown fox jumps over the lazy dog.Pack my box with five";
+      assert.isEqual(EXPECTED, this.writer.selection.getText());
+    },
 
-    // "Make a selection", function() {
-    //   this.document.select({
-    //     start: [0, 5],
-    //     end: [1, 10],
-    //   });
-    // },
+    "Make a selection within a single node", function() {
+      this.writer.selection.set({
+        start: [0, 4],
+        end: [0, 19],
+      });
 
-    // "Delete selection", function() {
-    //   this.document.delete();
-    // },
+      var EXPECTED = "quick brown fox";
+      assert.isEqual(EXPECTED, this.writer.selection.getText());
+    },
+
+    "Annotate current selection", function() {
+      var annotation = this.writer.annotate('idea');
+
+      assert.isEqual('idea', annotation.type);
+      assert.isArrayEqual([4, 19], annotation.range);
+      // ["annotate", "t1", "content", {"id": "a1",  type": "idea"}]
+    },
+
+    "Get all annotations for current document", function() {
+      var annotations = this.writer.getAnnotations();
+      assert.isEqual(1, annotations.length);
+    },
 
     // "Delete previous character for collapsed (single cursor) selection", function() {
     //   this.document.select({
