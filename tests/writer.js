@@ -4,9 +4,11 @@
 // ========
 
 var Test = require('substance-test');
+var assert = Test.assert;
 var registerTest = Test.registerTest;
 var util = require('substance-util');
 var Document = require('substance-document');
+
 
 
 // Test
@@ -50,7 +52,7 @@ var WriterTest = function() {
         end: [1,2]
       });
 
-      assert.True([1,2], this.writer.selection.start);
+      assert.isEqual([1,2], this.writer.selection.start);
     },
 
     // "Edge case: Select last char of text node", function() {
