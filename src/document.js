@@ -10,12 +10,14 @@
 
 var _ = require("underscore");
 var util = require("substance-util");
+var errors = util.errors;
 var Data = require("substance-data");
 var Operator = require("substance-operator");
 
 // Module
 // ========
 
+var DocumentError = errors.define("DocumentError");
 
 // Default Document Schema
 // --------
@@ -446,7 +448,7 @@ Converter = function() {
       update = Operator.ObjectOperation.Extend(val, command.args);
     }
     else {
-      throw new Error("Unsupported type for update: " + valueType);
+      throw new DocumentError("Unsupported type for update: " + valueType);
     }
     return Data.Graph.Update(command.path, update);
   };
@@ -460,7 +462,7 @@ Converter = function() {
 
   this.annotate = function(graph, command) {
     // TODO: check if source exists, otherwise reject annotation
-    if (command.path.length !== 2) throw new Error("Invalid target: " + command.path);
+    if (command.path.length !== 2) throw new DocumentError("Invalid target: " + command.path);
 
     var annotation = _.extend({}, command.args, {
       node: command.path[0],
@@ -481,7 +483,7 @@ Converter = function() {
     // TODO: check if source exists, otherwise reject annotation
 
     // keep track of annotation
-    if (command.path.length !== 1) throw new Error("Invalid target: " + command.path);
+    if (command.path.length !== 1) throw new DocumentError("Invalid target: " + command.path);
 
     var comment = _.extend({}, command.args);
     comment.node = command.path[0];
@@ -581,8 +583,9 @@ Document.COMMANDS = _.extend({}, Data.COMMANDS, {
 });
 
 
-
 Document.SCHEMA = SCHEMA;
+Document.DocumentError = DocumentError;
+
 
 // Export
 // ========
