@@ -87,13 +87,29 @@ var WriterTest = function() {
       var annotation = this.writer.annotate('idea');
 
       assert.isEqual('idea', annotation.type);
-      assert.isArrayEqual([4, 19], annotation.range);
+      assert.isArrayEqual([4 , 19], annotation.range);
       // ["annotate", "t1", "content", {"id": "a1",  type": "idea"}]
     },
 
     "Get all annotations for current document", function() {
       var annotations = this.writer.getAnnotations();
       assert.isEqual(1, annotations.length);
+    },
+
+    "Get annotations for current selection", function() {
+      this.writer.selection.set({
+        start: [0, 4],
+        end: [0, 15]
+      });
+
+      var annotations = this.writer.getAnnotations('text_1', [4, 15]);
+      assert.isEqual(1, annotations.length);
+
+
+      annotations = this.writer.getAnnotations('text_1', [4, 15], ['error']);
+      console.log('ANNOTS', annotations);
+      // assert.isEqual(0, annotations.length);
+      // console.log('ANNOTS', annotations);
     },
 
     // "Delete previous character for collapsed (single cursor) selection", function() {

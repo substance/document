@@ -338,7 +338,6 @@ Writer.Prototype = function() {
     this.apply(Data.Graph.Compound(this, ops));
   };
 
-
   // Based on current selection, insert new node
   // --------
   //
@@ -419,31 +418,51 @@ Writer.Prototype = function() {
   };
 
 
-  // Get all annotations stored on the document
-  // --------
-  //
-  // TODO: implement type filter
-  // TODO: make smart
+  // Get annotations
+  // ---------------
+  // 
+  // For the given range, get all matching annotations
+  // Step one: make it work for single-node selections
+  // TODO: consider inclusive / non-inclusive option
 
-  this.getAnnotations = function(type) {
-    var annotations = [];
+  this.getAnnotations = function(node, range, aTypes) {
     var doc = this.__document;
+    if (!node) {
+      return _.select(doc.nodes, function(node) {
+        var baseType = doc.schema.baseType(node.type);
+        return baseType === 'annotation';
+      });
+    }
 
-    return _.select(doc.nodes, function(node) {
-      var baseType = doc.schema.baseType(node.type);
-      return baseType === 'annotation';
+    var annotations = doc.find('annotations', node);
+    if (!range) return annotations;
+
+    var sStart = range[0];
+    var sEnd = range[1];
+    var res = [];
+    _.each(annotations, function(a) {
+      var aStart = a.range[0];
+      var aEnd = a.range[1];
+      
+      // if(types[a.type] && types[a.type].inclusive === false) {
+      //   // its a non inclusive annotation
+      //   // so intersects doesnt include the prev and last chars
+      //   var intersects = (aStart + 1) <= sEnd && (aEnd - 1) >= sStart;
+      // } else {
+
+      // Assumes all annotations are inclusive for the time being
+      var intersects = aStart <= sEnd && aEnd >= sStart;
+      // }
+
+      // Intersects and satisfies type filter
+      if (intersects && (aTypes ? _.include(aTypes, a.type) : true)) {
+        res.push(a);
+      }
     });
 
+    return res;
+
   };
-
-
-  // For the current selection, get all matching annotations
-  // Step one: make it work for single-node selections
-
-  this.getAnnotationsForSelection = function() {
-    throw Error('Not implemented');
-  };
-
 
   // inserts text at the current position
   // --------
