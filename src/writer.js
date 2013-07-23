@@ -464,7 +464,7 @@ Writer.Prototype = function() {
 
   };
 
-  // inserts text at the current position
+  // Inserts text at the current position
   // --------
   //
 
