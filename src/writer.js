@@ -411,7 +411,11 @@ Writer.Prototype = function() {
       range: pos
     }]);
 
-    return this.__document.get(id);
+    var annotation = this.__document.get(id);
+    // HACK: the document should trigger itself
+    this.__document.trigger("annotation:changed", annotation);
+
+    return annotation;
   };
 
 
