@@ -23,9 +23,9 @@ var P3 = "Fix problem quickly with galvanized jets"; // 0..39
 
 var WriterTest = function() {
 
-  this.uuid = util.uuidGen('node_');
 
   this.setup = function() {
+    this.uuid = util.uuidGen('node_');
     this.__document = new Document({id: "writer_test"});
     this.writer = new Document.Writer(this.__document);
   }
