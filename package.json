@@ -14,7 +14,7 @@
     "url": "https://github.com/substance/document.git"
   },
   "dependencies": {
-    "underscore": "1.4.x",
+    "underscore": ">=1.5.x",
     "mocha": "1.12.x",
     "substance-util": "git+https://github.com/substance/util.git#master",
     "substance-operator": "git+https://github.com/substance/operator.git#master",
