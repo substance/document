@@ -105,9 +105,9 @@ var WriterTest = function() {
       var annotations = this.writer.getAnnotations('text_1', [4, 15]);
       assert.isEqual(1, annotations.length);
 
-
       annotations = this.writer.getAnnotations('text_1', [4, 15], ['error']);
       console.log('ANNOTS', annotations);
+
       // assert.isEqual(0, annotations.length);
       // console.log('ANNOTS', annotations);
     },

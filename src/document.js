@@ -217,6 +217,7 @@ var Document = function(options) {
 // TODO: Ensure the snapshot doesn't get chronicled
 
 Document.fromSnapshot = function(data, options) {
+  options = options || {};
   options.seed = [];
   var doc = new Document(options);
 
