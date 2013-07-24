@@ -5,7 +5,7 @@
 
 var _ = require("underscore");
 //var util = require("substance-util");
-//var Data = require("substance-data");
+var Data = require("substance-data");
 var Document = require("./document");
 var DocumentError = Document.DocumentError;
 //var Operator = require("substance-operator");
@@ -17,10 +17,11 @@ var DocumentError = Document.DocumentError;
 // --------
 //
 
-var Annotator = function(writer) {
+var Annotator = function(document, selection) {
   // TODO: register for co-transformations to keep annotations up2date.
 
-  this.writer = writer;
+  this.document = document;
+  this.selection = selection;
 
   // defines groups of annotations that will be mutually exclusive
   this.group = {
@@ -68,7 +69,6 @@ Annotator.Prototype = function() {
 
     // get all affected annotations
     var annotations = this.getAnnotations({selection: sel});
-    var result = [];
 
     for (var i = 0; i < annotations.length; i++) {
       var annotation = annotations[i];
@@ -135,7 +135,7 @@ Annotator.Prototype = function() {
   //
 
   this.getAnnotations = function(options) {
-    var doc = this.writer.__document;
+    var doc = this.document;
 
     var annotations;
     var range, node;
@@ -145,13 +145,14 @@ Annotator.Prototype = function() {
         var baseType = doc.schema.baseType(node.type);
         return baseType === 'annotation';
       });
+
     } else if (options.node) {
       annotations = _filterByNodeAndRange(doc, options.node, options.range);
 
     } else if (options.selection) {
 
       var sel = options.selection;
-      var nodes = this.writer.selection.getNodes(sel);
+      var nodes = this.selection.getNodes(sel);
 
       annotations = [];
 
@@ -186,8 +187,12 @@ Annotator.Prototype = function() {
   // --------
   //
 
-  var _create = function(self, range, type) {
-    throw new Error("Not implemented yet.");
+  var _create = function(self, nodeId, range, type) {
+    this.document.apply(["annotate", nodeId, "content", {
+      "id": nodeId,
+      "type": type,
+      "range": range
+    }]);
   };
 
   // Deletes an annotation
@@ -195,16 +200,38 @@ Annotator.Prototype = function() {
   //
 
   var _delete = function(self, annotation) {
-    throw new Error("Not implemented yet.");
+    this.document.apply(Data.Graph.Delete(annotation));
   };
 
   // Truncates an existing annotation
   // --------
   // Deletes an annotation that has a collapsed range after truncation.
-  //
+  // If the annotation is splittable and the given range is an inner segment,
+  // the first will be truncated and a second one will be created to annotate the tail.
+  // If the annotation is not splittable it will be deleted.
 
   var _truncate = function(self, annotation, range) {
-    throw new Error("Not implemented yet.");
+    var s1 = annotation.range[0];
+    var s2 = range[0];
+    var e1 = annotation.range[1];
+    var e2 = range[1];
+
+    // truncate the head
+    if (s2 <= s1) {
+    }
+
+    // truncate the tail
+    else if (e2 >= e1) {
+
+    }
+    // from the middle: split or delete
+    else {
+      if (self.isSplittable(annotation.type)) {
+
+      } else {
+        _delete(self, annotation);
+      }
+    }
   };
 
   // Returns true if two annotation types are mutually exclusive
@@ -235,10 +262,11 @@ Annotator.Prototype = function() {
   // - truncate one or more annotations
 
   this.annotate = function(type) {
-    var sel = this.writer.selection;
+    var sel = this.selection;
     var range = [sel.start[1], sel.end[1]];
 
     if (sel.start[0] !== sel.end[0]) throw new DocumentError('Multi-node annotations are not supported.');
+    var node = this.sel.getNodes()[0];
 
     var filter = {range: range};
     var annotations = this.getAnnotations(filter);
@@ -268,7 +296,7 @@ Annotator.Prototype = function() {
       }
 
       // create a new annotation
-      _create(this, type, range);
+      _create(this, node.id, type, range);
     }
   };
 
