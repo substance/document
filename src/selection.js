@@ -479,10 +479,9 @@ Selection.Prototype = function() {
   };
 };
 
-Selection.prototype = new Selection.Prototype();
 
-// Add event support
-_.extend(Selection.prototype, util.Events);
+Selection.Prototype.prototype = util.Events;
+Selection.prototype = new Selection.Prototype();
 
 // Export
 // ========

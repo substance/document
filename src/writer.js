@@ -9,6 +9,7 @@ var Data = require("substance-data");
 var Document = require("./document");
 var Operator = require("substance-operator");
 var Selection = require("./selection");
+var Clipboard = require("./clipboard");
 
 // Module
 // ========
@@ -28,11 +29,13 @@ var Selection = require("./selection");
 //
 //     var doc = new Substance.Document();
 //     var editor = new Substance.Document.Writer(doc);
-//     var editor.insert('Hello World');
+//     var editor.insert("Hello World");
 
 var Writer = function(document) {
   this.__document = document;
   this.selection = new Selection(this.__document, null);
+
+  this.clipboard = new Clipboard();
 };
 
 
@@ -125,6 +128,15 @@ Writer.Prototype = function() {
     });
   };
 
+
+  // Takes a selection and deletes it
+  // Used internally by Writer.delete
+  // 
+
+  this.deleteRange = function(sel) {
+
+  };
+
   // Delete current selection
   // --------
   //
@@ -135,8 +147,20 @@ Writer.Prototype = function() {
     var startOffset = this.selection.start[1];
     var endNode = this.selection.end[0];
     var endOffset = this.selection.end[1];
-    var nodes = this.selection.getNodes();
+    // var nodes = this.selection.getNodes();
     var doc = this.__document;
+
+    // Create a simulation
+    // Will be provided by Document.createSimulation later on
+    var simulation = Document.fromSnapshot(doc.toJSON());
+
+    // Use nodes from the simulated doc
+    var nodes = [];
+
+    _.each(this.selection.getNodes(), function(n) {
+      nodes.push(simulation.get(n.id));
+    });
+
 
 
     var ops = []; // operations transforming the original doc
@@ -149,25 +173,50 @@ Writer.Prototype = function() {
           if (index === 0) {
             var trailingText = node.content.slice(startOffset);
             var r = [startOffset, -trailingText.length];
-            // remove trailing text from first node at the beginning of the selection
-            ops.push(Data.Graph.Update([node.id, "content"], Operator.TextOperation.fromOT(node.content, r)));
+
+            // Remove trailing text from first node at the beginning of the selection
+            var op = [ "update", node.id, "content", r ];
+
+            // simulation.apply(op);
+            ops.push(simulation.apply(op));
+
           } else if (index === nodes.length-1) {
+
             // Last node of selection
-            var text = node.content.slice(0, endOffset);
-            var r = [-text.length];
+            var trailingText = node.content.slice(endOffset);
+
+            // Look back to prev node
+            var firstNode = nodes[0];
+            var r = [firstNode.content.length, trailingText];
 
             // remove preceding text from last node until the end of the selection
-            ops.push(Data.Graph.Update([node.id, "content"], Operator.TextOperation.fromOT(node.content, r)));
+            // 
+            
+            var op = [ "update", firstNode.id, "content", r ];
+            // var op = Data.Graph.Update([node.id, "content"], Operator.TextOperation.fromOT(firstNode.content, r));
+
+            ops.push(simulation.apply(op));
+            
+            // Delete last node of selection
+            var op = Document.Delete([node.id]);
+            ops.push(simulation.apply(op));
+
           } else {
             // Delete node from document
-            ops.push(Data.Graph.Delete(_.clone(node)));
-            var pos = doc.get('content').nodes.indexOf(node.id);
+            var op = Document.Delete([node.id]);
+            ops.push(simulation.apply(op));
+
             // ... and from view
-            ops.push(Data.Graph.Update(["content", "nodes"], Operator.ArrayOperation.Delete(pos, node.id)));
+            var pos = doc.get('content').nodes.indexOf(node.id);
+
+            var op = Data.Graph.Update(["content", "nodes"], Operator.ArrayOperation.Delete(pos, node.id));
+            ops.push(simulation.apply(op));
           }
         }
       }, this);
     } else {
+      // throw new Error('disabled for now');
+      // leave as is for now ...
       var node = nodes[0];
       // Backspace behavior (delete one char before current cursor position)
       if (startOffset === endOffset) {
@@ -183,10 +232,16 @@ Writer.Prototype = function() {
       var r = [startOffset, -text.length];
 
       // remove trailing text from first node at the beginning of the selection
-      ops.push(Data.Graph.Update([node.id, "content"], Operator.TextOperation.fromOT(node.content, r)));
+      var op = [ "update", node.id, "content", r ];
+      ops.push(simulation.apply(op));
     }
 
-    doc.apply(Data.Graph.Compound(doc, ops));
+    // Now apply the ops collected by the simulation run
+    for (var i = 0; i < ops.length; i++) {
+      // Brutal hacking: there is mess between document.js and data.js
+      // ops are graph operations and bring problems with Document.apply
+      Data.Graph.prototype.apply.call(doc, ops[i]);
+    };
 
     this.selection.set({
       start: [startNode, startOffset],
@@ -207,7 +262,7 @@ Writer.Prototype = function() {
     var endOffset = this.selection.end[1];
     var nodes = this.selection.getNodes();
 
-    var clipboard = new Document({id: "clipboard"});
+    var content = new Document({id: "clipboard"});
 
     if (nodes.length > 1) {
       // Remove trailing stuff
@@ -220,13 +275,13 @@ Writer.Prototype = function() {
 
             // Add trailing text to clipboard
             var nodeId = util.uuid();
-            clipboard.apply(Data.Graph.Create({
+            content.apply(Data.Graph.Create({
               id: nodeId,
               type: "text",
               content: trailingText
             }));
             // and the clipboards content view
-            clipboard.apply(Data.Graph.Update(["content", "nodes"], Operator.ArrayOperation.Insert(index, nodeId)));
+            content.apply(Data.Graph.Update(["content", "nodes"], Operator.ArrayOperation.Insert(index, nodeId)));
           } else if (index === nodes.length-1) {
             // Last node of selection
             var text = node.content.slice(0, endOffset);
@@ -234,18 +289,18 @@ Writer.Prototype = function() {
 
             // Add selected text from last node to clipboard
             var nodeId = util.uuid();
-            clipboard.apply(Data.Graph.Create({
+            content.apply(Data.Graph.Create({
               id: nodeId,
               type: "text",
               content: text
             }));
-            clipboard.apply(Data.Graph.Update(["content", "nodes"], Operator.ArrayOperation.Insert(index, nodeId)));
+            content.apply(Data.Graph.Update(["content", "nodes"], Operator.ArrayOperation.Insert(index, nodeId)));
           } else {
             var nodeId = util.uuid();
             // Insert node in clipboard document
-            clipboard.apply(Data.Graph.Create(_.extend(_.clone(node), {id: nodeId})));
+            content.apply(Data.Graph.Create(_.extend(_.clone(node), {id: nodeId})));
             // ... and view
-            clipboard.apply(Data.Graph.Update(["content", "nodes"], Operator.ArrayOperation.Insert(index, nodeId)));
+            content.apply(Data.Graph.Update(["content", "nodes"], Operator.ArrayOperation.Insert(index, nodeId)));
           }
         }
       }, this);
@@ -254,15 +309,15 @@ Writer.Prototype = function() {
       var text = node.content.slice(startOffset, endOffset);
 
       var nodeId = util.uuid();
-      clipboard.apply(Data.Graph.Create({
+      content.apply(Data.Graph.Create({
         id: nodeId,
         type: "text",
         content: text
       }));
-      clipboard.apply(Data.Graph.Update(["content", "nodes"], Operator.ArrayOperation.Insert(0, nodeId)));
+      content.apply(Data.Graph.Update(["content", "nodes"], Operator.ArrayOperation.Insert(0, nodeId)));
     }
 
-    return clipboard;
+    this.clipboard.setContent(content);
   };
 
 
@@ -272,9 +327,8 @@ Writer.Prototype = function() {
   // Returns cutted content as a new Substance.Document
 
   this.cut = function() {
-    var content = this.copy();
+    this.copy();
     this.delete();
-    return content;
   };
 
 
@@ -282,7 +336,9 @@ Writer.Prototype = function() {
   // --------
   //
 
-  this.paste = function(content) {
+  this.paste = function() {
+
+    var content = this.clipboard.getContent();
 
     // First off, delete the selection
     if (!this.selection.isCollapsed()) this.delete();
@@ -335,7 +391,7 @@ Writer.Prototype = function() {
       ops.push(Data.Graph.Update([referenceNode.id, "content"], Operator.TextOperation.Insert(startOffset, node.content)));
     }
 
-    this.apply(Data.Graph.Compound(this, ops));
+    this.__document.apply(Data.Graph.Compound(this.__document, ops));
   };
 
   // Based on current selection, insert new node
