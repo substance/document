@@ -337,13 +337,13 @@ Writer.Prototype = function() {
   //
 
   this.paste = function() {
-
     var content = this.clipboard.getContent();
 
     // First off, delete the selection
     if (!this.selection.isCollapsed()) this.delete();
 
     if (!content) return;
+    var doc = this.__document;
 
     // After delete selection we can be sure
     // that the collection is collapsed
@@ -357,7 +357,10 @@ Writer.Prototype = function() {
     var nodes = content.query(["content", "nodes"]);
     var ops = []; // operations transforming the original doc
 
-    if (nodes.length > 0) {
+    var sel = this.selection;
+    var newSel;
+
+    if (nodes.length > 1) {
       // Remove trailing stuff
       _.each(nodes, function(node, index) {
         // only consider textish nodes for now
@@ -380,18 +383,27 @@ Writer.Prototype = function() {
             // and the clipboards content view
             ops.push(Data.Graph.Update(["content", "nodes"], Operator.ArrayOperation.Insert(startNode+index+1, nodeId)));
           } else if (index === nodes.length-1) {
-            // Skip
+            // Skip last node of the clipboard document
           } else {
+            // Create a copy of the 
             ops.push(Data.Graph.Create(node));
             ops.push(Data.Graph.Update(["content", "nodes"], Operator.ArrayOperation.Insert(startNode+index, node.id)));
           }
         }
       }, this);
     } else {
+      // Only one node to insert
+      var node = nodes[0];
       ops.push(Data.Graph.Update([referenceNode.id, "content"], Operator.TextOperation.Insert(startOffset, node.content)));
+      // Move selection to the end of the pasted content
+      newSel = {
+        start: [sel.start[0], sel.start[1]+node.content.length],
+        end: [sel.start[0], sel.start[1]+node.content.length]
+      };
     }
 
-    this.__document.apply(Data.Graph.Compound(this.__document, ops));
+    doc.apply(Data.Graph.Compound(this.__document, ops));
+    if (newSel) sel.set(newSel);
   };
 
   // Based on current selection, insert new node
