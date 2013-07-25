@@ -361,6 +361,30 @@ Document.Prototype = function() {
     return this.create(comment);
   };
 
+  this.startSimulation = function() {
+    // TODO: this should be implemented in a more cleaner and efficient way.
+    // Though, for now and sake of simplicity done by creating a copy
+    var self = this;
+    var simulation = Document.fromSnapshot(this.toJSON());
+    var ops = [];
+
+    var __apply__ = simulation.apply;
+
+    simulation.apply = function(op) {
+      op = __apply__.call(simulation, op);
+      ops.push(op);
+      return op;
+    };
+
+    simulation.save = function() {
+      for (var i = 0; i < ops.length; i++) {
+        self.apply(ops[i]);
+      }
+      console.log("Saved simulated ops", self);
+    };
+
+    return simulation;
+  };
 };
 
 Document.Prototype.prototype = Data.Graph.prototype;

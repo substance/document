@@ -14,8 +14,6 @@ var Clipboard = require("./clipboard");
 // Module
 // ========
 
-
-
 // Document.Writer
 // -----------------
 //
@@ -150,7 +148,7 @@ Writer.Prototype = function() {
 
     // Create a simulation
     // Will be provided by Document.createSimulation later on
-    var simulation = Document.fromSnapshot(doc.toJSON());
+    var simulation = doc.startSimulation();
 
     // Use nodes from the simulated doc
     var nodes = [];
@@ -158,10 +156,6 @@ Writer.Prototype = function() {
     _.each(this.selection.getNodes(), function(n) {
       nodes.push(simulation.get(n.id));
     });
-
-
-
-    var ops = []; // operations transforming the original doc
 
     if (nodes.length > 1) {
       // Remove trailing stuff
@@ -173,7 +167,7 @@ Writer.Prototype = function() {
             var r = [startOffset, -trailingText.length];
 
             // Remove trailing text from first node at the beginning of the selection
-            ops.push(simulation.update([node.id, "content"], r));
+            simulation.update([node.id, "content"], r);
 
           } else if (index === nodes.length-1) {
 
@@ -186,19 +180,19 @@ Writer.Prototype = function() {
 
             // remove preceding text from last node until the end of the selection
             // 
-            ops.push(simulation.update([firstNode.id, "content"], r));
+            simulation.update([firstNode.id, "content"], r);
             
             // Delete last node of selection
-            ops.push(simulation.delete(node.id));
+            simulation.delete(node.id);
 
           } else {
             // Delete node from document
-            ops.push(simulation.delete(node.id));
+            simulation.delete(node.id);
 
             // ... and from view
             var pos = doc.get('content').nodes.indexOf(node.id);
 
-            ops.push(simulation.update(["content", "nodes"], ["-", pos]));
+            simulation.update(["content", "nodes"], ["-", pos]);
           }
         }
       }, this);
@@ -220,22 +214,17 @@ Writer.Prototype = function() {
       var r = [startOffset, -text.length];
 
       // remove trailing text from first node at the beginning of the selection
-      ops.push(simulation.update([node.id, "content"], r));
+      simulation.update([node.id, "content"], r);
     }
 
-    // Now apply the ops collected by the simulation run
-    for (var i = 0; i < ops.length; i++) {
-      // Brutal hacking: there is mess between document.js and data.js
-      // ops are graph operations and bring problems with Document.apply
-      doc.apply(ops[i]);
-    }
+    // apply the simulated changes to the doc
+    simulation.save();
 
     this.selection.set({
       start: [startNode, startOffset],
       end: [startNode, startOffset]
     });
   };
-
 
   // Copy current selection
   // --------
