@@ -80,7 +80,8 @@ var SCHEMA = {
       "properties": {
         "large": "string",
         "medium": "string",
-        "caption": "string"
+        "caption": "string",
+        "content": "string" // TODO: remove
       }
     },
 
