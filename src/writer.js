@@ -551,8 +551,9 @@ Writer.Prototype = function() {
     var pos = this.selection.start[1];
 
     // TODO: future. This only works for text nodes....
-    var cmd = Data.Graph.Update([node.id, "content"], [pos, text]);
-    this.__document.apply(cmd);
+    this.__document.update([node.id, "content"], [pos, text]);
+    // var cmd = Data.Graph.Update([node.id, "content"], [pos, text]);
+    // this.__document.apply(cmd);
 
     this.selection.set({
       start: [nodeIdx, pos+text.length],
