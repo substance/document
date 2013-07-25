@@ -428,15 +428,12 @@ WriterTest.Prototype = function() {
 
   this.insertContent = function(content) {
     var id = this.uuid("text_");
-    this.__document.apply(["create", {
+    this.__document.create({
       "id": id,
       "type": "text",
       "content": content
-    }]);
-    this.__document.apply(["position", "content", {
-      "nodes": [id],
-      "target": -1
-    }]);
+    });
+    this.__document.position("content", [id], -1);
   };
 };
 

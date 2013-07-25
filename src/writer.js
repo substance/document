@@ -460,11 +460,11 @@ Writer.Prototype = function() {
     var pos = [sel.start[1], sel.end[1]];
 
     var id = util.uuid(type+"_");
-    this.__document.apply(["annotate", node.id, "content", {
+    this.__document.annotate([node.id, "content"], {
       "id": id, 
       "type": type,
       range: pos
-    }]);
+    });
 
     var annotation = this.__document.get(id);
     // HACK: the document should trigger itself
