@@ -198,9 +198,6 @@ var SEED = function(options) {
   ];
 };
 
-// forward declaration
-var Converter;
-
 // Document
 // --------
 //
@@ -256,16 +253,6 @@ Document.Prototype = function() {
     return this.get(view).nodes.indexOf(id);
   };
 
-  // Make a new selection on the document
-  // --------
-  //
-
-  // this.select = function(range) {
-  //   this.selection = new Document.Range(this, range);
-  //   this.trigger('selection:changed', this.selection);
-  //   return this.selection;
-  // };
-
   // Serialize to JSON
   // --------
   //
@@ -279,8 +266,6 @@ Document.Prototype = function() {
 
   // Hide elements from provided view
   // --------
-  //
-  // ["hide", {"nodes": ["t1", "t2"]}]
   //
 
   this.hide = function(viewId, nodes) {
@@ -333,7 +318,7 @@ Document.Prototype = function() {
     }
 
     // target index can be given as negative number (as known from python/ruby)
-    var target = Math.min(target, l);
+    target = Math.min(target, l);
     if (target<0) target = Math.max(0, l+target+1);
 
     for (idx = 0; idx < nodes.length; idx++) {
@@ -347,14 +332,14 @@ Document.Prototype = function() {
   // Annotate document
   // --------
   //
-  // `command.path` defines the referenced content node and property
-  // ["annotate", "t1", "content", {"id": "a1",  type": "idea"}]
+  // `path` defines the referenced content node and property
 
   this.annotate = function(path, annotation) {
     // TODO: check if source exists, otherwise reject annotation
-    if (path.length !== 2) throw new DocumentError("Invalid target: " + command.path);
+    if (path.length !== 2) throw new DocumentError("Invalid target: " + path);
 
-    var annotation = util.clone(annotation);
+    // TODO: generalize the path stuff
+    annotation = util.clone(annotation);
     annotation.node = path[0];
     annotation.property = path[1];
 
