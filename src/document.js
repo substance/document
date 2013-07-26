@@ -177,22 +177,12 @@ var SEED = function(options) {
       guid: options.id, // external global document id
       creator: options.creator,
       created_at: options.created_at,
-      views: ["content", "figures", "publications"],
+      views: ["content"],
       title: "",
       abstract: ""
     }),
     Operator.ObjectOperation.Create(["content"], {
       id: "content",
-      type: "view",
-      nodes: [],
-    }),
-    Operator.ObjectOperation.Create(["figures"], {
-      id: "figures",
-      type: "view",
-      nodes: [],
-    }),
-    Operator.ObjectOperation.Create(["publications"], {
-      id: "publications",
       type: "view",
       nodes: [],
     })
@@ -231,12 +221,45 @@ Document.Prototype = function() {
 
   var __super__ = util.prototype(this);
 
+
+  // Get predecessor node for a given view and node id
+  // --------
+  //
+
+  this.getPredecessor = function(view, id) {
+    var pos = this.getPosition(view, id);
+    if (pos === 0) return null;
+    return this.getNodeFromPosition(view, pos-1);
+  };
+
+  // Get successor node for a given view and node id
+  // --------
+  //
+
+  this.getSuccessor = function(view, id) {
+    var view = this.get(view);
+    var pos = this.getPosition(view, id);
+    if (pos === view.length - 1) return null;
+    return this.getNodeFromPosition(view, pos+1);
+  };
+
+
   // Get node position for a given view and node id
   // --------
   //
 
   this.getPosition = function(view, id) {
     return this.get(view).nodes.indexOf(id);
+  };
+
+
+  // Get node object from a given view and position
+  // --------
+  //
+
+  this.getNodeFromPosition = function(view, pos) {
+    var nodeId = this.get(view).nodes[pos];
+    return this.get(nodeId);
   };
 
   // Serialize to JSON

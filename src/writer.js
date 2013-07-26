@@ -198,18 +198,32 @@ Writer.Prototype = function() {
     doc.delete(nodeId);
   };
 
+  // Deleting only the image, nothing else
+  // --------
+  // 
+
   this.__deleteImage = function(nodeId) {
-    // var pos = doc.getPosition('content', nodeId);
-    // this.selection.start[0]-1;
-    // console.log('POS', pos);
+    var doc = this.__document;
+
+    var pos = doc.getPosition('content', nodeId);
+    if (pos > 0) {
+      // Put cursor at last position of preceding node
+      var pred = doc.getPredecessor('content', nodeId);
+      var cursorPos = [pos-1, pred.content.length];
+    } else {
+      var succ = doc.getSuccessor('content', nodeId);
+      if (succ) {
+        // Put cursor at first position of successing node
+        var cursorPos = [pos+1, 0];
+      } else {
+        throw new Error('Tricky thing with cursors and empty docs...');
+      }
+    }
 
     this.__deleteNode(nodeId);
 
     // TODO: make dynamic
-    this.selection.set({
-      start: [0,4],
-      end: [0,4]
-    });
+    this.selection.setCursor(cursorPos);
   };
 
   // Delete current selection
@@ -235,8 +249,10 @@ Writer.Prototype = function() {
       console.log('deleting image here.');
       this.__deleteImage(node.id);
       return;
-    } else {
-      console.log('not an image');
+    }
+
+    if (!sel.hasMultipleNodes() && sel.startChar() === 0 && sel.endChar() === 1 && node.type === "image") {
+      return this.__deleteImage(node.id);
     }
 
 
