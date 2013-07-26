@@ -44,7 +44,7 @@ var AnnotationBusinessTest = function() {
       // 2. Perform operation
       // ---------------
 
-      doc.annotate("emphasis");
+      writer.annotate("emphasis");
 
       // 3. Check the result 
       // ---------------
@@ -84,7 +84,7 @@ var AnnotationBusinessTest = function() {
       // 2. Perform operation
       // ---------------
 
-      doc.annotate("emphasis");
+      writer.annotate("emphasis");
 
       // 3. Check the result 
       // ---------------

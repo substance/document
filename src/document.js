@@ -230,21 +230,6 @@ Document.Prototype = function() {
 
   var __super__ = util.prototype(this);
 
-  var updateAnnotations = function(node, property, change) {
-    // We need to update the range of affected annotations.
-
-    var annotations = this.find("annotations", node.id);
-    annotations = _.filter(annotations, function(a) {
-      return a.property === property;
-    });
-    for (var idx = 0; idx < annotations.length; idx++) {
-      var a = annotations[idx];
-      var changed = Operator.TextOperation.Range.transform(a.range, change);
-      // TODO: here we could check if the range is collapsed and remove the annotation.
-      if (changed) this.trigger("annotation:changed", a);
-    }
-  };
-
   // Get node position for a given view and node id
   // --------
   //

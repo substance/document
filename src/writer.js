@@ -9,6 +9,7 @@ var Data = require("substance-data");
 var Document = require("./document");
 var Operator = require("substance-operator");
 var Selection = require("./selection");
+var Annotator = require("./annotator");
 var Clipboard = require("./clipboard");
 
 // Module
@@ -31,8 +32,9 @@ var Clipboard = require("./clipboard");
 
 var Writer = function(document) {
   this.__document = document;
-  this.selection = new Selection(this.__document, null);
 
+  this.selection = new Selection(this.__document, null);
+  this.annotator = new Annotator(this);
   this.clipboard = new Clipboard();
 };
 
@@ -436,24 +438,8 @@ Writer.Prototype = function() {
   //
 
   this.annotate = function(type) {
-    var sel = this.selection;
-
-    if (sel.start[0] !== sel.end[0]) throw new Error('Multi-node annotations are not supported.');
-
-    var node = this.selection.getNodes()[0];
-    var pos = [sel.start[1], sel.end[1]];
-
-    var id = util.uuid(type+"_");
-    this.__document.annotate([node.id, "content"], {
-      "id": id, 
-      "type": type,
-      range: pos
-    });
-
-    var annotation = this.__document.get(id);
-    // HACK: the document should trigger itself
-    this.__document.trigger("annotation:changed", annotation);
-
+    var annotation = this.annotator.annotate(type);
+    this.annotator.propagateChanges();
     return annotation;
   };
 
@@ -529,6 +515,8 @@ Writer.Prototype = function() {
       start: [nodeIdx, pos+text.length],
       end: [nodeIdx, pos+text.length]
     });
+
+    this.annotator.propagateChanges();
   };
 
 

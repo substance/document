@@ -4,11 +4,10 @@
 // ========
 
 var _ = require("underscore");
-//var util = require("substance-util");
-var Data = require("substance-data");
+var util = require("substance-util");
 var Document = require("./document");
 var DocumentError = Document.DocumentError;
-//var Operator = require("substance-operator");
+var Operator = require("substance-operator");
 
 // Module
 // ========
@@ -17,11 +16,18 @@ var DocumentError = Document.DocumentError;
 // --------
 //
 
-var Annotator = function(document, selection) {
-  // TODO: register for co-transformations to keep annotations up2date.
+var Annotator = function(writer) {
+  var self = this;
 
-  this.document = document;
-  this.selection = selection;
+  this.document = writer.__document;
+  this.selection = writer.selection;
+
+  this._updates = [];
+
+  // register for co-transformations to keep annotations up2date.
+  this.document.propertyChanges().bind(function(op) {
+    self.transform(op);
+  }, {path: ["*", "content"]});
 
   // defines groups of annotations that will be mutually exclusive
   this.group = {
@@ -49,23 +55,123 @@ var Annotator = function(document, selection) {
 
 Annotator.Prototype = function() {
 
-  // Updates all annotations according to a given operation.
+  // Creates a new annotation
   // --------
   //
 
-  this.transform = function(op) {
-    // TextOperation: updated ranges according to the specific annotations' behavior
-    // ObjectOperation: if a node is deleted remove all associated annotations.
-    throw new Error("Not implemented yet.");
+  var _create = function(self, nodeId, property, type, range) {
+    var annotation = {
+      "id": util.uuid(),
+      "node": nodeId,
+      "property": property,
+      "type": type,
+      "range": range
+    };
+    self.document.create(annotation);
+    self._updates.push([annotation]);
+    return annotation;
   };
 
-  // Cut annotations in the given selection.
+  // Deletes an annotation
   // --------
-  // This is the pendant to the writer's cut method.
-  // Partially selected annotations get truncated and depending on the
-  // annotation type new annotation fragments are created which are returned.
+  //
 
-  this.cut = function(sel) {
+  var _delete = function(self, annotation) {
+    self.document.delete(annotation.id);
+    self._updates.push([{node: annotation.node, type: annotation.type}, annotation.range]);
+  };
+
+  var _update = function(self, annotation, newRange) {
+    var oldRange = [annotation.range[0], annotation.range[1]];
+    self.document.apply(Operator.ObjectOperation.Set([annotation.id, "range"], annotation.range, newRange));
+    self._updates.push([self.document.get(annotation.id), oldRange]);
+  };
+
+  // Updates all annotations according to a given operation.
+  // --------
+  //
+  // The provided operation is an ObjectOperation which has been applied
+  // to the document already.
+
+  this.transform = function(op) {
+    var nodeId = op.path[0];
+    var property = op.path[1];
+
+    var annotations = this.document.find("annotations", nodeId);
+    var idx, a;
+
+
+    for (idx = 0; idx < annotations.length; idx++) {
+
+      a = annotations[idx];
+      var oldRange = [a.range[0], a.range[1]];
+
+      // only apply the transformation on annotations with the same property
+      // Note: currently we only have annotations on the `content` property of nodes
+      if (a.property !== property) continue;
+
+      if (op.type === "update") {
+        // Note: these are implicit transformations, i.e., not triggered via annotation controls
+        var expandLeft = false;
+        var expandRight = false;
+
+        if (this.expansion[a.type]) {
+          expandLeft = this.expansion[a.type].left(a);
+          expandRight = this.expansion[a.type].right(a);
+        }
+
+        var changed = Operator.TextOperation.Range.transform(a.range, op.diff, expandLeft, expandRight);
+        if (changed) {
+          if (a.range[0] === a.range[1]) {
+            _delete(this, a);
+          } else {
+            // TODO: should we trigger events on the annotator?
+            // for now, we leave it as it was before
+            this._updates.push([a, oldRange]);
+          }
+        }
+      }
+      // if somebody has reset the property we must delete the annotation
+      else if (op.type === "delete" || op.type === "set") {
+        _delete(this, a);
+      }
+
+    }
+  };
+
+  var _getRanges = function(self, sel) {
+    var nodes = self.selection.getNodes(sel);
+    var ranges = {};
+
+    for (var i = 0; i < nodes.length; i++) {
+      var node = nodes[i];
+      var range = [0,null];
+
+      // in the first node search only in the trailing part
+      if (i === 0) {
+        range[0] = sel.start[1];
+      }
+
+      // in the last node search only in the leading part
+      if (i === nodes.length-1) {
+        range[1] = sel.end[1];
+      }
+
+      ranges[node.id] = range;
+    }
+
+    return ranges;
+  };
+
+  // Copy annotations in the given selection.
+  // --------
+  // This is the pendant to the writer's copy method.
+  // Partially selected annotations may not get copied depending on the
+  // annotation type, for others, new annotation fragments would be created.
+
+  this.copy = function(sel) {
+
+    var ranges = _getRanges(this, sel);
 
     // get all affected annotations
     var annotations = this.getAnnotations({selection: sel});
@@ -74,22 +180,23 @@ Annotator.Prototype = function() {
       var annotation = annotations[i];
 
       // TODO: determine if an annotation would be split by the given selection.
-      var needSplit = false;
-      if (true) throw new Error("Not implemented yet.");
+      var range = ranges[annotation.node];
+      var isPartial = (range[0] > annotation.range[0] || range[1] < annotation.range[1]);
 
-      if (needSplit) {
+      var newAnnotation;
+      if (isPartial) {
         // for the others create a new fragment (depending on type) and truncate the original
         if (this.isSplittable(annotation.type)) {
-
-          // TODO: create new annotation
-          var newAnnotation = null;
-          if (true) throw new Error("Not implemented yet.");
-
+          newAnnotation = util.clone(annotation);          
+          newAnnotation.range = util.clone(range);
           annotations.push(newAnnotation);
         }
       } else {
         // add totally included ones
-        annotations.push(annotation);
+        // TODO: need more control over uuid generation
+        newAnnotation = util.clone(annotation);          
+        newAnnotation.id = util.uuid();
+        annotations.push(newAnnotation);
       }
     }
 
@@ -183,26 +290,6 @@ Annotator.Prototype = function() {
     return annotations;
   };
 
-  // Creates a new annotation
-  // --------
-  //
-
-  var _create = function(self, nodeId, range, type) {
-    this.document.apply(["annotate", nodeId, "content", {
-      "id": nodeId,
-      "type": type,
-      "range": range
-    }]);
-  };
-
-  // Deletes an annotation
-  // --------
-  //
-
-  var _delete = function(self, annotation) {
-    this.document.apply(Data.Graph.Delete(annotation));
-  };
-
   // Truncates an existing annotation
   // --------
   // Deletes an annotation that has a collapsed range after truncation.
@@ -216,17 +303,31 @@ Annotator.Prototype = function() {
     var e1 = annotation.range[1];
     var e2 = range[1];
 
+    var newRange;
+
+    // truncate all = delete
+    if (s1 >= s2 && e1 <= e2) {
+      _delete(self, annotation);
+
     // truncate the head
-    if (s2 <= s1) {
+    } else if (s1 >= s2  && e1 > e2) {
+      newRange = [e2, e1];
+      _update(self, annotation, newRange);
     }
 
     // truncate the tail
-    else if (e2 >= e1) {
-
+    else if (s1 < s2 && e1 <= e2 ) {
+      newRange = [s1, s2];
+      _update(self, annotation, newRange);
     }
     // from the middle: split or delete
     else {
       if (self.isSplittable(annotation.type)) {
+        newRange = [s1, s2];
+        _update(self, annotation, newRange);
+
+        var tailRange = [e2, e1];
+        _create(self, annotation.node, annotation.property, annotation.type, tailRange);
 
       } else {
         _delete(self, annotation);
@@ -241,7 +342,7 @@ Annotator.Prototype = function() {
   //
 
   this.isExclusive = function(type1, type2) {
-    return this.groups[type1] === this.groups[type2];
+    return this.group[type1] === this.group[type2];
   };
 
   // Tell if an annotation can be split or should be truncated only.
@@ -266,9 +367,9 @@ Annotator.Prototype = function() {
     var range = [sel.start[1], sel.end[1]];
 
     if (sel.start[0] !== sel.end[0]) throw new DocumentError('Multi-node annotations are not supported.');
-    var node = this.sel.getNodes()[0];
+    var node = sel.getNodes()[0];
 
-    var filter = {range: range};
+    var filter = {node: node.id, range: range};
     var annotations = this.getAnnotations(filter);
 
     var i, annotation;
@@ -288,24 +389,34 @@ Annotator.Prototype = function() {
     } else {
 
       // truncate all existing annotations of the same type (or group)
+      var toggled = false;
       for (i = 0; i < annotations.length; i++) {
         annotation = annotations[i];
         if (this.isExclusive(type, annotation.type)) {
-          _truncate(this, annotation, sel);
+          _truncate(this, annotation, range);
+          if (type === annotation.type) toggled = true;
         }
       }
 
       // create a new annotation
-      _create(this, node.id, type, range);
+      if (!toggled) {
+        return _create(this, node.id, "content", type, range);
+      }
     }
   };
 
+  this.propagateChanges = function() {
+    for (var i = 0; i < this._updates.length; i++) {
+      var update = this._updates[i];
+      this.document.trigger("annotation:changed", update[0], update[1]);
+    }
+  };
 };
 
 Annotator.prototype = new Annotator.Prototype();
 
 Annotator.isOnNodeStart = function(a) {
-  return a.range.start[1] === 0;
+  return a.range[0] === 0;
 };
 
 Annotator.isTrue = function() {
