@@ -249,8 +249,10 @@ Writer.Prototype = function() {
       console.log('deleting image here.');
       this.__deleteImage(node.id);
       return;
-    } else {
-      console.log('not an image');
+    }
+
+    if (!sel.hasMultipleNodes() && sel.startChar() === 0 && sel.endChar() === 1 && node.type === "image") {
+      return this.__deleteImage(node.id);
     }
 
 
