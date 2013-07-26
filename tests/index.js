@@ -8,11 +8,13 @@
 
 // require("./selection");
 
-
 // Writer Tests
 // ---------------
 
 
 // Actual tests
 // require("./writer/content_deletion");
-require("./writer/annotation_business");
+
+// require("./writer/annotation_business");
+
+require("./writer/content_deletion");

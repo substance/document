@@ -56,7 +56,7 @@ var SRegExp = require("substance-regexp");
 
 var Selection = function(document, selection) {
   this.document = document;
-
+  
   if (!selection) {
     this.start = null;
     this.end = null;
@@ -125,7 +125,6 @@ Selection.Prototype = function() {
     return res;
   }
 
-
   // Set selection
   // --------
   //
@@ -147,8 +146,6 @@ Selection.Prototype = function() {
     return this;
   };
 
-
-
   // Always returns the cursor position
   // even for a multi-char selection
   // and takes into consideration the selection direction
@@ -165,9 +162,10 @@ Selection.Prototype = function() {
   // Convenience for placing the single cusor where start=end
 
   this.setCursor = function(pos) {
-    this.start = pos;
-    this.end = pos;
-    this.trigger('selection:changed', this.toJSON());
+    this.set({
+      start: pos,
+      end: pos
+    });
     return this;
   };
 
@@ -433,26 +431,6 @@ Selection.Prototype = function() {
       // After: a > c d e f g
     }
 
-
-
-    // // Compute new direction
-    // if (this.isCollapsed()) {
-    //   this.direction = null;
-    // } else {
-    //   console.log('direction before', this.direction);
-    //   if (this.start[1]>this.end[1]) {
-    //     var help = this.start;
-    //     this.start = this.end;
-    //     this.end = help;
-
-    //     this.direction = direction;
-    //   } else {
-    //     this.direction = this.direction || direction;
-    //   }
-    //   console.log('direction after', this.direction);
-    // }
-
-
     // Update selection
     this.set(normalize(res));
   };
@@ -472,6 +450,7 @@ Selection.Prototype = function() {
 
   // For a given document return the selected nodes
   // --------
+  // 
 
   this.getNodes = function(sel) {
     sel = sel || this;

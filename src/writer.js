@@ -41,61 +41,12 @@ var Writer = function(document) {
 
 Writer.Prototype = function() {
 
-  // Document Facette
-  // --------
-
-  this.getNodes = function(idsOnly) {
-    if (idsOnly) return this.__document.get(["content", "nodes"]);
-    else return this.__document.query(["content", "nodes"]);
-  };
-
-  // Given a node id, get position in the document
-  // --------
-  //
-
-  this.getPosition = function(id) {
-    return this.__document.getPosition('content', id);
-  };
-
-  // Based on selection get predecessor node, if available
-  // --------
-  //
-  // FIXME: currently assumes there are only text nodes!
-  // TODO: use Selection.find('left', 'node') instead
-
-  this.getPreviousNode = function() {
-    var sel = this.selection;
-    var node = this.selection.getNodes()[0];
-    var nodeOffset = sel.start[0];
-    var view = this.get('content').nodes;
-
-    if (nodeOffset === 0) return null;
-    return this.get(view[nodeOffset-1]);
-  };
-
-
-  // Based on selection get successor node, if available
-  // --------
-  //
-  // FIXME: currently assumes there are only text nodes!
-  // TODO: use Selection.find('right', 'node') instead
-
-  this.getNextNode = function() {
-    var sel = this.selection;
-    var node = this.selection.getNodes()[0];
-    var nodeOffset = sel.end[0];
-    var view = this.get('content').nodes;
-
-    if (nodeOffset > view.length) return null;
-    return this.get(view[nodeOffset+1]);
-  };
-
   // Merge with previous node
   // --------
   //
   // FIX: currently assumes there are only text nodes!
 
-  this.mergeWithPrevious = function() {
+  this.__mergeWithPrevious = function() {
     var sel = this.selection;
     var node = this.selection.getNodes()[0];
     var nodeOffset = sel.start[0];
@@ -126,106 +77,150 @@ Writer.Prototype = function() {
     });
   };
 
-
-  // Takes a selection and deletes it
-  // Used internally by Writer.delete
+  // Delete content at a given range
+  // ------------
   // 
+  // General implementation for character deletion that
+  // might span accross multiple nodes or just affects a single node
+  // Used internally by Writer.delete
 
-  this.deleteRange = function(sel) {
+  this.__deleteRange = function(sel) {
+    var doc = this.__document.startSimulation(),
+        sel = new Selection(doc, sel), // Fresh selection that refers to the simulated doc
+        startNode = sel.startNode(),
+        startChar = sel.startChar(),
+        endNode = sel.endNode(),
+        endChar = sel.endChar(),
+        nodes = sel.getNodes();
 
+    if (nodes.length > 1) {
+
+      // Selection spans across multiple nodes
+      // --------
+
+      _.each(nodes, function(node, index) {
+        // only consider textish nodes for now
+        if (node.content) {
+          if (index === 0) {
+            var trailingText = node.content.slice(startChar);
+            // Remove trailing text from first node at the beginning of the selection
+            doc.update([node.id, "content"], [startChar, -trailingText.length]);
+          } else if (index === nodes.length-1) {
+            // Last node of selection
+            var trailingText = node.content.slice(endChar);
+
+            // Look back to first node
+            var firstNode = nodes[0];
+
+            // remove preceding text from last node until the end of the selection
+            doc.update([firstNode.id, "content"], [firstNode.content.length, trailingText]);
+
+            // Delete last node of selection (remove from view and delete node)
+            var pos = doc.getPosition('content', node.id);
+            doc.update(["content", "nodes"], ["-", pos]);
+            doc.delete(node.id);
+          } else {
+            // Delete node from document (remove from view and delete node)
+            doc.update(["content", "nodes"], ["-", doc.getPosition('content', node.id)]);
+            doc.delete(node.id);
+          }
+        }
+      }, this);      
+    } else {
+
+      // Selection happened within a single node
+      // --------
+
+      var node = nodes[0];
+      var text = node.content.slice(startChar, endChar);
+      doc.update([node.id, "content"], [startChar, -text.length]);
+    }
+
+    // Commit the changes we just made
+    doc.save();
+
+    // Update the original selection
+    this.selection.setCursor([sel.startNode(), sel.startChar()]);
   };
+
+
+  // Document Facette
+  // --------
+
+  this.getNodes = function(idsOnly) {
+    if (idsOnly) return this.__document.get(["content", "nodes"]);
+    else return this.__document.query(["content", "nodes"]);
+  };
+
+  // Given a node id, get position in the document
+  // --------
+  //
+
+  this.getPosition = function(id) {
+    return this.__document.getPosition('content', id);
+  };
+
+  // Based on selection get predecessor node, if available
+  // --------
+  //
+
+  this.getPreviousNode = function() {
+    var sel = this.selection;
+    var node = this.selection.getNodes()[0];
+    var nodeOffset = sel.start[0];
+    var view = this.get('content').nodes;
+
+    if (nodeOffset === 0) return null;
+    return this.get(view[nodeOffset-1]);
+  };
+
+
+  // Based on selection get successor node, if available
+  // --------
+  //
+
+  this.getNextNode = function() {
+    var sel = this.selection;
+    var node = this.selection.getNodes()[0];
+    var nodeOffset = sel.end[0];
+    var view = this.get('content').nodes;
+
+    if (nodeOffset > view.length) return null;
+    return this.get(view[nodeOffset+1]);
+  };
+
 
   // Delete current selection
   // --------
   //
 
   this.delete = function() {
-    // Convenience vars
-    var startNode = this.selection.start[0];
-    var startOffset = this.selection.start[1];
-    var endNode = this.selection.end[0];
-    var endOffset = this.selection.end[1];
-    // var nodes = this.selection.getNodes();
-    var doc = this.__document;
+    var sel = this.selection;
 
-    // Create a simulation
-    // Will be provided by Document.createSimulation later on
-    var simulation = doc.startSimulation();
+    // Single cursor: remove preceding char
+    // --------
+    // 
 
-    // Use nodes from the simulated doc
-    var nodes = [];
-
-    _.each(this.selection.getNodes(), function(n) {
-      nodes.push(simulation.get(n.id));
-    });
-
-    if (nodes.length > 1) {
-      // Remove trailing stuff
-      _.each(nodes, function(node, index) {
-        // only consider textish nodes for now
-        if (node.content) {
-          if (index === 0) {
-            var trailingText = node.content.slice(startOffset);
-            var r = [startOffset, -trailingText.length];
-
-            // Remove trailing text from first node at the beginning of the selection
-            simulation.update([node.id, "content"], r);
-
-          } else if (index === nodes.length-1) {
-
-            // Last node of selection
-            var trailingText = node.content.slice(endOffset);
-
-            // Look back to prev node
-            var firstNode = nodes[0];
-            var r = [firstNode.content.length, trailingText];
-
-            // remove preceding text from last node until the end of the selection
-            // 
-            simulation.update([firstNode.id, "content"], r);
-            
-            // Delete last node of selection
-            simulation.delete(node.id);
-
-          } else {
-            // Delete node from document
-            simulation.delete(node.id);
-
-            // ... and from view
-            var pos = doc.get('content').nodes.indexOf(node.id);
-
-            simulation.update(["content", "nodes"], ["-", pos]);
-          }
-        }
-      }, this);
-    } else {
-      // throw new Error('disabled for now');
-      // leave as is for now ...
-      var node = nodes[0];
-      // Backspace behavior (delete one char before current cursor position)
-      if (startOffset === endOffset) {
-        if (startOffset>0) {
-          startOffset -= 1;
-        } else {
-          // Merge with previous text node if possible
-          return this.mergeWithPrevious();
-        }
-      }
-
-      var text = node.content.slice(startOffset, endOffset);
-      var r = [startOffset, -text.length];
-
-      // remove trailing text from first node at the beginning of the selection
-      simulation.update([node.id, "content"], r);
+    if (sel.isCollapsed() && sel.startChar()>0) {
+      this.__deleteRange({
+        start: [sel.startNode(), sel.startChar - 1],
+        end: sel.end
+      });
     }
 
-    // apply the simulated changes to the doc
-    simulation.save();
+    // Single cursor: merge with previous node
+    // --------
+    // 
 
-    this.selection.set({
-      start: [startNode, startOffset],
-      end: [startNode, startOffset]
-    });
+    if (sel.isCollapsed() && sel.startChar() === 0) {
+      this.__mergeWithPrevious();
+    }
+
+    // Default behavior
+    // --------
+    // 
+
+    this.__deleteRange(sel);
   };
 
   // Copy current selection
@@ -443,13 +438,13 @@ Writer.Prototype = function() {
     return annotation;
   };
 
-
   // Get annotations
   // ---------------
   // 
   // For the given range, get all matching annotations
   // Step one: make it work for single-node selections
   // TODO: consider inclusive / non-inclusive option
+  // TODO: move into annotator?
 
   this.getAnnotations = function(node, range, aTypes) {
     var doc = this.__document;
