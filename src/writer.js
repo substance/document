@@ -189,6 +189,31 @@ Writer.Prototype = function() {
     return this.get(view[nodeOffset+1]);
   };
 
+  // Did it work?
+  // Maybe this should go into the document module?
+
+  this.__deleteNode = function(nodeId) {
+    var doc = this.__document;
+    // Delete node from document (remove from view and delete node)
+    doc.update(["content", "nodes"], ["-", doc.getPosition('content', nodeId)]);
+    doc.delete(nodeId);
+  };
+
+  this.__deleteImage = function(nodeId) {
+    var doc = this.__document;
+
+    // var pos = doc.getPosition('content', nodeId);
+    // this.selection.start[0]-1;
+    // console.log('POS', pos);
+
+    this.__deleteNode(nodeId);
+
+    // TODO: make dynamic
+    this.selection.set({
+      start: [0,4],
+      end: [0,4]
+    });
+  };
 
   // Delete current selection
   // --------
@@ -197,14 +222,37 @@ Writer.Prototype = function() {
   this.delete = function() {
     var sel = this.selection;
 
+    // Single cursor stuff
+    // =========
+
+    var node = sel.getNodes()[0];
+
+    // Image Business
+    // --------
+
+    // Case: Collapsed cursor is at right edge of the image
+    // Desired behavior -> delete the image and put cursor to last position
+    // of preceding element
+
+    if (sel.isCollapsed() && sel.startChar() === 1 && node.type === "image") {
+      console.log('deleting image here.');
+      this.__deleteImage(node.id);
+      return;
+    } else {
+      console.log('not an image');
+      debugger;
+    }
+
+
     // Single cursor: remove preceding char
     // --------
     // 
+    
 
     if (sel.isCollapsed() && sel.startChar()>0) {
       this.__deleteRange({
-        start: [sel.startNode(), sel.startChar - 1],
-        end: sel.end
+        start: [sel.startNode(), sel.startChar() - 1],
+        end: sel.start
       });
     }
 
@@ -215,6 +263,8 @@ Writer.Prototype = function() {
     if (sel.isCollapsed() && sel.startChar() === 0) {
       this.__mergeWithPrevious();
     }
+
+
 
     // Default behavior
     // --------
