@@ -10,17 +10,18 @@ var util = require('substance-util');
 var Document = require('../../src/document');
 
 var WriterTest = function() {
-  
+
 };
 
 // General aid for the writertest
 WriterTest.Prototype = function() {
-  // helpers go here
-
   this.createWriter = function(spec) {
     // var uuid = util.uuidGen('node_');
     var doc = new Document({"id": "writer_test"});
     var writer = new Document.Writer(doc);
+
+    // Build content nodes
+    // --------
 
     _.each(spec.document, function(node, index) {
       var id = node[0];
@@ -40,8 +41,33 @@ WriterTest.Prototype = function() {
       doc.position("content", [id], -1);
     });
 
+
+    // Build annotations if there are any
+    // --------
+
+    if (spec.annotations) {
+      _.each(spec.annotations, function(annotation, index) {
+        var id = annotation[0];
+        var node = annotation[1];
+        var property = annotation[2]; // e.g. "content" on a text node
+        var range = annotation[3]; // e.g. [0,4] for the first 4 chars
+        var type = annotation[4];
+
+        doc.create({
+          "id": id,
+          "type": type,
+          "node": node,
+          "property": property,
+          "range": range
+        });
+      });      
+    }
+
+
+    // Set the selection
+    // --------
+
     var sel = spec.selection;
-    // Now set the selection
 
     var startNodeOffset = doc.getPosition("content", sel[0]);
     var startCharOffset = sel[1];
