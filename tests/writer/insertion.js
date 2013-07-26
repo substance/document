@@ -4,7 +4,6 @@
 // ========
 
 var Test = require('substance-test');
-var WriterTest = require('./writer_test');
 var assert = Test.assert;
 var registerTest = Test.registerTest;
 var util = require('substance-util');
@@ -28,79 +27,12 @@ var ContentDeletionTest = function() {
   };
 
   this.actions = [
-
-    "Delete single-node text selection", function() {
-      
-      // 1. Construct writing scenario
-      // ---------------
-
-      var writer = this.createWriter({
-        "document": [
-          ["text_1", "Hello world!"],
-        ],
-        "selection": ["text_1", 5, "text_1", 11 ]
-      });
-
-      // 2. Perform operation
-      // ---------------
-
-      writer.delete();
-
-      // 3. Check the result 
-      // ---------------
-
-      var expectedWriter = this.createWriter({
-        "document": [
-          ["text_1", "Hello!"],
-        ],
-        "selection": ["text_1", 5]
-      });
-
-      this.isWriterEqual(expectedWriter, writer);
-    },
-
-    "Delete multi-node selection (with image in between)", function() {
-      
-      // 1. Construct writing scenario
-      // ---------------
-
-      var writer = this.createWriter({
-        "document": [
-          ["heading_1", "ABCD"],
-          ["image_1"          ],
-          ["text_1",    "abcd"]
-        ],
-        "selection": ["heading_1", 2, "text_1", 2 ]
-      });
-
-      // 2. Perform operation
-      // ---------------
-
-      writer.delete();
-
-
-      // 3. Check the result 
-      // ---------------
-      // 
-      // Selected content should be gone and cusor ends up at the start
-      // of the selection. Text node gets merged into header node
-
-      var expectedWriter = this.createWriter({
-        "document": [
-          ["heading_1", "ABcd"],
-        ],
-        "selection": ["heading_1", 2]
-      });
-
-      this.isWriterEqual(expectedWriter, writer);
-    },
-
     "Delete when cursor is on the image (right edge)", function() {
       
       // 1. Construct writing scenario
       // ---------------
 
-      var writer = this.createWriter({
+      var writer = createWriter({
         "document": [
           ["heading_1", "ABCD"],
           ["image_1"          ],
@@ -112,12 +44,12 @@ var ContentDeletionTest = function() {
       // 2. Perform operation
       // ---------------
 
-      writer.delete();
+      doc.delete();
 
       // 3. Check the result 
       // ---------------
 
-      var expectedWriter = this.createWriter({
+      var expectedWriter = createWriter({
         "document": [
           ["heading_1", "ABCD"],
           ["text_1",    "abcd"]
@@ -125,8 +57,9 @@ var ContentDeletionTest = function() {
         "selection": ["heading_1", 4]
       });
 
-      this.isWriterEqual(expectedWriter, writer);
+      assert.isWriterEqual(expectedWriter, writer);
     },
+
 
     "Delete when cursor is right after an image", function() {
       
@@ -197,6 +130,41 @@ var ContentDeletionTest = function() {
           ["text_1",    "abcd"]
         ],
         "selection": ["heading_1", 4, "heading_1", 4]
+      });
+
+      assert.isWriterEqual(expectedWriter, writer);
+    },
+
+    "Delete multi-node selection (with image in between)", function() {
+      
+      // 1. Construct writing scenario
+      // ---------------
+
+      var writer = createWriter({
+        "document": [
+          ["heading_1", "ABCD"],
+          ["image_1"          ],
+          ["text_1",    "abcd"]
+        ],
+        "selection": ["heading_1", 2, "text_1", 2 ]
+      });
+
+      // 2. Perform operation
+      // ---------------
+
+      doc.delete();
+
+      // 3. Check the result 
+      // ---------------
+      // 
+      // Selected content should be gone and cusor ends up at the start
+      // of the selection. Text node gets merged into header node
+
+      var expectedWriter = createWriter({
+        "document": [
+          ["heading_1", "ABcd"],
+        ],
+        "selection": ["heading_1", 2]
       });
 
       assert.isWriterEqual(expectedWriter, writer);
@@ -341,8 +309,11 @@ var ContentDeletionTest = function() {
         ],
         "selection": ["heading_1", 1]
       });
+
       assert.isWriterEqual(expectedWriter, writer);
     }
+
+
   ];
 };
 
@@ -352,7 +323,6 @@ ContentDeletionTest.Prototype = function() {
 };
 
 
-ContentDeletionTest.Prototype.prototype = WriterTest.prototype;
 ContentDeletionTest.prototype = new ContentDeletionTest.Prototype();
 
 registerTest(['Document', 'Writer', 'Content Deletion'], new ContentDeletionTest());
