@@ -99,6 +99,7 @@ var SCHEMA = {
         "node": "content",
         "property": "string",
         "range": "object"
+        // path: ["array", "string"] -> could be ["text_1", "content"]
       }
     },
 

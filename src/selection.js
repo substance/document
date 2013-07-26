@@ -67,6 +67,7 @@ var Selection = function(document, selection) {
 
 
 
+
 Selection.Prototype = function() {
 
   function compare(a, b) {
@@ -426,6 +427,50 @@ Selection.Prototype = function() {
       return this.document.get(n);
     }, this);
   };
+
+  // Always returns the cursor position
+  // even for a multi-char selection
+  // and takes into consideration the selection direction
+  // --------
+  //
+
+  this.getCursor = function() {
+    return this.direction === "right" ? this.end : this.start;
+  };
+
+  // Returns start node offset
+  // --------
+  //
+
+  this.startNode = function() {
+    return this.start[0];
+  };
+
+  // Returns end node offset
+  // --------
+  //
+
+  this.endNode = function() {
+    return this.end[0];
+  };
+
+
+  // Returns start node offset
+  // --------
+  //
+
+  this.startChar = function() {
+    return this.start[1];
+  };
+
+  // Returns end node offset
+  // --------
+  //
+
+  this.endChar = function() {
+    return this.end[1];
+  };
+
 
 
   // No selection

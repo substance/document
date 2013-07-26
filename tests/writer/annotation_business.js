@@ -4,10 +4,10 @@
 // ========
 
 var Test = require('substance-test');
-var assert = Test.assert;
+var WriterTest = require('./writer_test');
+// var assert = Test.assert;
 var registerTest = Test.registerTest;
-var util = require('substance-util');
-var Document = require('../index');
+// var Document = require('../index');
 
 
 // Test
@@ -19,7 +19,7 @@ var AnnotationBusinessTest = function() {
 
   };
 
-  // deactivate the default fixture
+  // Deactivate the default fixture
   // ----------
 
   this.fixture = function() {
@@ -32,53 +32,54 @@ var AnnotationBusinessTest = function() {
       // 1. Construct writing scenario
       // ---------------
 
-      var writer = createWriter({
+      var writer = this.createWriter({
         "document": [
           ["text_1", "abcdefghi"],
-          ["text_2", "jklmnopq"]
+          ["text_2", "jklmnopq"],
           ["text_3", "rstuvxyz"]
         ],
-        "selection": ["text_1", 0, "text_3", 3]
+        "selection": ["text_1", 0, "text_1", 3]
       });
 
       // 2. Perform operation
       // ---------------
 
-      writer.annotate("emphasis");
+      var a = writer.annotate("emphasis");
 
       // 3. Check the result 
       // ---------------
 
-      var expectedWriter = createWriter({
+      var expectedWriter = this.createWriter({
         "document": [
           ["text_1", "abcdefghi"],
-          ["text_2", "jklmnopq"]
+          ["text_2", "jklmnopq"],
           ["text_3", "rstuvxyz"]
         ],
         "annotations": [
-          ["text_1", [0, 3], "emphasis"]
+          [a.id, "text_1", "content", [0, 3], "emphasis"]
         ],
-        "selection": ["text_1", 0, "text_3", 3]
+        "selection": ["text_1", 0, "text_1", 3]
       });
 
-      assert.isWriterEqual(expectedWriter, writer);
+      this.isWriterEqual(expectedWriter, writer);
     },
+
 
     "Toggle back (remove) the previous annotation", function() {
       
       // 1. Construct writing scenario
       // ---------------
 
-      var expectedWriter = createWriter({
+      var writer = this.createWriter({
         "document": [
           ["text_1", "abcdefghi"],
-          ["text_2", "jklmnopq"]
+          ["text_2", "jklmnopq"],
           ["text_3", "rstuvxyz"]
         ],
         "annotations": [
-          ["text_1", [0, 3], "emphasis"]
+          ["annotation_1", "text_1", "content", [0, 3], "emphasis"]
         ],
-        "selection": ["text_1", 0, "text_3", 3]
+        "selection": ["text_1", 0, "text_1", 3]
       });
 
       // 2. Perform operation
@@ -89,62 +90,63 @@ var AnnotationBusinessTest = function() {
       // 3. Check the result 
       // ---------------
 
-      var expectedWriter = createWriter({
+      var expectedWriter = this.createWriter({
         "document": [
           ["text_1", "abcdefghi"],
-          ["text_2", "jklmnopq"]
+          ["text_2", "jklmnopq"],
           ["text_3", "rstuvxyz"]
         ],
         "selection": ["text_1", 0, "text_1", 3]
       });
 
-      assert.isWriterEqual(expectedWriter, writer);
-    },
+      this.isWriterEqual(expectedWriter, writer);
+    }
 
-    "Breaking an existing annotation into pieces", function() {
+    // "Breaking an existing annotation into pieces", function() {
       
-      // 1. Construct writing scenario
-      // ---------------
+    //   // 1. Construct writing scenario
+    //   // ---------------
 
-      var expectedWriter = createWriter({
-        "document": [
-          ["text_1", "abcdefghi"],
-        ],
-        "annotations": [
-          ["text_1", [0, 3], "emphasis"]
-        ],
-        "selection": ["text_1", 0, "text_1", 3]
-      });
+    //   var expectedWriter = createWriter({
+    //     "document": [
+    //       ["text_1", "abcdefghi"],
+    //     ],
+    //     "annotations": [
+    //       ["text_1", [0, 3], "emphasis"]
+    //     ],
+    //     "selection": ["text_1", 2, "text_1", 2]
+    //   });
 
-      // 2. Perform operation
-      // ---------------
+    //   // 2. Perform operation
+    //   // ---------------
 
-      // doc.annotate("emphasis");
-      doc.insertNode('text');
+    //   var n = writer.insertNode('text');
 
-      // 3. Check the result 
-      // ---------------
+    //   // 3. Check the result 
+    //   // ---------------
 
-      var expectedWriter = createWriter({
-        "document": [
-          ["text_1", "abcdefghi"],
-          ["text_*", "jklmnopq"]
-          ["text_3", "rstuvxyz"]
-        ],
-        "selection": ["text_1", 0, "text_3", 3]
-      });
+    //   var expectedWriter = createWriter({
+    //     "document": [
+    //       ["text_1", "ab"],
+    //       [n.id, "c"]
+    //     ],
+    //     "selection": [n.id, 0]
+    //   });
 
-      assert.isWriterEqual(expectedWriter, writer);
-    },
-
+    //   assert.isWriterEqual(expectedWriter, writer);
+    // }
 
   ];
 };
+
+
 
 // General aid for the writertest
 AnnotationBusinessTest.Prototype = function() {
   // helpers go here
 };
+
+AnnotationBusinessTest.Prototype.prototype = WriterTest.prototype;
 
 AnnotationBusinessTest.prototype = new AnnotationBusinessTest.Prototype();
 
