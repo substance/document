@@ -87,11 +87,11 @@ Writer.Prototype = function() {
   // Used internally by Writer.delete
 
   this.__deleteRange = function(sel) {
-    var doc = this.__document.startSimulation(),
-        startChar = sel.startChar(),
+    var doc = this.__document.startSimulation();
+    sel = new Selection(doc, sel); // Fresh selection that refers to the simulated doc
+    var startChar = sel.startChar(),
         endChar = sel.endChar(),
         nodes = sel.getNodes();
-    sel = new Selection(doc, sel); // Fresh selection that refers to the simulated doc
 
     if (nodes.length > 1) {
 
