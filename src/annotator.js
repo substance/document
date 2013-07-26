@@ -67,8 +67,12 @@ Annotator.Prototype = function() {
       "type": type,
       "range": range
     };
-    self.document.create(annotation);
-    self._updates.push([annotation]);
+    return self.create(annotation);
+  };
+
+  this.create = function(annotation) {
+    this.document.create(annotation);
+    this._updates.push([annotation]);
     return annotation;
   };
 
@@ -93,14 +97,13 @@ Annotator.Prototype = function() {
   // The provided operation is an ObjectOperation which has been applied
   // to the document already.
 
-  this.transform = function(op) {
+  this.transform = function(op, annotations) {
     var nodeId = op.path[0];
     var property = op.path[1];
 
-    var annotations = this.document.find("annotations", nodeId);
+    annotations = annotations || this.document.find("annotations", nodeId);
+
     var idx, a;
-
-
     for (idx = 0; idx < annotations.length; idx++) {
 
       a = annotations[idx];
@@ -139,6 +142,19 @@ Annotator.Prototype = function() {
     }
   };
 
+  this.paste = function(annotations, newNodeId, offset) {
+    if (offset === undefined) offset = 0;
+
+    for (var i = 0; i < annotations.length; i++) {
+      var annotation = annotations[i];
+      annotation.node = newNodeId;
+      annotation.range[0] += offset;
+      annotation.range[1] += offset;
+      this.create(annotation);
+    }
+    this.propagateChanges();
+  };
+
   var _getRanges = function(self, sel) {
     var nodes = self.selection.getNodes(sel);
     var ranges = {};
@@ -175,6 +191,7 @@ Annotator.Prototype = function() {
 
     // get all affected annotations
     var annotations = this.getAnnotations({selection: sel});
+    var result = [];
 
     for (var i = 0; i < annotations.length; i++) {
       var annotation = annotations[i];
@@ -187,20 +204,22 @@ Annotator.Prototype = function() {
       if (isPartial) {
         // for the others create a new fragment (depending on type) and truncate the original
         if (this.isSplittable(annotation.type)) {
-          newAnnotation = util.clone(annotation);          
-          newAnnotation.range = util.clone(range);
-          annotations.push(newAnnotation);
+          newAnnotation = util.clone(annotation);
+          // make the range relative to the selection
+          newAnnotation.range = [range[0] - range[0], range[1] - range[0]];
+          result.push(newAnnotation);
         }
       } else {
         // add totally included ones
         // TODO: need more control over uuid generation
         newAnnotation = util.clone(annotation);          
         newAnnotation.id = util.uuid();
-        annotations.push(newAnnotation);
+        newAnnotation.range = [newAnnotation.range[0] - range[0], newAnnotation.range[1] - range[0]];
+        result.push(newAnnotation);
       }
     }
 
-    return annotations;
+    return result;
   };
 
 
@@ -280,7 +299,7 @@ Annotator.Prototype = function() {
         annotations.push(_filterByNodeAndRange(doc, node.id, range));
       }
 
-      annotations = Array.prototype.concat.apply(null, annotations);
+      annotations = Array.prototype.concat.apply([], annotations);
     }
 
     if (options.filter) {
@@ -406,8 +425,8 @@ Annotator.Prototype = function() {
   };
 
   this.propagateChanges = function() {
-    for (var i = 0; i < this._updates.length; i++) {
-      var update = this._updates[i];
+    while (this._updates.length > 0) {
+      var update = this._updates.shift();
       this.document.trigger("annotation:changed", update[0], update[1]);
     }
   };
