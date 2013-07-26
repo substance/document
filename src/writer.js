@@ -419,12 +419,19 @@ Writer.Prototype = function() {
 
             // and the clipboards content view
             doc.update(["content", "nodes"], ["+", startNode+index+1, nodeId]);
+
+            var annotations = content.find("annotations", node.id);
+            this.annotator.paste(annotations, referenceNode.id, startOffset);
+
           } else if (index === nodes.length-1) {
             // Skip last node of the clipboard document
+            // TODO why?
           } else {
             // Create a copy of the 
             doc.create(node);
             doc.update(["content", "nodes"], ["+", startNode+index, node.id]);
+            var annotations = content.find("annotations", node.id);
+            this.annotator.paste(annotations);
           }
         }
       }, this);
@@ -432,26 +439,16 @@ Writer.Prototype = function() {
       // Only one node to insert
       var node = nodes[0];
       doc.update([referenceNode.id, "content"], [startOffset, node.content]);
+
+      var annotations = content.find("annotations", node.id);
+      this.annotator.paste(annotations, referenceNode.id, startOffset);
+
       // Move selection to the end of the pasted content
       newSel = {
         start: [sel.start[0], sel.start[1]+node.content.length],
         end: [sel.start[0], sel.start[1]+node.content.length]
       };
     }
-
-    // extract annotations from content
-    var annotations = [];
-    var annotatedNodes = Object.keys(content.indexes.annotations);
-    var idx;
-    for (idx = 0; idx < annotatedNodes.length; idx++) {
-      var id = annotatedNodes[idx];
-      annotations = annotations.concat(content.indexes.annotations[id]);
-    }
-    for (idx = 0; idx < annotations.length; idx++) {
-      var annotation = content.get(annotations[idx]);
-      this.annotator.create(annotation);
-    }
-    this.annotator.propagateChanges();
 
     if (newSel) sel.set(newSel);
   };

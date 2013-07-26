@@ -143,13 +143,16 @@ Annotator.Prototype = function() {
   };
 
   this.paste = function(annotations, newNodeId, offset) {
-    if (offset === undefined) offset = 0;
 
     for (var i = 0; i < annotations.length; i++) {
       var annotation = annotations[i];
-      annotation.node = newNodeId;
-      annotation.range[0] += offset;
-      annotation.range[1] += offset;
+      if (newNodeId !== undefined) {
+        annotation.node = newNodeId;
+      }
+      if (offset !== undefined) {
+        annotation.range[0] += offset;
+        annotation.range[1] += offset;
+      }
       this.create(annotation);
     }
     this.propagateChanges();
