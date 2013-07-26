@@ -113,25 +113,23 @@ var AnnotationBusinessTest = function() {
         "annotations": [
           ["text_1", [0, 3], "emphasis"]
         ],
-        "selection": ["text_1", 0, "text_1", 3]
+        "selection": ["text_1", 2, "text_1", 2]
       });
 
       // 2. Perform operation
       // ---------------
 
-      // doc.annotate("emphasis");
-      doc.insertNode('text');
+      var n = doc.insertNode('text');
 
       // 3. Check the result 
       // ---------------
 
       var expectedWriter = createWriter({
         "document": [
-          ["text_1", "abcdefghi"],
-          ["text_*", "jklmnopq"]
-          ["text_3", "rstuvxyz"]
+          ["text_1", "ab"],
+          [n.id, "c"]
         ],
-        "selection": ["text_1", 0, "text_3", 3]
+        "selection": [n.id, 0]
       });
 
       assert.isWriterEqual(expectedWriter, writer);

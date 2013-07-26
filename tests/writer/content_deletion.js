@@ -202,7 +202,118 @@ var ContentDeletionTest = function() {
       });
 
       assert.isWriterEqual(expectedWriter, writer);
+    },
+
+    "Delete selection that ends right before an image", function() {
+      
+      // 1. Construct writing scenario
+      // ---------------
+
+      var writer = createWriter({
+        "document": [
+          ["heading_1", "ABCD"],
+          ["image_1"          ],
+          ["text_1",    "abcd"]
+        ],
+        "selection": ["heading_1", 1, "image_1", 0 ]
+      });
+
+      // 2. Perform operation
+      // ---------------
+
+      doc.delete();
+
+      // 3. Check the result 
+      // ---------------
+      // 
+      // Selected content should be gone and cusor ends up at the start
+      // of the selection. Text node gets merged into header node
+
+      var expectedWriter = createWriter({
+        "document": [
+          ["heading_1", "A"],
+          ["image_1"          ],
+          ["text_1",    "abcd"]
+        ],
+        "selection": ["heading_1", 1]
+      });
+
+      assert.isWriterEqual(expectedWriter, writer);
+    },
+
+    "Delete selection that ends right after an image", function() {
+      
+      // 1. Construct writing scenario
+      // ---------------
+
+      var writer = createWriter({
+        "document": [
+          ["heading_1", "ABCD"],
+          ["image_1"          ],
+          ["text_1",    "abcd"]
+        ],
+        "selection": ["heading_1", 1, "image_1", 1 ]
+      });
+
+      // 2. Perform operation
+      // ---------------
+
+      doc.delete();
+
+      // 3. Check the result 
+      // ---------------
+      // 
+      // Image should be removed but heading_1 and text_1 should not be
+      // merged since the selection didn't touch the text_1 node
+      // Next test describes that scenario
+
+      var expectedWriter = createWriter({
+        "document": [
+          ["heading_1", "A"],
+          ["text_1",    "abcd"]
+        ],
+        "selection": ["heading_1", 1]
+      });
+
+      assert.isWriterEqual(expectedWriter, writer);
+    },
+
+    "Delete selection that ends at the beginning of text node, right after image", function() {
+      
+      // 1. Construct writing scenario
+      // ---------------
+
+      var writer = createWriter({
+        "document": [
+          ["heading_1", "ABCD"],
+          ["image_1"          ],
+          ["text_1",    "abcd"]
+        ],
+        "selection": ["heading_1", 1, "text_1", 0 ]
+      });
+
+      // 2. Perform operation
+      // ---------------
+
+      doc.delete();
+
+      // 3. Check the result 
+      // ---------------
+      // 
+      // Image should be removed but and text_1 gets merged
+      // into heading_1
+
+      var expectedWriter = createWriter({
+        "document": [
+          ["heading_1", "Aabcd"]
+        ],
+        "selection": ["heading_1", 1]
+      });
+
+      assert.isWriterEqual(expectedWriter, writer);
     }
+
+
   ];
 };
 
