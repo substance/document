@@ -4,6 +4,7 @@ var _ = require("underscore");
 var util = require("substance-util");
 var SRegExp = require("substance-regexp");
 
+
 // Document.Selection
 // ================
 //
@@ -64,8 +65,6 @@ var Selection = function(document, selection) {
     this.set(selection);
   }
 };
-
-
 
 
 Selection.Prototype = function() {
@@ -148,6 +147,18 @@ Selection.Prototype = function() {
     return this;
   };
 
+
+
+  // Always returns the cursor position
+  // even for a multi-char selection
+  // and takes into consideration the selection direction
+  // --------
+  //
+
+  this.getCursor = function() {
+    return this.direction === "right" ? this.end : this.start;
+  };
+
   // Set cursor to position
   // --------
   //
@@ -169,6 +180,15 @@ Selection.Prototype = function() {
     return this.document.get(view[pos]);
   };
 
+
+  // Check if the given node position has a successor
+  // --------
+  //
+
+  this.hasPredecessor = function(nodePos) {
+    return nodePos > 0;
+  };
+
   // Check if the given node has a successor
   // --------
   //
@@ -176,6 +196,45 @@ Selection.Prototype = function() {
   this.hasSuccessor = function(nodePos) {
     var view = this.document.get('content').nodes;
     return nodePos < view.length-1;
+  };
+
+
+  // Return previous node boundary for a given node/character position
+  // --------
+  //
+
+  this.prevNode = function(pos) {
+    var nodePos = pos[0],
+        charPos = pos[1];
+
+    if (charPos > 0) {
+      return [nodePos, 0];
+    } else if (this.hasPredecessor(nodePos)) {
+      var prevNode = this.getNodeAtPosition(nodePos - 1);
+      return [nodePos-1, prevNode.content.length];
+    } else {
+      // Beginning of the document reached
+      return pos;
+    }
+  };
+
+  // Return next node boundary for a given node/character position
+  // --------
+  //
+
+  this.nextNode = function(pos) {
+    var nodePos = pos[0],
+        charPos = pos[1],
+        node = this.getNodeAtPosition(nodePos);
+
+    if (charPos < node.content.length) {
+      return [nodePos, node.content.length];
+    } else if (this.hasSuccessor(nodePos)) {
+      return [nodePos+1, 0];
+    } else {
+      // End of the document reached
+      return pos;
+    }
   };
 
   // Return previous occuring word for a given node/character position
@@ -356,7 +415,6 @@ Selection.Prototype = function() {
 
     if (this.direction === 'right') {
       // Right bound: a > > d e f g
-
       if (direction === 'left') {
         res.end = this.find(this.end, direction, granularity);
         // After: a > c d e f g
@@ -400,7 +458,6 @@ Selection.Prototype = function() {
   };
 
 
-
   // JSON serialization
   // --------
   //
@@ -412,7 +469,6 @@ Selection.Prototype = function() {
       "direction": this.direction
     };
   };
-
 
   // For a given document return the selected nodes
   // --------
@@ -428,15 +484,6 @@ Selection.Prototype = function() {
     }, this);
   };
 
-  // Always returns the cursor position
-  // even for a multi-char selection
-  // and takes into consideration the selection direction
-  // --------
-  //
-
-  this.getCursor = function() {
-    return this.direction === "right" ? this.end : this.start;
-  };
 
   // Returns start node offset
   // --------
@@ -472,7 +519,6 @@ Selection.Prototype = function() {
   };
 
 
-
   // No selection
   // --------
   //
@@ -493,6 +539,17 @@ Selection.Prototype = function() {
   this.isCollapsed = function() {
     return this.start[0] === this.end[0] && this.start[1] === this.end[1];
   };
+
+
+  // Multinode
+  // --------
+  //
+  // Returns true if the selection refers to multiple nodes
+
+  this.hasMultipleNodes = function() {
+    return this.startNode() !== this.endNode();
+  };
+
 
   // For a given document return the selected text
   // --------
