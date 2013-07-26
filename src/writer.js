@@ -5,9 +5,7 @@
 
 var _ = require("underscore");
 var util = require("substance-util");
-var Data = require("substance-data");
 var Document = require("./document");
-var Operator = require("substance-operator");
 var Selection = require("./selection");
 var Annotator = require("./annotator");
 var Clipboard = require("./clipboard");
@@ -55,12 +53,13 @@ Writer.Prototype = function() {
     // var prevNode = sel.find('left', node);
     var prevNode = this.getPreviousNode();
     var doc = this.__document;
-    var ops = [];
 
     if (!prevNode) return;
 
     var prevText = prevNode.content;
     var txt = node.content;
+
+    var annotations = this.annotator.copy({start: sel.start, end: [nodeOffset, node.content.length]});
 
     // 1. Delete original node from graph
     doc.delete(node.id);
@@ -70,6 +69,9 @@ Writer.Prototype = function() {
 
     // 2. Update previous node and append text
     doc.update([prevNode.id, "content"], [prevNode.content.length, txt]);
+
+    // transform all annotations so that they reflect the stitching
+    this.annotator.paste(annotations, prevNode.id, prevText.length);
 
     this.selection.set({
       start: [nodeOffset-1, prevText.length],
@@ -86,28 +88,27 @@ Writer.Prototype = function() {
 
   this.__deleteRange = function(sel) {
     var doc = this.__document.startSimulation(),
-        sel = new Selection(doc, sel), // Fresh selection that refers to the simulated doc
-        startNode = sel.startNode(),
         startChar = sel.startChar(),
-        endNode = sel.endNode(),
         endChar = sel.endChar(),
         nodes = sel.getNodes();
+    sel = new Selection(doc, sel); // Fresh selection that refers to the simulated doc
 
     if (nodes.length > 1) {
 
       // Selection spans across multiple nodes
       // --------
+      var trailingText;
 
       _.each(nodes, function(node, index) {
         // only consider textish nodes for now
         if (node.content) {
           if (index === 0) {
-            var trailingText = node.content.slice(startChar);
+            trailingText = node.content.slice(startChar);
             // Remove trailing text from first node at the beginning of the selection
             doc.update([node.id, "content"], [startChar, -trailingText.length]);
           } else if (index === nodes.length-1) {
             // Last node of selection
-            var trailingText = node.content.slice(endChar);
+            trailingText = node.content.slice(endChar);
 
             // Look back to first node
             var firstNode = nodes[0];
@@ -166,7 +167,6 @@ Writer.Prototype = function() {
 
   this.getPreviousNode = function() {
     var sel = this.selection;
-    var node = this.selection.getNodes()[0];
     var nodeOffset = sel.start[0];
     var view = this.get('content').nodes;
 
@@ -181,7 +181,6 @@ Writer.Prototype = function() {
 
   this.getNextNode = function() {
     var sel = this.selection;
-    var node = this.selection.getNodes()[0];
     var nodeOffset = sel.end[0];
     var view = this.get('content').nodes;
 
@@ -200,8 +199,6 @@ Writer.Prototype = function() {
   };
 
   this.__deleteImage = function(nodeId) {
-    var doc = this.__document;
-
     // var pos = doc.getPosition('content', nodeId);
     // this.selection.start[0]-1;
     // console.log('POS', pos);
@@ -240,7 +237,6 @@ Writer.Prototype = function() {
       return;
     } else {
       console.log('not an image');
-      debugger;
     }
 
 
@@ -279,13 +275,17 @@ Writer.Prototype = function() {
 
   this.copy = function() {
     // Convenience vars
-    var startNode = this.selection.start[0];
-    var startOffset = this.selection.start[1];
-    var endNode = this.selection.end[0];
-    var endOffset = this.selection.end[1];
-    var nodes = this.selection.getNodes();
+    var sel = this.selection;
+    var startOffset = sel.start[1];
+    var endOffset = sel.end[1];
+    var nodes = sel.getNodes();
 
     var content = new Document({id: "clipboard"});
+
+    // keep a mapping of ids to be able to map extracted annotations
+    // to the newly created nodes
+    var idMap = {};
+    var nodeId;
 
     if (nodes.length > 1) {
       // Remove trailing stuff
@@ -294,10 +294,9 @@ Writer.Prototype = function() {
         if (node.content) {
           if (index === 0) {
             var trailingText = node.content.slice(startOffset);
-            var r = [startOffset, -trailingText.length];
 
             // Add trailing text to clipboard
-            var nodeId = util.uuid();
+            nodeId = util.uuid();
             content.create({
               id: nodeId,
               type: "text",
@@ -305,25 +304,30 @@ Writer.Prototype = function() {
             });
             // and the clipboards content view
             content.update(["content", "nodes"], ["+", index, nodeId]);
+
+            idMap[node.id] = nodeId;
           } else if (index === nodes.length-1) {
             // Last node of selection
             var text = node.content.slice(0, endOffset);
-            var r = [-text.length];
 
             // Add selected text from last node to clipboard
-            var nodeId = util.uuid();
+            nodeId = util.uuid();
             content.create({
               id: nodeId,
               type: "text",
               content: text
             });
             content.update(["content", "nodes"], ["+", index, nodeId]);
+
+            idMap[node.id] = nodeId;
           } else {
-            var nodeId = util.uuid();
+            nodeId = util.uuid();
             // Insert node in clipboard document
             content.create(_.extend(_.clone(node), {id: nodeId}));
             // ... and view
             content.update(["content", "nodes"], ["+", index, nodeId]);
+
+            idMap[node.id] = nodeId;
           }
         }
       }, this);
@@ -331,13 +335,24 @@ Writer.Prototype = function() {
       var node = nodes[0];
       var text = node.content.slice(startOffset, endOffset);
 
-      var nodeId = util.uuid();
+      nodeId = util.uuid();
       content.create({
         id: nodeId,
         type: "text",
         content: text
       });
       content.update(["content", "nodes"], ["+", 0, nodeId]);
+
+      idMap[node.id] = nodeId;
+    }
+
+    // get a copy of annotations within the selection
+    // and bind them to the newly created nodes using the previously stored id map.
+    var annotations = this.annotator.copy(sel);
+    for (var i = 0; i < annotations.length; i++) {
+      var annotation = annotations[i];
+      annotation.node = idMap[annotation.node];
+      content.create(annotation);
     }
 
     this.clipboard.setContent(content);
@@ -378,7 +393,6 @@ Writer.Prototype = function() {
 
     // Nodes from the clipboard to insert
     var nodes = content.query(["content", "nodes"]);
-    var ops = []; // operations transforming the original doc
 
     var sel = this.selection;
     var newSel;
@@ -425,6 +439,20 @@ Writer.Prototype = function() {
       };
     }
 
+    // extract annotations from content
+    var annotations = [];
+    var annotatedNodes = Object.keys(content.indexes.annotations);
+    var idx;
+    for (idx = 0; idx < annotatedNodes.length; idx++) {
+      var id = annotatedNodes[idx];
+      annotations = annotations.concat(content.indexes.annotations[id]);
+    }
+    for (idx = 0; idx < annotations.length; idx++) {
+      var annotation = content.get(annotations[idx]);
+      this.annotator.create(annotation);
+    }
+    this.annotator.propagateChanges();
+
     if (newSel) sel.set(newSel);
   };
 
@@ -441,8 +469,6 @@ Writer.Prototype = function() {
     var nodes = this.selection.getNodes();
     var node = nodes[0];
 
-    var ops = [];
-
     // Remove the selection
     // TODO: implement
 
@@ -451,23 +477,25 @@ Writer.Prototype = function() {
     var cursorPos = this.selection.start[1];
     var trailingText = node.content.slice(cursorPos);
 
+    var annotations = this.annotator.copy({start: [nodePos, cursorPos], end: [nodePos, node.content.length]});
+
     if (trailingText.length > 0) {
       var r = [cursorPos, -trailingText.length];
 
       doc.update([node.id, "content"], r);
     }
 
-    var id1 = type+"_"+util.uuid();
-    var id2 = "text_"+util.uuid();
-
     // Insert new node for trailingText
     if (trailingText.length > 0) {
+      var newId = "text_"+util.uuid();
       doc.create({
-        id: id2,
+        id: newId,
         type: "text",
         content: trailingText
       });
-      doc.update(["content", "nodes"], ["+", nodePos+1, id2]);
+      doc.update(["content", "nodes"], ["+", nodePos+1, newId]);
+
+      this.annotator.paste(annotations, newId);
     }
 
     this.selection.set({
@@ -561,6 +589,8 @@ Writer.Prototype = function() {
       end: [nodeIdx, pos+text.length]
     });
 
+    // need to call thas explicitely as the annotator does not dispatch
+    // this automatically to have the changes to the node in place first
     this.annotator.propagateChanges();
   };
 
