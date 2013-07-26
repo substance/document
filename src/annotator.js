@@ -338,7 +338,7 @@ Annotator.Prototype = function() {
     }
 
     // truncate the tail
-    else if (s1 < s2 && e1 <= e2 ) {
+    else if (s1 < s2 && e1 <= e2) {
       newRange = [s1, s2];
       _update(self, annotation, newRange);
     }
