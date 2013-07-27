@@ -209,6 +209,7 @@ Annotator.Prototype = function() {
         if (this.isSplittable(annotation.type)) {
           newAnnotation = util.clone(annotation);
           // make the range relative to the selection
+          newAnnotation.id = util.uuid();
           newAnnotation.range = [range[0] - range[0], range[1] - range[0]];
           result.push(newAnnotation);
         }
