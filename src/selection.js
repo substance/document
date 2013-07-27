@@ -352,22 +352,22 @@ Selection.Prototype = function() {
   //     find('left', 'word');
   //     find('left', 'node');
 
-  this.find = function(start, direction, granularity) {
+  this.find = function(pos, direction, granularity) {
     if (direction === "left") {
       if (granularity === "word") {
-        return this.prevWord(start);
+        return this.prevWord(pos);
       } else if (granularity === "char") {
-        return this.prevChar(start);
+        return this.prevChar(pos);
       } else if (granularity === "node") {
-        return this.prevNode(start);
+        return this.prevNode(pos);
       }
     } else {
       if (granularity === "word") {
-        return this.nextWord(start);
+        return this.nextWord(pos);
       } else if (granularity === "char") {
-        return this.nextChar(start);
+        return this.nextChar(pos);
       } else if (granularity === "node") {
-        return this.nextNode(start);
+        return this.nextNode(pos);
       }
     }
   };
