@@ -30,7 +30,7 @@ Range.Prototype = function() {
   //
 
   this.isFirst = function() {
-    return this.nodePos === selection.startNode();
+    return this.nodePos === this.selection.startNode();
   };
 
   // Returns true if the range denotes the last range in a selection
@@ -38,7 +38,7 @@ Range.Prototype = function() {
   //
 
   this.isLast = function() {
-    return this.nodePos === selection.endNode();
+    return this.nodePos === this.selection.endNode();
   };
 
   // Returns true if the range denotes the last range in a selection
@@ -242,12 +242,10 @@ Selection.Prototype = function() {
   // Get node from position in contnet view
   // --------
   //
-  // TODO: obsolete?
 
   this.__node = function(pos) {
     return this.document.getNodeFromPosition('content', pos);
   };
-
 
 
   // Set selection
@@ -294,8 +292,39 @@ Selection.Prototype = function() {
     return this;
   };
 
+  // Fully selects a the node with the given id
+  // --------
+  //
 
-  // Check if the given node position has a successor
+  this.selectNode = function(nodeId) {
+    var node = this.document.get(nodeId);
+    var nodePos = this.document.getPosition('content', nodeId);
+    this.set({
+      start: [nodePos, 0],
+      end: [nodePos, node.content.length]
+    });
+  };
+
+  // Get predecessor node of a given node pos
+  // --------
+  //
+
+  this.getPredecessor = function(nodePos) {
+    nodePos = nodePos || this.start[0];
+    if (nodePos === 0) return null;
+    return this.__node(nodePos-1);
+  };
+
+  // Get successor node of a given node pos
+  // --------
+  //
+
+  this.getSuccessor = function(nodePos) {
+    nodePos = nodePos || this.end[0];
+    return this.__node(nodePos+1);
+  };
+
+  // Check if the given position has a successor
   // --------
   //
 

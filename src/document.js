@@ -239,7 +239,7 @@ Document.Prototype = function() {
   this.getSuccessor = function(view, id) {
     var view = this.get(view);
     var pos = this.getPosition(view, id);
-    if (pos === view.length - 1) return null;
+    // if (pos === view.length - 1) return null;
     return this.getNodeFromPosition(view, pos+1);
   };
 
@@ -259,7 +259,7 @@ Document.Prototype = function() {
 
   this.getNodeFromPosition = function(view, pos) {
     var nodeId = this.get(view).nodes[pos];
-    return this.get(nodeId);
+    return nodeId ? this.get(nodeId) : null;
   };
 
   // Serialize to JSON

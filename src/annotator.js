@@ -6,6 +6,7 @@
 var _ = require("underscore");
 var util = require("substance-util");
 var Document = require("./document");
+var Selection = require("./selection");
 var DocumentError = Document.DocumentError;
 var Operator = require("substance-operator");
 
@@ -16,11 +17,11 @@ var Operator = require("substance-operator");
 // --------
 //
 
-var Annotator = function(writer) {
+var Annotator = function(doc, selection) {
   var self = this;
 
-  this.document = writer.__document;
-  this.selection = writer.selection;
+  this.document = doc;
+  // this.selection = selection;
 
   this._updates = [];
 
@@ -159,7 +160,7 @@ Annotator.Prototype = function() {
   };
 
   var _getRanges = function(self, sel) {
-    var nodes = self.selection.getNodes(sel);
+    var nodes = new Selection(self.document, sel).getNodes();
     var ranges = {};
 
     for (var i = 0; i < nodes.length; i++) {
@@ -265,24 +266,18 @@ Annotator.Prototype = function() {
   //
 
   this.getAnnotations = function(options) {
+    options = options || {};
     var doc = this.document;
 
     var annotations;
     var range, node;
 
-    if (arguments.length === 0) {
-      annotations = _.select(doc.nodes, function(node) {
-        var baseType = doc.schema.baseType(node.type);
-        return baseType === 'annotation';
-      });
-
-    } else if (options.node) {
+    if (options.node) {
       annotations = _filterByNodeAndRange(doc, options.node, options.range);
-
     } else if (options.selection) {
 
       var sel = options.selection;
-      var nodes = this.selection.getNodes(sel);
+      var nodes = sel.getNodes(sel);
 
       annotations = [];
 
@@ -304,6 +299,11 @@ Annotator.Prototype = function() {
       }
 
       annotations = Array.prototype.concat.apply([], annotations);
+    } else {
+      annotations = _.select(doc.nodes, function(node) {
+        var baseType = doc.schema.baseType(node.type);
+        return baseType === 'annotation';
+      });
     }
 
     if (options.filter) {
@@ -385,8 +385,7 @@ Annotator.Prototype = function() {
   // - toggle delete one or more annotations
   // - truncate one or more annotations
 
-  this.annotate = function(type) {
-    var sel = this.selection;
+  this.annotate = function(sel, type) {
     var range = [sel.start[1], sel.end[1]];
 
     if (sel.start[0] !== sel.end[0]) throw new DocumentError('Multi-node annotations are not supported.');
