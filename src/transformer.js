@@ -6,12 +6,6 @@ var util = require("substance-util");
 // Registered node types
 // --------
 
-var nodeTypes = {
-  "paragraph": require('substance-nodes/paragraph'),
-  "heading": require('substance-nodes/heading'),
-  "image": require('substance-nodes/image')
-};
-
 
 // Substance.Document.Transformer
 // -----------------
@@ -31,7 +25,7 @@ Transformer.Prototype = function() {
   //
 
   this.split = function(doc, node, charPos) {
-    var NodeType = nodeTypes[node.type];
+    var NodeType = Transformer.nodeTypes[node.type];
 
     var nodePos = doc.getPosition('content', node.id);
 
@@ -78,7 +72,7 @@ Transformer.Prototype = function() {
     // Split and use
     if (this.split(doc, node, charPos)) {
       // Lookup some config for dealing with edge cases
-      var NodeType = nodeTypes[node.type];
+      var NodeType = Transformer.nodeTypes[node.type];
       var splittedType = NodeType.properties.split.nodeType;
       if (type === splittedType) {
         sel.setCursor([nodePos+1, 0]);
@@ -283,8 +277,8 @@ Transformer.Prototype = function() {
   this.mergeNodes = function(doc, source, target) {
     if (!source || !target) return false;
 
-    var SourceNodeType = nodeTypes[source.type];
-    var TargetNodeType = nodeTypes[target.type];
+    var SourceNodeType = Transformer.nodeTypes[source.type];
+    var TargetNodeType = Transformer.nodeTypes[target.type];
 
     if (!SourceNodeType.properties.isText) return false;
     if (!TargetNodeType.properties.isText) return false;
@@ -335,7 +329,7 @@ Transformer.Prototype = function() {
       if (range.isEnclosed()) {
         this.deleteNode(doc, range.node.id);
       } else {
-        var ContentNodeTransformer = nodeTypes[range.node.type].Transformer;
+        var ContentNodeTransformer = Transformer.nodeTypes[range.node.type].Transformer;
         var t = new ContentNodeTransformer(doc, range.node);
         t.deleteRange(range);  
       }
