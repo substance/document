@@ -210,7 +210,7 @@ Annotator.Prototype = function() {
           newAnnotation = util.clone(annotation);
           // make the range relative to the selection
           newAnnotation.id = util.uuid();
-          newAnnotation.range = [range[0] - range[0], range[1] - range[0]];
+          newAnnotation.range = [Math.max(0, annotation.range[0] - range[0]), annotation.range[1] - range[0]];
           result.push(newAnnotation);
         }
       } else {
@@ -429,11 +429,12 @@ Annotator.Prototype = function() {
   this.propagateChanges = function() {
     while (this._updates.length > 0) {
       var update = this._updates.shift();
-      this.document.trigger("annotation:changed", update[0], update[1]);
+      this.trigger("annotation:changed", update[0], update[1]);
     }
   };
 };
 
+Annotator.Prototype.prototype = util.Events;
 Annotator.prototype = new Annotator.Prototype();
 
 Annotator.isOnNodeStart = function(a) {
