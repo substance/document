@@ -8,6 +8,7 @@ var util = require("substance-util");
 
 var nodeTypes = {
   "paragraph": require('substance-nodes/paragraph'),
+  "codeblock": require('substance-nodes/codeblock'),
   "heading": require('substance-nodes/heading'),
   "image": require('substance-nodes/image')
 };
