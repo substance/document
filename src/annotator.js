@@ -190,7 +190,7 @@ Annotator.Prototype = function() {
   // annotation type, for others, new annotation fragments would be created.
 
   this.copy = function(sel) {
-
+    sel = new Selection(this.document, sel);
     var ranges = _getRanges(this, sel);
 
     // get all affected annotations

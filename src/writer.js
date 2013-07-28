@@ -157,7 +157,6 @@ Writer.Prototype = function() {
   // Returns cutted content as a new Substance.Document
 
   this.cut = function() {
-    throw new Error('Soon.');
     this.copy();
     this.delete();
   };
@@ -171,18 +170,30 @@ Writer.Prototype = function() {
     var doc = this.__document.startSimulation();
     var sel = new Selection(doc, this.selection);
     this.transformer.paste(doc, this.clipboard.getContent(), sel);
+    doc.save();
   };
 
   // Based on current selection, insert new node
   // --------
   //
-  // TODO: move to controller?
 
   this.insertNode = function(type) {
     var doc = this.__document.startSimulation();
     var sel = new Selection(doc, this.selection);
 
+    // Remove selected text and get a cursor
+    if (!sel.isCollapsed()) this.transformer.deleteSelection(doc, sel);
+
     this.transformer.insertNode(doc, sel, type);
+
+    // Commit
+    doc.save();
+    this.selection.set(sel);
+    // TODO: udpate the selection accordingly
+    // this.selection.set({
+    //   start: [nodePos+1, 0],
+    //   end: [nodePos+1, 0]
+    // });
   };
 
   // Creates an annotation based on the current position

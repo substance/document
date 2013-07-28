@@ -598,13 +598,11 @@ Selection.Prototype = function() {
   // 
   // TODO: is now covered by this.ranges
 
-  this.getNodes = function(sel) {
-    sel = sel || this;
-
+  this.getNodes = function() {
     var view = this.document.get('content').nodes;
     if (this.isNull()) return [];
 
-    return _.map(view.slice(sel.start[0], sel.end[0]+1), function(n) {
+    return _.map(view.slice(this.start[0], this.end[0]+1), function(n) {
       return this.document.get(n);
     }, this);
   };

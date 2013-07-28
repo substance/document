@@ -1,6 +1,7 @@
 var _ = require("underscore");
 var Annotator = require("./annotator");
 var Selection = require("./selection");
+var util = require("substance-util");
 
 // Registered node types
 // --------
@@ -24,49 +25,76 @@ var Transformer = function() {
 
 Transformer.Prototype = function() {
 
+  // Split 
+  // --------
+  //
 
-  this.insertNode = function() {
-    // if (!this.selection.isCollapsed()) {
-    //   this.delete();
-    // }
-    // var doc = this.__document;
-    // var nodes = this.selection.getNodes();
-    // var node = nodes[0];
+  this.split = function(doc, node, charPos) {
+    var NodeType = nodeTypes[node.type];
 
-    // // Remove the selection
-    // // TODO: implement
+    var nodePos = doc.getPosition('content', node.id);
 
-    // // Remove trailing stuff
-    // var nodePos = this.selection.start[0];
-    // var cursorPos = this.selection.start[1];
-    // var trailingText = node.content.slice(cursorPos);
+    if (!NodeType.properties.isText) return null;
 
-    // var annotations = this.annotator.copy({start: [nodePos, cursorPos], end: [nodePos, node.content.length]});
+    // Skip non-splittable nodes
+    if (!NodeType.properties.split.splittable) return null;
 
-    // if (trailingText.length > 0) {
-    //   var r = [cursorPos, -trailingText.length];
+    var trailingText = node.content.slice(charPos);
+    if (trailingText.length === 0) return null;
 
-    //   doc.update([node.id, "content"], r);
-    // }
+    var annotator = new Annotator(doc);
 
-    // // Insert new node for trailingText
-    // if (trailingText.length > 0) {
-    //   var newId = "text_"+util.uuid();
-    //   doc.create({
-    //     id: newId,
-    //     type: "text",
-    //     content: trailingText
-    //   });
-    //   doc.update(["content", "nodes"], ["+", nodePos+1, newId]);
+    var annotations = annotator.copy({
+      start: [nodePos, charPos],
+      end: [nodePos, node.content.length]
+    });
 
-    //   this.annotator.paste(annotations, newId);
-    // }
+    doc.update([node.id, "content"], [charPos, -trailingText.length]);
 
-    // this.selection.set({
-    //   start: [nodePos+1, 0],
-    //   end: [nodePos+1, 0]
-    // });
+    // Use the typename from node configuration
+    var typeName = NodeType.properties.split.nodeType;
 
+    var newNode = {
+      id: typeName+"_"+util.uuid(),
+      type: typeName,
+      content: trailingText
+    };
+
+    newNode = this.createNode(doc, newNode, nodePos+1);
+    annotator.paste(annotations, newNode.id);
+
+    return newNode;
+  };
+
+  // Insert Node 
+  // --------
+  //
+
+  this.insertNode = function(doc, sel, type) {
+    var node = sel.getNodes()[0];
+    var nodePos = sel.startNode();
+    var charPos = sel.startChar();
+    
+    // Split and use
+    if (this.split(doc, node, charPos)) {
+      // Lookup some config for dealing with edge cases
+      var NodeType = nodeTypes[node.type];
+      var splittedType = NodeType.properties.split.nodeType;
+      if (type === splittedType) {
+        sel.setCursor([nodePos+1, 0]);
+        return;
+      }
+    }
+
+    // or insert and abuse
+    var newNode = {
+      id: type+"_"+util.uuid(),
+      type: type,
+      content: ""
+    };
+
+    this.createNode(doc, newNode, nodePos+1);
+    sel.setCursor([nodePos+1, 0]);
     // return this;
   };
 
@@ -283,6 +311,16 @@ Transformer.Prototype = function() {
   this.deleteNode = function(doc, nodeId) {
     doc.update(["content", "nodes"], ["-", doc.getPosition('content', nodeId)]);
     return doc.delete(nodeId);
+  };
+
+  // Create node and insert at a given position
+  // --------
+  // 
+
+  this.createNode = function(doc, node, pos) {
+    var newNode = doc.create(node);
+    doc.update(["content", "nodes"], ["+", pos, node.id]);
+    return newNode;
   };
 
   // Deletes a given selection from the document
