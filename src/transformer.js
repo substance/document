@@ -6,7 +6,6 @@ var util = require("substance-util");
 // Registered node types
 // --------
 
-
 // Substance.Document.Transformer
 // -----------------
 //
