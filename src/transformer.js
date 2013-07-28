@@ -12,6 +12,7 @@ var nodeTypes = {
   "image": require('substance-nodes/image')
 };
 
+
 // Substance.Document.Transformer
 // -----------------
 //
@@ -62,7 +63,6 @@ Transformer.Prototype = function() {
 
     newNode = this.createNode(doc, newNode, nodePos+1);
     annotator.paste(annotations, newNode.id);
-
     return newNode;
   };
 
@@ -90,12 +90,11 @@ Transformer.Prototype = function() {
     var newNode = {
       id: type+"_"+util.uuid(),
       type: type,
-      content: ""
+      content: type === "image" ? " " : ""
     };
 
     this.createNode(doc, newNode, nodePos+1);
     sel.setCursor([nodePos+1, 0]);
-    // return this;
   };
 
   // Copy 
