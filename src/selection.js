@@ -170,7 +170,9 @@ Range.prototype = new Range.Prototype();
 
 var Selection = function(document, selection) {
   this.document = document;
-  this.set(selection);
+  if (selection) {
+    this.set(selection);
+  }
 };
 
 
