@@ -17,11 +17,10 @@ var Operator = require("substance-operator");
 // --------
 //
 
-var Annotator = function(doc, selection) {
+var Annotator = function(doc) {
   var self = this;
 
   this.document = doc;
-  // this.selection = selection;
 
   this._updates = [];
 
