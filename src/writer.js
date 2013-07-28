@@ -55,36 +55,13 @@ Writer.Prototype = function() {
     return this.__document.getPosition('content', id);
   };
 
-  this.getAnnotations = function(filter) {
-    return this.annotator.getAnnotations(filter);
-  };
-
-  // Based on selection get predecessor node, if available
+  // See Annotator
   // --------
   //
 
-  // this.getPreviousNode = function() {
-  //   var sel = this.selection;
-  //   var nodeOffset = sel.start[0];
-  //   var view = this.get('content').nodes;
-
-  //   if (nodeOffset === 0) return null;
-  //   return this.get(view[nodeOffset-1]);
-  // };
-
-
-  // // Based on selection get successor node, if available
-  // // --------
-  // //
-
-  // this.getNextNode = function() {
-  //   var sel = this.selection;
-  //   var nodeOffset = sel.end[0];
-  //   var view = this.get('content').nodes;
-
-  //   if (nodeOffset > view.length) return null;
-  //   return this.get(view[nodeOffset+1]);
-  // };
+  this.getAnnotations = function(filter) {
+    return this.annotator.getAnnotations(filter);
+  };
 
 
   // Delete current selection
@@ -177,23 +154,18 @@ Writer.Prototype = function() {
   // --------
   //
 
-  this.insertNode = function(type) {
+  this.insertNode = function(type, options) {
     var doc = this.__document.startSimulation();
     var sel = new Selection(doc, this.selection);
 
     // Remove selected text and get a cursor
     if (!sel.isCollapsed()) this.transformer.deleteSelection(doc, sel);
 
-    this.transformer.insertNode(doc, sel, type);
+    this.transformer.insertNode(doc, sel, type, options);
 
     // Commit
     doc.save();
     this.selection.set(sel);
-    // TODO: udpate the selection accordingly
-    // this.selection.set({
-    //   start: [nodePos+1, 0],
-    //   end: [nodePos+1, 0]
-    // });
   };
 
   // Creates an annotation based on the current position

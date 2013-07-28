@@ -70,7 +70,7 @@ Transformer.Prototype = function() {
   // --------
   //
 
-  this.insertNode = function(doc, sel, type) {
+  this.insertNode = function(doc, sel, type, options) {
     var node = sel.getNodes()[0];
     var nodePos = sel.startNode();
     var charPos = sel.startChar();
@@ -93,7 +93,11 @@ Transformer.Prototype = function() {
       content: type === "image" ? " " : ""
     };
 
-    this.createNode(doc, newNode, nodePos+1);
+    _.extend(newNode, options);
+
+    newNode = this.createNode(doc, newNode, nodePos+1);
+    console.log('A brand new nodeee', newNode);
+
     sel.setCursor([nodePos+1, 0]);
   };
 

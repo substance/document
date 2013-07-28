@@ -170,14 +170,7 @@ Range.prototype = new Range.Prototype();
 
 var Selection = function(document, selection) {
   this.document = document;
-  
-  if (!selection) {
-    this.start = null;
-    this.end = null;
-    this.direction = null;
-  } else {
-    this.set(selection);
-  }
+  this.set(selection);
 };
 
 
@@ -254,16 +247,27 @@ Selection.Prototype = function() {
   // Direction defaults to right
 
   this.set = function(sel) {
+    this.start = null;
+    this.end = null;
+    this.direction = null;
+
     sel = util.deepclone(sel);
-    var dir = sel.direction || "right";
+    if (!sel) return this;
+    var dir = sel.direction || 'right';
     if (_.isArray(sel)) {
       this.start = [sel[0], sel[1]];
       this.end = [sel[2], sel[3]];
       this.direction = this.isCollapsed() ? null : dir;
     } else {
-      this.start = _.clone(sel.start);
-      this.end = _.clone(sel.end);
-      this.direction = this.isCollapsed() ? null : dir;
+      // TODO: Make smarter
+      // should also check for out of range errors
+      if (sel && sel.start && sel.start.length === 2 && sel.start[0]>=0 && sel.start[1]>=0) {
+        this.start = sel.start;
+      }
+      if (sel && sel.end && sel.end.length === 2 && sel.end[0]>=0 && sel.end[1]>=0) {
+        this.end = sel.end;
+      }
+      this.direction = this.isNull() || this.isCollapsed() ? null : dir;
     }
     this.trigger('selection:changed', this.toJSON());
     return this;

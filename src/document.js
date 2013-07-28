@@ -14,6 +14,7 @@ var errors = util.errors;
 var Data = require("substance-data");
 var Operator = require("substance-operator");
 
+
 // Module
 // ========
 
@@ -80,8 +81,8 @@ var SCHEMA = {
       "properties": {
         "large": "string",
         "medium": "string",
-        "caption": "string",
-        "content": "string" // TODO: remove
+        "url": "string",
+        "content": "string"
       }
     },
 
@@ -252,6 +253,10 @@ Document.Prototype = function() {
     return this.get(view).nodes.indexOf(id);
   };
 
+  this.create = function(node) {
+    __super__.create.call(this, node);
+    return this.get(node.id);
+  };
 
   // Get node object from a given view and position
   // --------
