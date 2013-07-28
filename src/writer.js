@@ -1,8 +1,5 @@
 "use strict";
 
-var _ = require("underscore");
-var util = require("substance-util");
-var Document = require("./document");
 var Selection = require("./selection");
 var Annotator = require("./annotator");
 var Clipboard = require("./clipboard");
@@ -121,7 +118,7 @@ Writer.Prototype = function() {
   //
 
   this.copy = function() {
-    throw new Error('Soon.');
+    if (true) throw new Error('Soon.');
     // Delegate
     var content = this.transformer.copy(this.__document, this.selection);
     this.clipboard.setContent(content);
@@ -143,7 +140,7 @@ Writer.Prototype = function() {
   //
 
   this.paste = function() {
-    throw new Error('Soon.');
+    if (true) throw new Error('Soon.');
     var doc = this.__document.startSimulation();
     var sel = new Selection(doc, this.selection);
     this.transformer.paste(doc, this.clipboard.getContent(), sel);
@@ -233,8 +230,12 @@ Writer.Prototype = function() {
   // For property change events on document.nodes.*.content (string properties)
   // TODO: we probably need to be more specific here later
   // for now the Surface is only interested in changes on content of text-nodes.
-  this.onTextNodeChange = function(handler) {
-    this.__document.propertyChanges().bind(handler, {path: ["*", "content"]});
+  this.onTextNodeChange = function(handler, context) {
+    this.__document.propertyChanges().bind(handler, {path: ["*", "content"]}, context);
+  };
+
+  this.onPropertyChange = function(handler, context) {
+    this.__document.propertyChanges().bind(handler, {}, context);
   };
 
   // a generic unbinder
