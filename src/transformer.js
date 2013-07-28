@@ -39,11 +39,13 @@ Transformer.Prototype = function() {
     // var doc = this.document;
 
     _.each(sel.getRanges(), function(range) {
-      var ContentNodeTransformer = nodeTransformers[range.node.type];
+
+      // var NodeType = 'substance-nodes/'+range.node.type;
+      var ContentNodeTransformer = nodeTypes[range.node.type].Transformer;
       var t = new ContentNodeTransformer(doc, range.node);
 
       // Attempt to delete range
-      t.deleteRange();
+      
 
       // console.log('isFull', range.isFull());
       // console.log('isRightBound', range.isRightBound());
