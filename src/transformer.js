@@ -4,9 +4,9 @@ var _ = require("underscore");
 // --------
 
 var nodeTypes = {
-  "paragraph": require('../nodes/paragraph'),
-  "heading": require('../nodes/heading'),
-  "image": require('../nodes/image')
+  "paragraph": require('substance-nodes/paragraph'),
+  "heading": require('substance-nodes/heading'),
+  "image": require('substance-nodes/image')
 };
 
 // Substance.Document.Transformer
