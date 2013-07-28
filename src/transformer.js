@@ -289,14 +289,16 @@ Transformer.Prototype = function() {
     var annotator = new Annotator(doc);
     var annotations = annotator.copy(sel);
 
+    var insPos = target.content.length;
+
     // 1. Delete original node from graph
     this.deleteNode(doc, source.id);
 
     // 2. Update previous node and append text
-    doc.update([target.id, "content"], [target.content.length, source.content]);
+    doc.update([target.id, "content"], [insPos, source.content]);
 
     // 3. transform all annotations so that they reflect the stitching
-    annotator.paste(annotations, target.id, target.length);
+    annotator.paste(annotations, target.id, insPos);
     return true;
   };
 
