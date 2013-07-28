@@ -9,6 +9,8 @@ var Document = require("./document");
 var Selection = require("./selection");
 var Annotator = require("./annotator");
 var Clipboard = require("./clipboard");
+var Transformer = require('./transformer');
+
 
 // Module
 // ========
@@ -30,6 +32,10 @@ var Clipboard = require("./clipboard");
 
 var Writer = function(document) {
   this.__document = document;
+
+  // Document.Transformer
+  // Contains higher level operations to transform (change) a document
+  this.transformer = new Transformer(document);
 
   this.selection = new Selection(this.__document, null);
   this.annotator = new Annotator(this);
@@ -86,63 +92,63 @@ Writer.Prototype = function() {
   // might span accross multiple nodes or just affects a single node
   // Used internally by Writer.delete
 
-  this.__deleteRange = function(sel) {
-    var doc = this.__document.startSimulation();
-    sel = new Selection(doc, sel); // Fresh selection that refers to the simulated doc
-    var startChar = sel.startChar(),
-        endChar = sel.endChar(),
-        nodes = sel.getNodes();
+  // this.__deleteRange = function(sel) {
+  //   var doc = this.__document.startSimulation();
+  //   sel = new Selection(doc, sel); // Fresh selection that refers to the simulated doc
+  //   var startChar = sel.startChar(),
+  //       endChar = sel.endChar(),
+  //       nodes = sel.getNodes();
 
-    if (nodes.length > 1) {
+  //   if (nodes.length > 1) {
 
-      // Selection spans across multiple nodes
-      // --------
-      var trailingText;
+  //     // Selection spans across multiple nodes
+  //     // --------
+  //     var trailingText;
 
-      _.each(nodes, function(node, index) {
-        // only consider textish nodes for now
-        if (node.content) {
-          if (index === 0) {
-            trailingText = node.content.slice(startChar);
-            // Remove trailing text from first node at the beginning of the selection
-            doc.update([node.id, "content"], [startChar, -trailingText.length]);
-          } else if (index === nodes.length-1) {
-            // Last node of selection
-            trailingText = node.content.slice(endChar);
+  //     _.each(nodes, function(node, index) {
+  //       // only consider textish nodes for now
+  //       if (node.content) {
+  //         if (index === 0) {
+  //           trailingText = node.content.slice(startChar);
+  //           // Remove trailing text from first node at the beginning of the selection
+  //           doc.update([node.id, "content"], [startChar, -trailingText.length]);
+  //         } else if (index === nodes.length-1) {
+  //           // Last node of selection
+  //           trailingText = node.content.slice(endChar);
 
-            // Look back to first node
-            var firstNode = nodes[0];
+  //           // Look back to first node
+  //           var firstNode = nodes[0];
 
-            // remove preceding text from last node until the end of the selection
-            doc.update([firstNode.id, "content"], [firstNode.content.length, trailingText]);
+  //           // remove preceding text from last node until the end of the selection
+  //           doc.update([firstNode.id, "content"], [firstNode.content.length, trailingText]);
 
-            // Delete last node of selection (remove from view and delete node)
-            var pos = doc.getPosition('content', node.id);
-            doc.update(["content", "nodes"], ["-", pos]);
-            doc.delete(node.id);
-          } else {
-            // Delete node from document (remove from view and delete node)
-            doc.update(["content", "nodes"], ["-", doc.getPosition('content', node.id)]);
-            doc.delete(node.id);
-          }
-        }
-      }, this);      
-    } else {
+  //           // Delete last node of selection (remove from view and delete node)
+  //           var pos = doc.getPosition('content', node.id);
+  //           doc.update(["content", "nodes"], ["-", pos]);
+  //           doc.delete(node.id);
+  //         } else {
+  //           // Delete node from document (remove from view and delete node)
+  //           doc.update(["content", "nodes"], ["-", doc.getPosition('content', node.id)]);
+  //           doc.delete(node.id);
+  //         }
+  //       }
+  //     }, this);      
+  //   } else {
 
-      // Selection happened within a single node
-      // --------
+  //     // Selection happened within a single node
+  //     // --------
 
-      var node = nodes[0];
-      var text = node.content.slice(startChar, endChar);
-      doc.update([node.id, "content"], [startChar, -text.length]);
-    }
+  //     var node = nodes[0];
+  //     var text = node.content.slice(startChar, endChar);
+  //     doc.update([node.id, "content"], [startChar, -text.length]);
+  //   }
 
-    // Commit the changes we just made
-    doc.save();
+  //   // Commit the changes we just made
+  //   doc.save();
 
-    // Update the original selection
-    this.selection.setCursor([sel.startNode(), sel.startChar()]);
-  };
+  //   // Update the original selection
+  //   this.selection.setCursor([sel.startNode(), sel.startChar()]);
+  // };
 
 
   // Document Facette
@@ -191,99 +197,169 @@ Writer.Prototype = function() {
   // Did it work?
   // Maybe this should go into the document module?
 
-  this.__deleteNode = function(nodeId) {
-    var doc = this.__document;
-    // Delete node from document (remove from view and delete node)
-    doc.update(["content", "nodes"], ["-", doc.getPosition('content', nodeId)]);
-    doc.delete(nodeId);
-  };
+  // this.__deleteNode = function(nodeId) {
+  //   var doc = this.__document;
+  //   // Delete node from document (remove from view and delete node)
+  //   doc.update(["content", "nodes"], ["-", doc.getPosition('content', nodeId)]);
+  //   doc.delete(nodeId);
+  // };
 
   // Deleting only the image, nothing else
   // --------
   // 
 
-  this.__deleteImage = function(nodeId) {
-    var doc = this.__document;
+  // this.__deleteImage = function(nodeId) {
+  //   var doc = this.__document;
 
-    var pos = doc.getPosition('content', nodeId);
-    if (pos > 0) {
-      // Put cursor at last position of preceding node
-      var pred = doc.getPredecessor('content', nodeId);
-      var cursorPos = [pos-1, pred.content.length];
-    } else {
-      var succ = doc.getSuccessor('content', nodeId);
-      if (succ) {
-        // Put cursor at first position of successing node
-        var cursorPos = [pos+1, 0];
-      } else {
-        throw new Error('Tricky thing with cursors and empty docs...');
-      }
-    }
+  //   var pos = doc.getPosition('content', nodeId);
+  //   if (pos > 0) {
+  //     // Put cursor at last position of preceding node
+  //     var pred = doc.getPredecessor('content', nodeId);
+  //     var cursorPos = [pos-1, pred.content.length];
+  //   } else {
+  //     var succ = doc.getSuccessor('content', nodeId);
+  //     if (succ) {
+  //       // Put cursor at first position of successing node
+  //       var cursorPos = [pos+1, 0];
+  //     } else {
+  //       throw new Error('Tricky thing with cursors and empty docs...');
+  //     }
+  //   }
 
-    this.__deleteNode(nodeId);
+  //   this.__deleteNode(nodeId);
 
-    // TODO: make dynamic
-    this.selection.setCursor(cursorPos);
-  };
+  //   // TODO: make dynamic
+  //   this.selection.setCursor(cursorPos);
+  // };
+
+
+  // this.__deleteSelection = function(sel) {
+  //   var doc = this.__document.startSimulation();
+  //   sel = new Selection(doc, sel); // Fresh selection that refers to the simulated doc
+  //   var startChar = sel.startChar(),
+  //       endChar = sel.endChar(),
+  //       nodes = sel.getNodes();
+
+  //   _.each(nodes, function(node, index) {
+  //     var nodeHandler = new nodeTypes();
+  //   });
+
+  //   // if (nodes.length > 1) {
+
+  //   //   // Selection spans across multiple nodes
+  //   //   // --------
+  //   //   var trailingText;
+
+  //   //   _.each(nodes, function(node, index) {
+  //   //     // only consider textish nodes for now
+  //   //     if (node.content) {
+  //   //       if (index === 0) {
+  //   //         trailingText = node.content.slice(startChar);
+  //   //         // Remove trailing text from first node at the beginning of the selection
+  //   //         doc.update([node.id, "content"], [startChar, -trailingText.length]);
+  //   //       } else if (index === nodes.length-1) {
+  //   //         // Last node of selection
+  //   //         trailingText = node.content.slice(endChar);
+
+  //   //         // Look back to first node
+  //   //         var firstNode = nodes[0];
+
+  //   //         // remove preceding text from last node until the end of the selection
+  //   //         doc.update([firstNode.id, "content"], [firstNode.content.length, trailingText]);
+
+  //   //         // Delete last node of selection (remove from view and delete node)
+  //   //         var pos = doc.getPosition('content', node.id);
+  //   //         doc.update(["content", "nodes"], ["-", pos]);
+  //   //         doc.delete(node.id);
+  //   //       } else {
+  //   //         // Delete node from document (remove from view and delete node)
+  //   //         doc.update(["content", "nodes"], ["-", doc.getPosition('content', node.id)]);
+  //   //         doc.delete(node.id);
+  //   //       }
+  //   //     }
+  //   //   }, this);      
+  //   // } else {
+
+  //   //   // Selection happened within a single node
+  //   //   // --------
+
+  //   //   var node = nodes[0];
+  //   //   var text = node.content.slice(startChar, endChar);
+  //   //   doc.update([node.id, "content"], [startChar, -text.length]);
+  //   // }
+
+  //   // // Commit the changes we just made
+  //   // doc.save();
+
+  //   // // Update the original selection
+  //   // this.selection.setCursor([sel.startNode(), sel.startChar()]);
+  // };
+
 
   // Delete current selection
   // --------
   //
 
   this.delete = function() {
-    var sel = this.selection;
+    var doc = this.__document.startSimulation();
 
-    // Single cursor stuff
-    // =========
+    this.transformer.deleteSelection(doc, this.selection);
+  };
 
-    var node = sel.getNodes()[0];
+  // this.delete = function() {
+  //   var sel = this.selection;
 
-    // Image Business
-    // --------
+  //   // Single cursor stuff
+  //   // =========
 
-    // Case: Collapsed cursor is at right edge of the image
-    // Desired behavior -> delete the image and put cursor to last position
-    // of preceding element
+  //   var node = sel.getNodes()[0];
 
-    if (sel.isCollapsed() && sel.startChar() === 1 && node.type === "image") {
-      console.log('deleting image here.');
-      this.__deleteImage(node.id);
-      return;
-    }
+  //   // Image Business
+  //   // --------
 
-    if (!sel.hasMultipleNodes() && sel.startChar() === 0 && sel.endChar() === 1 && node.type === "image") {
-      return this.__deleteImage(node.id);
-    }
+  //   // Case: Collapsed cursor is at right edge of the image
+  //   // Desired behavior -> delete the image and put cursor to last position
+  //   // of preceding element
+
+  //   if (sel.isCollapsed() && sel.startChar() === 1 && node.type === "image") {
+  //     console.log('deleting image here.');
+  //     this.__deleteImage(node.id);
+  //     return;
+  //   }
+
+  //   if (!sel.hasMultipleNodes() && sel.startChar() === 0 && sel.endChar() === 1 && node.type === "image") {
+  //     return this.__deleteImage(node.id);
+  //   }
 
 
-    // Single cursor: remove preceding char
-    // --------
-    // 
+  //   // Single cursor: remove preceding char
+  //   // --------
+  //   // 
     
 
-    if (sel.isCollapsed() && sel.startChar()>0) {
-      this.__deleteRange({
-        start: [sel.startNode(), sel.startChar() - 1],
-        end: sel.start
-      });
-    }
+  //   if (sel.isCollapsed() && sel.startChar()>0) {
+  //     this.__deleteRange({
+  //       start: [sel.startNode(), sel.startChar() - 1],
+  //       end: sel.start
+  //     });
+  //   }
 
-    // Single cursor: merge with previous node
-    // --------
-    // 
+  //   // Single cursor: merge with previous node
+  //   // --------
+  //   // 
 
-    if (sel.isCollapsed() && sel.startChar() === 0) {
-      this.__mergeWithPrevious();
-    }
+  //   if (sel.isCollapsed() && sel.startChar() === 0) {
+  //     this.__mergeWithPrevious();
+  //   }
 
 
 
-    // Default behavior
-    // --------
-    // 
+  //   // Default behavior
+  //   // --------
+  //   // 
 
-    this.__deleteRange(sel);
-  };
+  //   this.__deleteRange(sel);
+  // };
 
   // Copy current selection
   // --------

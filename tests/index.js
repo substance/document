@@ -1,12 +1,12 @@
 // Document Tests
 // ---------------
 
-// require("./document");
+require("./document");
 
 // Selection Tests
 // ---------------
 
-// require("./selection");
+require("./selection");
 
 // Writer Tests
 // ---------------
@@ -15,7 +15,5 @@
 // Actual tests
 // require("./writer/content_deletion");
 
-
-
-require("./writer/content_deletion");
-require("./writer/annotation_business");
+// require("./writer/content_deletion");
+// require("./writer/annotation_business");

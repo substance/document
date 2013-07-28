@@ -4,6 +4,120 @@ var _ = require("underscore");
 var util = require("substance-util");
 var SRegExp = require("substance-regexp");
 
+// Document.Selection.Range
+// ================
+// 
+// A Document.Selection consists of 1..n Ranges
+// Each range belongs to a node in the document
+// This allows us to ask the range about the selected text
+// or ask if it's partially selected or not
+// For example if an image is fully selected we can just delete it
+
+var Range = function(selection, nodePos, start, end) {
+  this.selection = selection;
+  // The node pos within the document which can range
+  // between selection.startNode() and selection.endNode()
+  this.nodePos = nodePos;
+  this.node = selection.__node(nodePos);
+  this.start = start;
+  this.end = end;
+};
+
+Range.Prototype = function() {
+
+  // Returns true if the range denotes the first range in a selection
+  // --------
+  //
+
+  this.isFirst = function() {
+    return this.nodePos === selection.startNode();
+  };
+
+  // Returns true if the range denotes the last range in a selection
+  // --------
+  //
+
+  this.isLast = function() {
+    return this.nodePos === selection.endNode();
+  };
+
+  // Returns true if the range denotes the last range in a selection
+  // --------
+  //
+
+  this.hasPredecessor = function() {
+    return !this.isFirst();
+  };
+
+  // Returns true if the range denotes the last range in a selection
+  // --------
+  //
+
+  this.hasSuccessor = function() {
+    return !this.isLast();
+  };
+
+  // Returns true if the range is fully enclosed by both a preceding and successing range
+  // --------
+  //
+
+  this.isEnclosed = function() {
+    return this.hasPredecessor() && this.hasSuccessor();
+  };
+
+  // Returns true if the range includes the last character of a node
+  // --------
+  //
+
+  this.isRightBound = function() {
+    return this.end === this.node.content.length;
+  };
+
+  // Returns true if the range includes the first character of a node
+  // --------
+  //
+
+  this.isLeftBound = function() {
+    return this.start === 0;
+  };
+
+  // Returns the length of the range which corresponds to the number of chars contained
+  // --------
+  //
+
+  this.length = function() {
+    return this.end - this.start;
+  };
+
+  // Returns the range's content
+  // --------
+  //
+
+  this.content = function() {
+    return this.node.content.slice(this.start, this.end);
+  };
+
+  // Returns true if all chars are selected
+  // --------
+  //
+
+  this.isFull = function() {
+    return this.isLeftBound() && this.isRightBound();
+  };
+
+  // Returns true if the range includes the first character of a node
+  // --------
+  //
+
+  this.isPartial = function() {
+    return !this.isFull();
+  };
+
+};
+
+Range.prototype = new Range.Prototype();
+
+
 
 // Document.Selection
 // ================
@@ -125,6 +239,17 @@ Selection.Prototype = function() {
     return res;
   }
 
+  // Get node from position in contnet view
+  // --------
+  //
+  // TODO: obsolete?
+
+  this.__node = function(pos) {
+    return this.document.getNodeFromPosition('content', pos);
+  };
+
+
+
   // Set selection
   // --------
   //
@@ -169,15 +294,6 @@ Selection.Prototype = function() {
     return this;
   };
 
-  // Get node from position in contnet view
-  // --------
-  //
-
-  this.getNodeAtPosition = function(pos) {
-    var view = this.document.get('content').nodes;
-    return this.document.get(view[pos]);
-  };
-
 
   // Check if the given node position has a successor
   // --------
@@ -208,7 +324,7 @@ Selection.Prototype = function() {
     if (charPos > 0) {
       return [nodePos, 0];
     } else if (this.hasPredecessor(nodePos)) {
-      var prevNode = this.getNodeAtPosition(nodePos - 1);
+      var prevNode = this.__node(nodePos - 1);
       return [nodePos-1, prevNode.content.length];
     } else {
       // Beginning of the document reached
@@ -223,7 +339,7 @@ Selection.Prototype = function() {
   this.nextNode = function(pos) {
     var nodePos = pos[0],
         charPos = pos[1],
-        node = this.getNodeAtPosition(nodePos);
+        node = this.__node(nodePos);
 
     if (charPos < node.content.length) {
       return [nodePos, node.content.length];
@@ -243,7 +359,7 @@ Selection.Prototype = function() {
     // throw new Error('Not implemented');
     var nodePos = pos[0],
         charPos = pos[1],
-        node = this.getNodeAtPosition(nodePos);
+        node = this.__node(nodePos);
 
     if (!node) throw new Error('Invalid node position');
 
@@ -269,7 +385,7 @@ Selection.Prototype = function() {
   this.nextWord = function(pos) {
     var nodePos = pos[0],
         charPos = pos[1],
-        node = this.getNodeAtPosition(nodePos);
+        node = this.__node(nodePos);
 
     if (!node) throw new Error('Invalid node position');
 
@@ -297,7 +413,7 @@ Selection.Prototype = function() {
   this.nextChar = function(pos) {
     var nodePos = pos[0],
         charPos = pos[1],
-        node = this.getNodeAtPosition(nodePos);
+        node = this.__node(nodePos);
 
     if (!node) throw new Error('Invalid node position');
 
@@ -322,7 +438,7 @@ Selection.Prototype = function() {
   this.prevChar = function(pos) {
     var nodePos = pos[0],
         charPos = pos[1],
-        node = this.getNodeAtPosition(nodePos),
+        node = this.__node(nodePos),
         prevNode,
         lastPos;
 
@@ -332,7 +448,7 @@ Selection.Prototype = function() {
     // At end position
     if (charPos === 0) {
       if (nodePos > 0) {
-        prevNode = this.getNodeAtPosition(nodePos-1);
+        prevNode = this.__node(nodePos-1);
         lastPos = prevNode.content.length;
         return [nodePos-1, lastPos];
       } else {
@@ -451,6 +567,7 @@ Selection.Prototype = function() {
   // For a given document return the selected nodes
   // --------
   // 
+  // TODO: is now covered by this.ranges
 
   this.getNodes = function(sel) {
     sel = sel || this;
@@ -463,6 +580,36 @@ Selection.Prototype = function() {
     }, this);
   };
 
+  // Derives Range objects for the selection
+  // --------
+  // 
+
+  this.getRanges = function() {
+    // var nodes = this.getNodes();
+    var ranges = [];
+
+    for (var i = this.startNode(); i <= this.endNode(); i++) {
+      var startChar = 0;
+      var endChar = null;
+
+      // in the first node search only in the trailing part
+      if (i === this.startNode()) {
+        startChar = this.start[1];
+      }
+
+      // in the last node search only in the leading part
+      if (i === this.endNode()) {
+        endChar = this.end[1];
+      }
+
+      if (!endChar) {
+        var node = this.__node(i);
+        endChar = node.content.length;
+      }
+      ranges.push(new Range(this, i, startChar, endChar));
+    }
+    return ranges;
+  };
 
   // Returns start node offset
   // --------

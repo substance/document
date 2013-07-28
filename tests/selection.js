@@ -86,7 +86,6 @@ var SelectionTest = function() {
     },
 
     "Expand selection to the left once ", function() {
-      
       this.sel.expand('left', 'char');
 
       // Expect start pos to be 1st pos of the image
@@ -102,19 +101,29 @@ var SelectionTest = function() {
       assert.isArrayEqual([2,0], this.sel.end);
     },
 
-    "Expand selection to the left a third time to expand selection to the prev text node ", function() {
+    "Expand selection to the left a third time to expand selection to the prev text node", function() {
       this.sel.expand('left', 'char');
       // Expect start pos to be last pos of the image predecessor (in our case a text element)
       assert.isArrayEqual([0,44], this.sel.start);
       assert.isArrayEqual([2,0], this.sel.end);
     },
 
-    "Expand selection another time to include the last char of the preceding text node ", function() {
+    "Expand selection another time to include the last char of the preceding text node", function() {
       this.sel.expand('left', 'char');
       // Expect start pos to be next-to-last pos of the image predecessor (in our case a text element)
       assert.isArrayEqual([0,43], this.sel.start);
       assert.isArrayEqual([2,0], this.sel.end);
-    }
+    },
+
+    "Retrieve ranges", function() {
+      // this.sel.expand('left', 'char');
+      // // Expect start pos to be next-to-last pos of the image predecessor (in our case a text element)
+      // assert.isArrayEqual([0,43], this.sel.start);
+      // assert.isArrayEqual([2,0], this.sel.end);
+      var ranges = this.sel.getRanges();
+      console.log('RANGES', ranges);
+    },
+
 
   ];
 };

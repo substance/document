@@ -44,7 +44,7 @@ var SCHEMA = {
       }
     },
 
-    "text": {
+    "paragraph": {
       "parent": "content",
       "properties": {
         "content": "string"

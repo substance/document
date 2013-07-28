@@ -27,7 +27,7 @@ test.setup = function() {
 test.actions = [
 
   "Check if valid document has been constructed", function() {
-    assert.isArrayEqual(["content", "figures", "publications"], this.doc.get('document').views);
+    assert.isArrayEqual(["content"], this.doc.get('document').views);
     assert.isTrue(_.isArray(this.doc.get('content').nodes));
     assert.isEqual("substance_doc", this.doc.get('document').guid);
     assert.isEqual("substance_doc", this.doc.id);
@@ -38,7 +38,7 @@ test.actions = [
       "id": "h1",
       "type": "heading",
       "content": "Heading 1"
-    }
+    };
     this.doc.create(node);
     assert.isEqual(node.content, this.doc.get('h1').content);
 
