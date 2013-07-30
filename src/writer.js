@@ -66,29 +66,34 @@ Writer.Prototype = function() {
   //
 
   this.delete = function() {
+    console.log('DELETING...');
+    var that = this;
     var doc = this.__document.startSimulation();
+
+    debugger;
     var sel = new Selection(doc, this.selection);
 
-    if (sel.isCollapsed() && sel.startChar()>0) {
+    // Remove previous char (backspace behavior)
+    // --------
+    // 
 
-      // Remove previous char (backspace behavior)
-      // --------
-      // 
-
+    function removePrevChar() {
       sel.expand('left', 'char');
-      this.transformer.deleteSelection(doc, sel);
-      sel.setCursor(sel.start);
-    } else if (sel.isCollapsed() && sel.startChar() === 0) {
-      
-      // Attempt merge
-      // --------
-      // 
+      that.transformer.deleteSelection(doc, sel);
+      sel.setCursor(sel.start);      
+    }
 
+
+    // Attempt merge
+    // --------
+    // 
+
+    function attemptMerge() {
       var sourceNode = sel.getRanges()[0].node;
       var targetNode = sel.getPredecessor();
 
       var insertionPos = targetNode.content.length;
-      if (this.transformer.mergeNodes(doc, sourceNode, targetNode)) {
+      if (that.transformer.mergeNodes(doc, sourceNode, targetNode)) {
         // Consider this API instead?
         // sel.setCursor([targetNode.id, insertionPos]);
         sel.setCursor([doc.getPosition('content', targetNode.id), insertionPos]);
@@ -97,20 +102,35 @@ Writer.Prototype = function() {
         // E.g. if cursor is preceded by an image
         sel.selectNode(targetNode.id);
       }
-    } else {
-      // Regular deletion
-      // --------
-      // 
-
-      this.transformer.deleteSelection(doc, sel); 
-      sel.setCursor(sel.start);
     }
+
+
+    // Regular deletion
+    // --------
+    // 
+
+    function deleteSelection() {
+      console.log('deleting selection', sel);
+      // that.transformer.deleteSelection(doc, sel); 
+      // sel.setCursor(sel.start);
+    }
+
+    deleteSelection();
+
+    // if (sel.isCollapsed() && sel.startChar()>0) {
+    //   removePrevChar();
+    // } else if (sel.isCollapsed() && sel.startChar() === 0) {
+    //   console.log('attempting merge')
+    //   attemptMerge();
+    // } else {
+    //   deleteSelection();
+    // }
     
     // Commit changes
     // --------
 
-    doc.save();
-    this.selection.set(sel);
+    // doc.save();
+    // this.selection.set(sel);
   };
 
   // Copy current selection

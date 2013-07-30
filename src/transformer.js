@@ -28,13 +28,16 @@ Transformer.Prototype = function() {
 
     var nodePos = doc.getPosition('content', node.id);
 
-    if (!NodeType.properties.isText) return null;
+    // Pull off the target type from the node configuaration
+    var targetType = NodeType.properties.splitInto;
 
     // Skip non-splittable nodes
-    if (!NodeType.properties.split.splittable) return null;
+    if (!targetType) return null;
 
     var trailingText = node.content.slice(charPos);
     if (trailingText.length === 0) return null;
+    console.log('CONTENT', node.content);
+    console.log("TRAILINGTEXT", trailingText, trailingText.length);
 
     var annotator = new Annotator(doc);
 
@@ -45,12 +48,9 @@ Transformer.Prototype = function() {
 
     doc.update([node.id, "content"], [charPos, -trailingText.length]);
 
-    // Use the typename from node configuration
-    var typeName = NodeType.properties.split.nodeType;
-
     var newNode = {
-      id: typeName+"_"+util.uuid(),
-      type: typeName,
+      id: targetType+"_"+util.uuid(),
+      type: targetType,
       content: trailingText
     };
 
@@ -70,14 +70,19 @@ Transformer.Prototype = function() {
     
     // Split and use
     if (this.split(doc, node, charPos)) {
+      console.log('I splitted it');
       // Lookup some config for dealing with edge cases
       var NodeType = Transformer.nodeTypes[node.type];
-      var splittedType = NodeType.properties.split.nodeType;
-      if (type === splittedType) {
+      var splittedType = NodeType.properties.splitInto;
+
+      if (!type || type === splittedType) {
         sel.setCursor([nodePos+1, 0]);
         return;
       }
     }
+
+    // Default to new paragraph node
+    type = type || 'paragraph';
 
     // or insert and abuse
     var newNode = {
@@ -89,8 +94,6 @@ Transformer.Prototype = function() {
     _.extend(newNode, options);
 
     newNode = this.createNode(doc, newNode, nodePos+1);
-    console.log('A brand new nodeee', newNode);
-
     sel.setCursor([nodePos+1, 0]);
   };
 
@@ -279,8 +282,9 @@ Transformer.Prototype = function() {
     var SourceNodeType = Transformer.nodeTypes[source.type];
     var TargetNodeType = Transformer.nodeTypes[target.type];
 
-    if (!SourceNodeType.properties.isText) return false;
-    if (!TargetNodeType.properties.isText) return false;
+    // Check if source node is mergable with targetnode
+    var allowedBuddies = SourceNodeType.properties.mergeableWith;
+    if (!_.include(allowedBuddies, target.type)) return false;
 
     var sel = new Selection(doc);
     sel.selectNode(source.id);
@@ -327,7 +331,9 @@ Transformer.Prototype = function() {
 
   this.deleteSelection = function(doc, sel) {
     _.each(sel.getRanges(), function(range) {
-      if (range.isEnclosed()) {
+      debugger;
+      if (range.isEnclosed() || range.isFull()) {
+        console.log('range is full or enclosed')
         this.deleteNode(doc, range.node.id);
       } else {
         var ContentNodeTransformer = Transformer.nodeTypes[range.node.type].Transformer;

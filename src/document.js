@@ -76,6 +76,13 @@ var SCHEMA = {
       }
     },
 
+    "codeline": {
+      "parent": "content",
+      "properties": {
+        "content": "string"
+      }
+    },
+
     "image": {
       "parent": "content",
       "properties": {
