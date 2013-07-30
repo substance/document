@@ -35,9 +35,6 @@ Transformer.Prototype = function() {
     if (!targetType) return null;
 
     var trailingText = node.content.slice(charPos);
-    if (trailingText.length === 0) return null;
-    console.log('CONTENT', node.content);
-    console.log("TRAILINGTEXT", trailingText, trailingText.length);
 
     var annotator = new Annotator(doc);
 
@@ -331,9 +328,7 @@ Transformer.Prototype = function() {
 
   this.deleteSelection = function(doc, sel) {
     _.each(sel.getRanges(), function(range) {
-      debugger;
       if (range.isEnclosed() || range.isFull()) {
-        console.log('range is full or enclosed')
         this.deleteNode(doc, range.node.id);
       } else {
         var ContentNodeTransformer = Transformer.nodeTypes[range.node.type].Transformer;

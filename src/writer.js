@@ -66,11 +66,9 @@ Writer.Prototype = function() {
   //
 
   this.delete = function() {
-    console.log('DELETING...');
     var that = this;
     var doc = this.__document.startSimulation();
 
-    debugger;
     var sel = new Selection(doc, this.selection);
 
     // Remove previous char (backspace behavior)
@@ -110,27 +108,26 @@ Writer.Prototype = function() {
     // 
 
     function deleteSelection() {
-      console.log('deleting selection', sel);
-      // that.transformer.deleteSelection(doc, sel); 
-      // sel.setCursor(sel.start);
+      that.transformer.deleteSelection(doc, sel); 
+      sel.setCursor(sel.start);
     }
 
-    deleteSelection();
-
-    // if (sel.isCollapsed() && sel.startChar()>0) {
-    //   removePrevChar();
-    // } else if (sel.isCollapsed() && sel.startChar() === 0) {
-    //   console.log('attempting merge')
-    //   attemptMerge();
-    // } else {
-    //   deleteSelection();
-    // }
+    if (sel.isCollapsed() && sel.startChar()>0) {
+      console.log('removing prev char');
+      removePrevChar();
+    } else if (sel.isCollapsed() && sel.startChar() === 0) {
+      console.log('attempting merge');
+      attemptMerge();
+    } else {
+      console.log('deleting selection');
+      deleteSelection();
+    }
     
     // Commit changes
     // --------
 
-    // doc.save();
-    // this.selection.set(sel);
+    doc.save();
+    this.selection.set(sel);
   };
 
   // Copy current selection
