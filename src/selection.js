@@ -282,7 +282,8 @@ Selection.Prototype = function() {
   //
 
   this.getCursor = function() {
-    return this.direction === "right" ? this.end : this.start;
+    var result = (this.direction === "right" ? this.end : this.start);
+    return _.clone(result);
   };
 
   // Set cursor to position
