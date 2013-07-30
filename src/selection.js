@@ -636,7 +636,7 @@ Selection.Prototype = function() {
         endChar = this.end[1];
       }
 
-      if (!endChar) {
+      if (!_.isNumber(endChar)) {
         var node = this.__node(i);
         endChar = node.content.length;
       }

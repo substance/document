@@ -60,48 +60,60 @@ Writer.Prototype = function() {
     return this.annotator.getAnnotations(filter);
   };
 
-
   // Delete current selection
   // --------
   //
 
-  this.delete = function() {
+  this.delete = function(direction) {
     var that = this;
     var doc = this.__document.startSimulation();
-
     var sel = new Selection(doc, this.selection);
 
-    // Remove previous char (backspace behavior)
+    // Remove character (backspace behavior)
     // --------
     // 
 
-    function removePrevChar() {
-      sel.expand('left', 'char');
+    function removeChar(direction) {
+      sel.expand(direction, 'char');
       that.transformer.deleteSelection(doc, sel);
       sel.setCursor(sel.start);      
     }
-
 
     // Attempt merge
     // --------
     // 
 
-    function attemptMerge() {
-      var sourceNode = sel.getRanges()[0].node;
-      var targetNode = sel.getPredecessor();
+    function attemptMerge(direction) {
+      var node = sel.getRanges()[0].node
+      var sourceNode;
+      var targetNode;
+      var insertionPos;
 
-      var insertionPos = targetNode.content.length;
+      if (direction === "left") {
+        sourceNode = node;
+        targetNode = sel.getPredecessor();
+        if (!targetNode) return;
+        insertionPos = targetNode.content.length;
+      } else {
+        sourceNode = sel.getSuccessor();
+        if (!sourceNode) return;
+        targetNode = node;
+        // Cusor stays at current position
+        // insertionPos = node.content.length;
+      }
+
       if (that.transformer.mergeNodes(doc, sourceNode, targetNode)) {
         // Consider this API instead?
         // sel.setCursor([targetNode.id, insertionPos]);
-        sel.setCursor([doc.getPosition('content', targetNode.id), insertionPos]);
+        if (direction === "left") {
+          sel.setCursor([doc.getPosition('content', targetNode.id), insertionPos]);  
+        }
       } else {
         // Attempt to select the previous node
         // E.g. if cursor is preceded by an image
         sel.selectNode(targetNode.id);
       }
     }
-
 
     // Regular deletion
     // --------
@@ -112,15 +124,17 @@ Writer.Prototype = function() {
       sel.setCursor(sel.start);
     }
 
-    if (sel.isCollapsed() && sel.startChar()>0) {
-      console.log('removing prev char');
-      removePrevChar();
-    } else if (sel.isCollapsed() && sel.startChar() === 0) {
-      console.log('attempting merge');
-      attemptMerge();
+    if (sel.isCollapsed()) {
+      var cursor = sel.getRanges()[0];
+      if (cursor.isLeftBound() && direction === "left") {
+        attemptMerge('left');
+      } else if (cursor.isRightBound() && direction =="right") {
+        attemptMerge('right');
+      } else {
+        removeChar(direction);
+      }
     } else {
-      console.log('deleting selection');
-      deleteSelection();
+      deleteSelection(direction);
     }
     
     // Commit changes
