@@ -45,6 +45,14 @@ var SCHEMA = {
       }
     },
 
+    // Abstract node nodetype
+    "node": {
+      "parent": "content",
+      "properties": {
+        "content": "string"
+      }
+    },
+
     "paragraph": {
       "parent": "content",
       "properties": {

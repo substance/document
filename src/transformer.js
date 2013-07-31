@@ -56,11 +56,26 @@ Transformer.Prototype = function() {
     return newNode;
   };
 
+  // Morph Node
+  // --------
+  //
+
+  this.morphNode = function(doc, sel, node, type, data) {
+    console.log('morphing into ' + type);
+    var nodePos = sel.startNode();
+
+    this.deleteNode(node.id);
+
+    this.insertNode(doc, sel, type, data);
+  };
+
+  // this.transformer.morphNode(doc, node, type);
+
   // Insert Node 
   // --------
   //
 
-  this.insertNode = function(doc, sel, type, options) {
+  this.insertNode = function(doc, sel, type, data) {
     var node = sel.getNodes()[0];
     var nodePos = sel.startNode();
     var charPos = sel.startChar();
@@ -81,15 +96,20 @@ Transformer.Prototype = function() {
     // Default to new paragraph node
     type = type || 'paragraph';
 
+    var content = "";
+
+    if (type === "image") content = " ";
+    if (type === "node") content = "PHIC";
+
+
     // or insert and abuse
     var newNode = {
       id: type+"_"+util.uuid(),
       type: type,
-      content: type === "image" ? " " : ""
+      content: content
     };
 
-    _.extend(newNode, options);
-
+    _.extend(newNode, data);
     newNode = this.createNode(doc, newNode, nodePos+1);
     sel.setCursor([nodePos+1, 0]);
   };

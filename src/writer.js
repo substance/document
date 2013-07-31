@@ -182,6 +182,28 @@ Writer.Prototype = function() {
   // --------
   //
 
+  this.modifyNode = function(type, options) {
+    var doc = this.__document.startSimulation();
+    var sel = new Selection(doc, this.selection);
+    if (!sel.isCollapsed()) return;
+    var node = sel.getRanges()[0].node;
+
+    if (node.type === "node") {
+      this.transformer.morphNode(doc, sel, node, type);
+    } else {
+      // does a split ()
+      this.transformer.insertNode(doc, sel, type, options);  
+    }
+
+    // Commit
+    doc.save();
+    this.selection.set(sel);
+  };
+
+  // Based on current selection, insert new node
+  // --------
+  //
+
   this.insertNode = function(type, options) {
     var doc = this.__document.startSimulation();
     var sel = new Selection(doc, this.selection);
