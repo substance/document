@@ -13,21 +13,37 @@ var Operator = require("substance-operator");
 // Module
 // ========
 
+var annotationKey = function(path) {
+  return path.join("_");
+};
+
+var _addAnnotationToIndex = function(annotation) {
+  var key = annotationKey(annotation.path);
+  this._annotated[key] = this._annotated[key] || [];
+  this._annotated[key].push(annotation);
+};
+
+var _removeAnnotationFromIndex = function(annotation) {
+  var key = annotationKey(annotation.path);
+  this._annotated[key] = _.without(this._annotated[key], annotation);
+};
+
+var _getAnnotationsForProperty = function(path) {
+  var key = annotationKey(path);
+  var annotations = this._annotated[key] || [];
+  return annotations;
+};
+
 // A class that manages a document's annotations.
 // --------
 //
 
 var Annotator = function(doc) {
-  var self = this;
 
   this.document = doc;
 
-  this._updates = [];
-
   // register for co-transformations to keep annotations up2date.
-  this.document.propertyChanges().bind(function(op) {
-    self.transform(op);
-  }, {path: ["*", "content"]});
+  this.document.propertyChanges().bind(this.handleOperation, null, this);
 
   // defines groups of annotations that will be mutually exclusive
   this.group = {
@@ -51,6 +67,16 @@ var Annotator = function(doc) {
   };
 
   this.splittable = ["emphasis", "strong"];
+
+  this._annotated = {};
+
+  _.each(doc.nodes, function(annotation) {
+    var baseType = doc.schema.baseType(annotation.type);
+    if (baseType === 'annotation') {
+      _addAnnotationToIndex.call(this, annotation);
+    }
+  }, this);
+
 };
 
 Annotator.Prototype = function() {
@@ -59,36 +85,75 @@ Annotator.Prototype = function() {
   // --------
   //
 
-  var _create = function(self, nodeId, property, type, range) {
+  var _create = function(self, path, type, range) {
     var annotation = {
       "id": util.uuid(),
-      "node": nodeId,
-      "property": property,
       "type": type,
+      "path": path,
       "range": range
     };
     return self.create(annotation);
   };
 
-  this.create = function(annotation) {
-    this.document.create(annotation);
-    this._updates.push([annotation]);
-    return annotation;
-  };
-
   // Deletes an annotation
   // --------
   //
-
   var _delete = function(self, annotation) {
     self.document.delete(annotation.id);
-    self._updates.push([{node: annotation.node, type: annotation.type}, annotation.range]);
   };
 
   var _update = function(self, annotation, newRange) {
-    var oldRange = [annotation.range[0], annotation.range[1]];
     self.document.apply(Operator.ObjectOperation.Set([annotation.id, "range"], annotation.range, newRange));
-    self._updates.push([self.document.get(annotation.id), oldRange]);
+  };
+
+  // Takes care of updating annotations whenever an graph operation is applied.
+  // --------
+  // Triggers new events dedicated to annotation changes.
+  this.handleOperation = function(op) {
+
+    // TODO: it would be great to have some API to retrieve reflection information for an object operation.
+
+    var typeChain, annotation;
+
+    if (op.type === "delete" || op.type === "create") {
+      annotation = this.document.get(op.value.type);
+
+      typeChain = this.document.schema.typeChain(annotation);
+      if (typeChain.indexOf("annotation") < 0) return;
+
+      if (op.type === "delete") {
+        _removeAnnotationFromIndex.call(this, annotation);
+      } else if (op.type === "create") {
+        _addAnnotationToIndex.call(this, annotation);
+      }
+
+      this.triggerLater("annotation:changed", op.type, annotation);
+    }
+
+    else if (op.type === "update" || op.type === "set") {
+
+      var node = this.document.get(op.path[0]);
+      typeChain = this.document.schema.typeChain(node.type);
+
+      if (typeChain.indexOf("annotation") >= 0) {
+        // for now we only are interested range updates
+        if (op.path[1] !== "range") return;
+
+        this.triggerLater("annotation:changed", "update", node);
+
+      } else {
+        var annotations = _getAnnotationsForProperty.call(this, op.path);
+        for (var i = 0; i < annotations.length; i++) {
+          this.transform(op, annotations[i]);
+        }
+      }
+    }
+
+  };
+
+  this.create = function(annotation) {
+    this.document.create(annotation);
+    return annotation;
   };
 
   // Updates all annotations according to a given operation.
@@ -97,49 +162,35 @@ Annotator.Prototype = function() {
   // The provided operation is an ObjectOperation which has been applied
   // to the document already.
 
-  this.transform = function(op, annotations) {
-    var nodeId = op.path[0];
-    var property = op.path[1];
+  this.transform = function(op, annotation) {
+    // only apply the transformation on annotations with the same property
+    // Note: currently we only have annotations on the `content` property of nodes
+    if (!_.isEqual(annotation.path, op.path)) return;
 
-    annotations = annotations || this.document.find("annotations", nodeId);
+    if (op.type === "update") {
+      // Note: these are implicit transformations, i.e., not triggered via annotation controls
+      var expandLeft = false;
+      var expandRight = false;
 
-    var idx, a;
-    for (idx = 0; idx < annotations.length; idx++) {
-
-      a = annotations[idx];
-      var oldRange = [a.range[0], a.range[1]];
-
-      // only apply the transformation on annotations with the same property
-      // Note: currently we only have annotations on the `content` property of nodes
-      if (a.property !== property) continue;
-
-      if (op.type === "update") {
-        // Note: these are implicit transformations, i.e., not triggered via annotation controls
-        var expandLeft = false;
-        var expandRight = false;
-
-        if (this.expansion[a.type]) {
-          expandLeft = this.expansion[a.type].left(a);
-          expandRight = this.expansion[a.type].right(a);
-        }
-
-        var changed = Operator.TextOperation.Range.transform(a.range, op.diff, expandLeft, expandRight);
-        if (changed) {
-          if (a.range[0] === a.range[1]) {
-            _delete(this, a);
-          } else {
-            // TODO: should we trigger events on the annotator?
-            // for now, we leave it as it was before
-            this._updates.push([a, oldRange]);
-          }
-        }
-      }
-      // if somebody has reset the property we must delete the annotation
-      else if (op.type === "delete" || op.type === "set") {
-        _delete(this, a);
+      if (this.expansion[annotation.type]) {
+        expandLeft = this.expansion[annotation.type].left(annotation);
+        expandRight = this.expansion[annotation.type].right(annotation);
       }
 
+      var changed = Operator.TextOperation.Range.transform(annotation.range, op.diff, expandLeft, expandRight);
+      if (changed) {
+        if (annotation.range[0] === annotation.range[1]) {
+          _delete(this, annotation);
+        } else {
+          this.triggerLater("annotation:changed", "update", annotation);
+        }
+      }
     }
+    // if somebody has reset the property we must delete the annotation
+    else if (op.type === "delete" || op.type === "set") {
+      _delete(this, annotation);
+    }
+
   };
 
   this.paste = function(annotations, newNodeId, offset) {
@@ -147,7 +198,8 @@ Annotator.Prototype = function() {
     for (var i = 0; i < annotations.length; i++) {
       var annotation = annotations[i];
       if (newNodeId !== undefined) {
-        annotation.node = newNodeId;
+        annotation.path = _.clone(annotation.path);
+        annotation.path[0] = newNodeId;
       }
       if (offset !== undefined) {
         annotation.range[0] += offset;
@@ -200,7 +252,7 @@ Annotator.Prototype = function() {
       var annotation = annotations[i];
 
       // TODO: determine if an annotation would be split by the given selection.
-      var range = ranges[annotation.node];
+      var range = ranges[annotation.path[0]];
       var isPartial = (range[0] > annotation.range[0] || range[1] < annotation.range[1]);
 
       var newAnnotation;
@@ -216,7 +268,7 @@ Annotator.Prototype = function() {
       } else {
         // add totally included ones
         // TODO: need more control over uuid generation
-        newAnnotation = util.clone(annotation);          
+        newAnnotation = util.clone(annotation);
         newAnnotation.id = util.uuid();
         newAnnotation.range = [newAnnotation.range[0] - range[0], newAnnotation.range[1] - range[0]];
         result.push(newAnnotation);
@@ -349,7 +401,7 @@ Annotator.Prototype = function() {
         _update(self, annotation, newRange);
 
         var tailRange = [e2, e1];
-        _create(self, annotation.node, annotation.property, annotation.type, tailRange);
+        _create(self, annotation.path, annotation.type, tailRange);
 
       } else {
         _delete(self, annotation);
@@ -421,17 +473,11 @@ Annotator.Prototype = function() {
 
       // create a new annotation
       if (!toggled) {
-        return _create(this, node.id, "content", type, range);
+        return _create(this, [node.id, "content"], type, range);
       }
     }
   };
 
-  this.propagateChanges = function() {
-    while (this._updates.length > 0) {
-      var update = this._updates.shift();
-      this.trigger("annotation:changed", update[0], update[1]);
-    }
-  };
 };
 
 Annotator.Prototype.prototype = util.Events;
