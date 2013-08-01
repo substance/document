@@ -60,14 +60,14 @@ Transformer.Prototype = function() {
   // --------
   //
 
-  this.morphNode = function(doc, sel, node, type, data) {
+  this.morphNode = function(doc, nodePos, node, type, data) {
     console.log('morphing into ' + sel, type);
-    var nodePos = sel.startNode();
+
     console.log('old node', node);
     console.log('nodePOs', nodePos);
 
-    // this.deleteNode(node.id);
-    // this.insertNode(doc, sel, type, data);
+    this.deleteNode(node.id);
+    this.insertNode(doc, sel, type, data);
   };
 
   // this.transformer.morphNode(doc, node, type);
@@ -76,10 +76,10 @@ Transformer.Prototype = function() {
   // --------
   //
 
-  this.insertNode = function(doc, sel, type, data) {
-    var node = sel.getNodes()[0];
-    var nodePos = sel.startNode();
-    var charPos = sel.startChar();
+  this.insertNode = function(doc, range, type, data) {
+    // var node = sel.getNodes()[0];
+    var nodePos = pos[0];
+    var charPos = pos[1];
     
     // Split and use
     if (this.split(doc, node, charPos)) {

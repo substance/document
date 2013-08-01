@@ -77,6 +77,34 @@ Document.Prototype = function() {
 
   this.getSuccessor = function(view, id) {
     var pos = this.getPosition(view, id);
+    if (pos === view.length - 1) return null;
+    return this.getNodeFromPosition(view, pos+1);
+  };
+
+
+  // Returns true if given view and node pos has a successor
+  // --------
+  //
+
+  this.hasSuccessor = function(view, nodePos) {
+    var view = this.get(view).nodes;
+    return nodePos < view.length - 1;
+  };
+
+  // Returns true if given view and node pos has a predecessor
+  // --------
+  //
+
+  this.hasPredecessor = function(view, nodePos) {
+    return nodePos > 0;
+  };
+
+  // Get successor node for a given view and node id
+  // --------
+  //
+
+  this.getSuccessor = function(view, id) {
+    var pos = this.getPosition(view, id);
     // if (pos === view.length - 1) return null;
     return this.getNodeFromPosition(view, pos+1);
   };

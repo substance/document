@@ -182,18 +182,20 @@ Writer.Prototype = function() {
   // --------
   //
 
-  this.modifyNode = function(type, options) {
+  this.modifyNode = function(type, data) {
     var doc = this.__document.startSimulation();
     var sel = new Selection(doc, this.selection);
     if (!sel.isCollapsed()) return;
     var node = sel.getRanges()[0].node;
 
     if (node.type === "node") {
-      console.log('meh', node);
-      // this.transformer.morphNode(doc, sel, node, type);
+      var charPos = sel.getCursor().charPos;
+      var targetType = node.content[charPos].type;
+      if (targetType) {
+        this.transformer.morphNode(doc, node, targetType, data);
+      }
     } else {
-      // does a split ()
-      this.transformer.insertNode(doc, sel, type, options);  
+      this.transformer.insertNode(doc, sel.getCursor(), type, data);
     }
 
     // Commit
@@ -205,14 +207,14 @@ Writer.Prototype = function() {
   // --------
   //
 
-  this.insertNode = function(type, options) {
+  this.insertNode = function(type, data) {
     var doc = this.__document.startSimulation();
     var sel = new Selection(doc, this.selection);
 
     // Remove selected text and get a cursor
     if (!sel.isCollapsed()) this.transformer.deleteSelection(doc, sel);
 
-    this.transformer.insertNode(doc, sel, type, options);
+    this.transformer.insertNode(doc, sel, type, data);
 
     // Commit
     doc.save();

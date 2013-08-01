@@ -4,6 +4,193 @@ var _ = require("underscore");
 var util = require("substance-util");
 var SRegExp = require("substance-regexp");
 
+
+// Document.Selection.Cursor
+// ================
+// 
+// Hi, I'm an iterator, just so you know.
+
+var Cursor = function(document, nodePos, charPos) {
+  this.document = document;
+  this.view = 'content';
+
+  this.nodePos = nodePos;
+  this.charPos = charPos;
+};
+
+
+Cursor.Prototype = function() {
+
+  this.copy = function() {
+    return new Cursor(this.document, this.nodePos, this.charPos);
+  };
+
+  this.isRightBound = function() {
+    return this.charPos === this.node.content.length;
+  };
+
+  this.isLeftBound = function() {
+    return this.charPos === 0;
+  };
+
+  this.isEndOfDocument = function() {
+    return this.isRightBound() && !this.document.hasSuccessor(this.view, this.nodePos);
+  };
+
+  this.isBeginOfDocument = function() {
+    return this.isLeftBound() && !this.document.hasPredecessor(this.view, this.nodePos);
+  };
+
+
+  // Return previous node boundary for a given node/character position
+  // --------
+  //
+
+  this.prevNode = function() {
+    if (!this.isLeftBound()) {
+      this.charPos = 0;
+    } else if (this.document.hasPredecessor(this.view, this.nodePos)) {
+      this.nodePos -= 1;
+      this.charPos = this.node.content.length;
+    }
+  };
+
+  // Return next node boundary for a given node/character position
+  // --------
+  //
+
+  this.nextNode = function() {
+    if (!this.isRightBound()) {
+      this.charPos = this.node.content.length;
+    } else if (this.document.hasSuccessor(this.view, this.nodePos)) {
+      this.nodePos += 1;
+      this.charPos = 0;
+    }
+  };
+
+  // Return previous occuring word for a given node/character position
+  // --------
+  //
+
+  this.prevWord = function() {
+    if (!this.node) throw new Error('Invalid node position');
+
+    // Cursor is at first position -> move to prev paragraph if there is any
+    if (this.isLeftBound()) return this.prevChar();
+
+    var content = this.node.content;
+
+    // Matches all word boundaries in a string
+    var wordBounds = new SRegExp(/\b\w/g).match(content);
+    var prevBounds = _.select(wordBounds, function(m) {
+      return m.index < this.charPos;
+    }, this);
+    this.charPos = _.last(prevBounds).index;
+  };
+
+  // Return next occuring word for a given node/character position
+  // --------
+  //
+
+  this.nextWord = function() {
+    if (!this.node) throw new Error('Invalid node position');
+
+    // Cursor is a last position -> move to next paragraph if there is any
+    if (this.isRightBound()) return this.nextChar();
+
+    var content = this.node.content;
+
+    // Matches all word boundaries in a string
+    var wordBounds = new SRegExp(/\w\b/g).match(content);
+    var nextBound = _.find(wordBounds, function(m) {
+      return m.index > this.charPos;
+    }, this);
+
+    this.charPos = nextBound.index + 1;
+  };
+
+
+  // Return next char, for a given node/character position
+  // --------
+  //
+  // Useful when navigating over paragraph boundaries
+
+  this.nextChar = function() {
+    if (!this.node) throw new Error('Invalid node position');
+
+    // Last char in paragraph
+    if (this.isRightBound()) {
+      if (this.document.hasSuccessor(this.view, this.nodePos)) {
+        this.nodePos += 1;
+        this.charPos = 0;
+      }
+    } else {
+      this.charPos += 1;
+    }
+  };
+
+
+  // Return next char, for a given node/character position
+  // --------
+  //
+  // Useful when navigating over paragraph boundaries
+
+  this.prevChar = function() {
+    if (!this.node) throw new Error('Invalid node position');
+    if (this.charPos<0) throw new Error('Invalid char position');
+
+    if (this.isLeftBound()) {
+      if (this.nodePos > 0) {
+        this.nodePos -= 1;
+        this.charPos = this.node.content.length;
+      }
+    } else {
+      this.charPos -= 1;
+    }
+  };
+
+  // Move
+  // --------
+  //
+  // Useful helper to find char,word and node boundaries
+  //
+  //     find('right', 'char');
+  //     find('left', 'word');
+  //     find('left', 'node');
+
+  this.move = function(direction, granularity) {
+    if (direction === "left") {
+      if (granularity === "word") {
+        return this.prevWord();
+      } else if (granularity === "char") {
+        return this.prevChar();
+      } else if (granularity === "node") {
+        return this.prevNode();
+      }
+    } else {
+      if (granularity === "word") {
+        return this.nextWord();
+      } else if (granularity === "char") {
+        return this.nextChar();
+      } else if (granularity === "node") {
+        return this.nextNode();
+      }
+    }
+  };
+
+};
+
+
+Cursor.prototype = new Cursor.Prototype();
+
+Object.defineProperties(Cursor.prototype, {
+  node: {
+    get: function() {
+      return this.document.getNodeFromPosition(this.view, this.nodePos);
+    }
+  }
+});
+
 // Document.Selection.Range
 // ================
 // 
@@ -170,9 +357,9 @@ Range.prototype = new Range.Prototype();
 
 var Selection = function(document, selection) {
   this.document = document;
-  if (selection) {
-    this.set(selection);
-  }
+  // if (selection) {
+  this.set(selection);
+  // }
 };
 
 
@@ -252,25 +439,41 @@ Selection.Prototype = function() {
     this.start = null;
     this.end = null;
     this.direction = null;
+    this.cursor = null;
 
     sel = util.deepclone(sel);
-    if (!sel) return this;
-    var dir = sel.direction || 'right';
-    if (_.isArray(sel)) {
-      this.start = [sel[0], sel[1]];
-      this.end = [sel[2], sel[3]];
-      this.direction = this.isCollapsed() ? null : dir;
-    } else {
-      // TODO: Make smarter
-      // should also check for out of range errors
-      if (sel && sel.start && sel.start.length === 2 && sel.start[0]>=0 && sel.start[1]>=0) {
-        this.start = sel.start;
+    // if (!sel) return this;
+    if (sel) {
+      var dir = sel.direction || 'right';
+      if (_.isArray(sel)) {
+        this.start = [sel[0], sel[1]];
+        this.end = [sel[2], sel[3]];
+        this.direction = this.isCollapsed() ? null : dir;
+      } else {
+        // TODO: Make smarter
+        // should also check for out of range errors
+        if (sel && sel.start && sel.start.length === 2 && sel.start[0]>=0 && sel.start[1]>=0) {
+          this.start = sel.start;
+        }
+        if (sel && sel.end && sel.end.length === 2 && sel.end[0]>=0 && sel.end[1]>=0) {
+          this.end = sel.end;
+        }
+        this.direction = this.isNull() || this.isCollapsed() ? null : dir;
       }
-      if (sel && sel.end && sel.end.length === 2 && sel.end[0]>=0 && sel.end[1]>=0) {
-        this.end = sel.end;
+      
+      // Init cursor if selection is valid
+      if (!this.isNull()) {
+        var pos;
+        if (this.direction === "left") {
+          pos = this.start;
+        } else {
+          pos = this.end;
+        }
+
+        this.cursor = new Cursor(this.document, pos[0], pos[1]);
       }
-      this.direction = this.isNull() || this.isCollapsed() ? null : dir;
     }
+
     this.trigger('selection:changed', this.toJSON());
     return this;
   };
@@ -281,10 +484,16 @@ Selection.Prototype = function() {
   // --------
   //
 
-  this.getCursor = function() {
-    var result = (this.direction === "right" ? this.end : this.start);
-    return _.clone(result);
-  };
+  // this.getCursor = function() {
+  //   if (this.isNull()) return null;
+  //   var pos;
+  //   if (this.direction === "left") {
+  //     pos = start;
+  //   } else {
+  //     pos = end;
+  //   };
+  //   return new Cursor(this.document, pos[0], pos[1])
+  // };
 
   // Set cursor to position
   // --------
@@ -292,6 +501,9 @@ Selection.Prototype = function() {
   // Convenience for placing the single cusor where start=end
 
   this.setCursor = function(pos) {
+    if (pos instanceof Cursor) {
+      pos = [pos.nodePos, pos.charPos];
+    }
     this.set({
       start: pos,
       end: pos
@@ -348,183 +560,7 @@ Selection.Prototype = function() {
     return nodePos < view.length-1;
   };
 
-
-  // Return previous node boundary for a given node/character position
-  // --------
-  //
-
-  this.prevNode = function(pos) {
-    var nodePos = pos[0],
-        charPos = pos[1];
-
-    if (charPos > 0) {
-      return [nodePos, 0];
-    } else if (this.hasPredecessor(nodePos)) {
-      var prevNode = this.__node(nodePos - 1);
-      return [nodePos-1, prevNode.content.length];
-    } else {
-      // Beginning of the document reached
-      return pos;
-    }
-  };
-
-  // Return next node boundary for a given node/character position
-  // --------
-  //
-
-  this.nextNode = function(pos) {
-    var nodePos = pos[0],
-        charPos = pos[1],
-        node = this.__node(nodePos);
-
-    if (charPos < node.content.length) {
-      return [nodePos, node.content.length];
-    } else if (this.hasSuccessor(nodePos)) {
-      return [nodePos+1, 0];
-    } else {
-      // End of the document reached
-      return pos;
-    }
-  };
-
-  // Return previous occuring word for a given node/character position
-  // --------
-  //
-
-  this.prevWord = function(pos) {
-    // throw new Error('Not implemented');
-    var nodePos = pos[0],
-        charPos = pos[1],
-        node = this.__node(nodePos);
-
-    if (!node) throw new Error('Invalid node position');
-
-    // Cursor is at first position -> move to prev paragraph if there is any
-    if (charPos === 0) return this.prevChar(pos);
-
-    var content = node.content;
-
-    // Matches all word boundaries in a string
-    var wordBounds = new SRegExp(/\b\w/g).match(content);
-    var prevBounds = _.select(wordBounds, function(m) {
-      return m.index<charPos;
-    });
-
-    if (prevBounds.length === 0) return [nodePos, 0];
-    return [nodePos, _.last(prevBounds).index];
-  };
-
-  // Return next occuring word for a given node/character position
-  // --------
-  //
-
-  this.nextWord = function(pos) {
-    var nodePos = pos[0],
-        charPos = pos[1],
-        node = this.__node(nodePos);
-
-    if (!node) throw new Error('Invalid node position');
-
-    // Cursor is a last position -> move to next paragraph if there is any
-    if (charPos >= node.content.length) return this.nextChar(pos);
-
-    var content = node.content;
-
-    // Matches all word boundaries in a string
-    var wordBounds = new SRegExp(/\w\b/g).match(content);
-    var nextBound = _.find(wordBounds, function(m) {
-      return m.index>charPos;
-    });
-
-    if (!nextBound) return [nodePos, content.length];
-    return [nodePos, nextBound.index+1];
-  };
-
-
-  // Return next char, for a given node/character position
-  // --------
-  //
-  // Useful when navigating over paragraph boundaries
-
-  this.nextChar = function(pos) {
-    var nodePos = pos[0],
-        charPos = pos[1],
-        node = this.__node(nodePos);
-
-    if (!node) throw new Error('Invalid node position');
-
-    // Last char in paragraph
-    if (charPos >= node.content.length) {
-      if (this.hasSuccessor(nodePos)) {
-        return [nodePos+1, 0];
-      } else {
-        return pos;
-      }
-    } else {
-      return [nodePos, charPos+1];
-    }
-  };
-
-
-  // Return next char, for a given node/character position
-  // --------
-  //
-  // Useful when navigating over paragraph boundaries
-
-  this.prevChar = function(pos) {
-    var nodePos = pos[0],
-        charPos = pos[1],
-        node = this.__node(nodePos),
-        prevNode,
-        lastPos;
-
-    if (!node) throw new Error('Invalid node position');
-    if (charPos<0) throw new Error('Invalid char position');
-
-    // At end position
-    if (charPos === 0) {
-      if (nodePos > 0) {
-        prevNode = this.__node(nodePos-1);
-        lastPos = prevNode.content.length;
-        return [nodePos-1, lastPos];
-      } else {
-        return pos;
-      }
-    } else {
-      return [nodePos, charPos-1];
-    }
-  };
-
-  // Find
-  // --------
-  //
-  // Useful helper to find char,word and node boundaries
-  //
-  //     find('right', 'char');
-  //     find('left', 'word');
-  //     find('left', 'node');
-
-  this.find = function(pos, direction, granularity) {
-    if (direction === "left") {
-      if (granularity === "word") {
-        return this.prevWord(pos);
-      } else if (granularity === "char") {
-        return this.prevChar(pos);
-      } else if (granularity === "node") {
-        return this.prevNode(pos);
-      }
-    } else {
-      if (granularity === "word") {
-        return this.nextWord(pos);
-      } else if (granularity === "char") {
-        return this.nextChar(pos);
-      } else if (granularity === "node") {
-        return this.nextNode(pos);
-      }
-    }
-  };
-
-  // Move cursor to position
+  // move selection to position
   // --------
   //
   // Convenience for placing the single cusor where start=end
@@ -533,7 +569,7 @@ Selection.Prototype = function() {
     direction = direction || 'right';
     granularity = granularity || 'char';
 
-    if (!this.isCollapsed()) {
+    if (!this.isCollapsed() && granularity === "char") {
       // TODO: Does not yet consider granularity word
       if (direction === 'left') {
         this.setCursor(this.start);
@@ -542,12 +578,13 @@ Selection.Prototype = function() {
       }
     } else {
       // Collapsed: a b c|d e f g
-      var next = this.find(this.start, direction, granularity);
-      this.setCursor(next);
+      this.cursor.move(direction, granularity);
+      this.setCursor(this.cursor);
       // After (direction=left):  a b|c d e f g
       // After (direction=right): a b c d|e f g
     }
   };
+
 
   // Expand current selection
   // ---------
@@ -561,30 +598,25 @@ Selection.Prototype = function() {
     granularity = granularity || 'char';
 
     // Create a copy to ensure consistency during transformation
-    var res = this.toJSON();
+    var newSel = this.toJSON();
+
+    // New cursor pos
+    this.cursor.move(direction, granularity);
 
     if (this.direction === 'right') {
-      // Right bound: a > > d e f g
-      if (direction === 'left') {
-        res.end = this.find(this.end, direction, granularity);
-        // After: a > c d e f g
-      } else {
-        res.end = this.find(this.end, direction, granularity);
-        // After: a > > > e f g
-      }
+      newSel.end = [this.cursor.nodePos, this.cursor.charPos];
     }
     else if (this.direction === 'left') {
-      // Left bound: a < < d e f g
-      res.start = this.find(this.start, direction, granularity);
+      newSel.start = [this.cursor.nodePos, this.cursor.charPos];
     } else {
       // Collapsed: a|b c d e f g
-      res.end = this.find(this.end, direction, granularity);
+      newSel.end = [this.cursor.nodePos, this.cursor.charPos];
       // After: < b c d e f g
       // After: a > c d e f g
     }
 
     // Update selection
-    this.set(normalize(res));
+    this.set(normalize(newSel));
   };
 
 
@@ -741,9 +773,11 @@ Selection.Prototype = function() {
   };
 };
 
-
 Selection.Prototype.prototype = util.Events;
 Selection.prototype = new Selection.Prototype();
+
+Selection.Range = Range;
+Selection.Cursor = Cursor;
 
 // Export
 // ========
