@@ -1,9 +1,11 @@
 "use strict";
+
 // Substance.Document 0.5.0
 // (c) 2010-2013 Michael Aufreiter
 // Substance.Document may be freely distributed under the MIT license.
 // For all details and documentation:
 // http://interior.substance.io/modules/document.html
+
 
 // Import
 // ========
@@ -14,28 +16,28 @@ var errors = util.errors;
 var Data = require("substance-data");
 var Operator = require("substance-operator");
 
-
 // Module
 // ========
 
 var DocumentError = errors.define("DocumentError");
 
+
+// Document
+// --------
+//
+// A generic model for representing and transforming digital documents
+
+var Document = function(options) {
+  Data.Graph.call(this, options.schema, options);
+};
+
 // Default Document Schema
 // --------
 
-var SCHEMA = {
+Document.schema = {
   // Static indexes
   "indexes": {
-    // all comments are now indexed by node association
-    "comments": {
-      "type": "comment",
-      "properties": ["node"]
-    },
-    // All annotations are now indexed by node
-    "annotations": {
-      "type": "annotation",
-      "properties": ["node"]
-    }
+
   },
 
   "types": {
@@ -45,197 +47,20 @@ var SCHEMA = {
       }
     },
 
-    // Abstract node nodetype
-    "node": {
-      "parent": "content",
-      "properties": {
-        "content": "string"
-      }
-    },
-
-    "paragraph": {
-      "parent": "content",
-      "properties": {
-        "content": "string"
-      }
-    },
-
-    "document": {
-      "properties": {
-        "views": ["array", "view"],
-        "guid": "string",
-        "creator": "string",
-        "title": "string",
-        "abstract": "string",
-        "keywords": ["array", "string"]
-      }
-    },
-
     "view": {
       "properties": {
         "nodes": ["array", "content"]
-      }
-    },
-
-    "codeblock": {
-      "parent": "content",
-      "properties": {
-        "content": "string"
-      }
-    },
-
-    "codeline": {
-      "parent": "content",
-      "properties": {
-        "content": "string"
-      }
-    },
-
-    "image": {
-      "parent": "content",
-      "properties": {
-        "large": "string",
-        "medium": "string",
-        "url": "string",
-        "content": "string"
-      }
-    },
-
-    "heading": {
-      "parent": "content",
-      "properties": {
-        "content": "string",
-        "level": "number"
-      }
-    },
-
-    // Annotations
-    "annotation": {
-      "properties": {
-        "path": ["array", "string"], // -> e.g. ["text_1", "content"]
-        "range": "object"
-      }
-    },
-
-    "strong": {
-      "parent": "annotation",
-      "properties": {
-      }
-    },
-
-    "emphasis": {
-      "properties": {
-      },
-      "parent": "annotation"
-    },
-
-    "code": {
-      "parent": "annotation",
-      "properties": {
-      }
-    },
-
-    "link": {
-      "parent": "annotation",
-      "properties": {
-        "url": "string"
-      }
-    },
-
-    "idea": {
-      "parent": "annotation",
-      "properties": {
-      }
-    },
-
-    "error": {
-      "parent": "annotation",
-      "properties": {
-      }
-    },
-
-    "question": {
-      "parent": "annotation",
-      "properties": {
-      }
-    },
-
-    // Comments
-    "comment": {
-      "properties": {
-        "content": "string",
-        "created_at": "string", // should be date
-        "creator": "string", // should be date
-        "node": "node" // references either a content node or annotation
       }
     }
   }
 };
 
-// Seed Data
-// ========
-//
-// Some pre-defined nodes that are required for each document
-// `document` stores all meta-information about the document
-// `content` is the main view
-
-// Provides an initial state by a set of nodes.
-// --------
-// These commands change will not be versioned.
-// Every document's history must be applicable on this.
-var SEED = function(options) {
-  return [
-    Operator.ObjectOperation.Create(["document"], {
-      id: "document",
-      type: "document",
-      guid: options.id, // external global document id
-      creator: options.creator,
-      created_at: options.created_at,
-      views: ["content"],
-      title: "",
-      abstract: ""
-    }),
-    Operator.ObjectOperation.Create(["content"], {
-      id: "content",
-      type: "view",
-      nodes: [],
-    })
-  ];
-};
-
-// Document
-// --------
-//
-// A generic model for representing and transforming digital documents
-
-var Document = function(options) {
-  options.seed = options.seed || SEED(options);
-  // Schema needs to be derived from the nodes plugged in
-  Data.Graph.call(this, options.schema || SCHEMA, options);
-};
 
 
-// Factory method
-// --------
-//
-// TODO: Ensure the snapshot doesn't get chronicled
-
-Document.fromSnapshot = function(data, options) {
-  options = options || {};
-  options.seed = [];
-  var doc = new Document(options);
-
-  _.each(data.nodes, function(n) {
-    doc.create(n);
-  });
-
-  return doc;
-};
 
 Document.Prototype = function() {
 
   var __super__ = util.prototype(this);
-
 
   // Get predecessor node for a given view and node id
   // --------
@@ -269,6 +94,21 @@ Document.Prototype = function() {
   this.create = function(node) {
     __super__.create.call(this, node);
     return this.get(node.id);
+  };
+
+  // Delegates to Graph.get but wraps the result in the particular node constructor
+  // --------
+  //
+
+  this.get = function(path) {
+    var node = __super__.get.call(this, path);
+    if (node) {
+      // return this.nodes[node.type]();
+      // TODO: wrap in nodetype constructor
+      return node;
+    } else {
+      return node;
+    }
   };
 
   // Get node object from a given view and position
@@ -356,35 +196,10 @@ Document.Prototype = function() {
     return this.apply(update);
   };
 
-  // Annotate document
+
+  // Start simulation, which conforms to a transaction (think databases)
   // --------
   //
-  // `path` defines the referenced content node and property
-
-  this.annotate = function(path, annotation) {
-
-    console.error("This method is deprecated. This is now done by Substance.Document.Annotator.");
-
-    annotation = util.clone(annotation);
-    annotation.path = path;
-
-    return this.create(annotation);
-  };
-
-
-  // Comment
-  // --------
-  //
-  // `command.path` holds the node id, where the comment should stick on
-
-  this.comment = function(nodeId, comment) {
-
-    comment = util.clone(comment);
-    comment.node = nodeId;
-    comment.type = comment.type || 'comment';
-
-    return this.create(comment);
-  };
 
   this.startSimulation = function() {
     // TODO: this should be implemented in a more cleaner and efficient way.
@@ -418,78 +233,8 @@ Document.prototype = new Document.Prototype();
 // Add event support
 _.extend(Document.prototype, util.Events);
 
-// Add convenience accessors for builtin document attributes
-Object.defineProperties(Document.prototype, {
-  id: {
-    get: function () {
-      return this.get("document").guid;
-    },
-    set: function() {
-      throw "doc.id is immutable";
-    }
-  },
-  creator: {
-    get: function () {
-      return this.get("document").creator;
-    }
-  },
-  created_at: {
-    get: function () {
-      return this.get("document").created_at;
-    }
-  },
-  title: {
-    get: function () {
-      return this.get("document").title;
-    }
-  },
-  abstract: {
-    get: function () {
-      return this.get("document").abstract;
-    }
-  },
-  keywords: {
-    get: function () {
-      // Note: returing a copy to avoid inadvertent changes
-      return this.get("document").keywords.slice(0);
-    }
-  },
-  views: {
-    get: function () {
-      // Note: returing a copy to avoid inadvertent changes
-      return this.get("document").views.slice(0);
-    }
-  },
-});
 
-
-Document.COMMANDS = _.extend({}, Data.COMMANDS, {
-  "position": {
-    "types": ["array"],
-    "arguments": 1
-  },
-  "hide": {
-    "types": ["array"],
-    "arguments": 1
-  },
-  "delete": {
-    "types": ["graph"],
-    "arguments": 1
-  },
-  "annotate": {
-    "types": ["content"],
-    "arguments": 1
-  },
-  "comment": {
-    "types": ["content", "annotation"],
-    "arguments": 1
-  }
-});
-
-
-Document.SCHEMA = SCHEMA;
 Document.DocumentError = DocumentError;
-
 
 // Export
 // ========
