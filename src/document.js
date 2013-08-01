@@ -204,7 +204,7 @@ Document.Prototype = function() {
     // TODO: this should be implemented in a more cleaner and efficient way.
     // Though, for now and sake of simplicity done by creating a copy
     var self = this;
-    var simulation = Document.fromSnapshot(this.toJSON());
+    var simulation = this.fromSnapshot(this.toJSON());
     var ops = [];
 
     var __apply__ = simulation.apply;
@@ -224,6 +224,11 @@ Document.Prototype = function() {
 
     return simulation;
   };
+
+  this.fromSnapshot = function(data, options) {
+    return Document.fromSnapshot(data, options);
+  };
+
 };
 
 Document.Prototype.prototype = Data.Graph.prototype;
@@ -232,6 +237,21 @@ Document.prototype = new Document.Prototype();
 // Add event support
 _.extend(Document.prototype, util.Events);
 
+
+Document.fromSnapshot = function(data, options) {
+  options = options || {};
+  // options.seed = [];
+  var doc = new Document(options);
+
+  _.each(data.nodes, function(n) {
+    if (doc.get(n.id)) {
+      doc.delete(n.id); // skip existing nodes
+    }
+    doc.create(n);
+  });
+
+  return doc;
+};
 
 Document.DocumentError = DocumentError;
 
