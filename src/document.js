@@ -37,7 +37,6 @@ var Document = function(options) {
 Document.schema = {
   // Static indexes
   "indexes": {
-
   },
 
   "types": {

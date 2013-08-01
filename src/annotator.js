@@ -13,27 +13,6 @@ var Operator = require("substance-operator");
 // Module
 // ========
 
-var annotationKey = function(path) {
-  return path.join("_");
-};
-
-var _addAnnotationToIndex = function(annotation) {
-  var key = annotationKey(annotation.path);
-  this._annotated[key] = this._annotated[key] || [];
-  this._annotated[key].push(annotation);
-};
-
-var _removeAnnotationFromIndex = function(annotation) {
-  var key = annotationKey(annotation.path);
-  this._annotated[key] = _.without(this._annotated[key], annotation);
-};
-
-var _getAnnotationsForProperty = function(path) {
-  var key = annotationKey(path);
-  var annotations = this._annotated[key] || [];
-  return annotations;
-};
-
 // A class that manages a document's annotations.
 // --------
 //
@@ -67,19 +46,75 @@ var Annotator = function(doc) {
   };
 
   this.splittable = ["emphasis", "strong"];
+  this._annotationIndex = {};
 
-  this._annotated = {};
-
-  _.each(doc.nodes, function(annotation) {
-    var baseType = doc.schema.baseType(annotation.type);
-    if (baseType === 'annotation') {
-      _addAnnotationToIndex.call(this, annotation);
-    }
-  }, this);
-
+  this.createIndex();
 };
 
 Annotator.Prototype = function() {
+
+  // Annotation index
+  // --------
+
+  var _resolve = function(path) {
+    var index = this._annotationIndex;
+    for (var i = 0; i < path.length; i++) {
+      var id = path[i];
+      index[id] = index[id] || {_annotations: {} };
+      index = index[id];
+    }
+    return index;
+  };
+
+  var _findAnnotations = function(index) {
+    var result = _.extend({}, index._annotations);
+
+    _.each(index, function(child, name) {
+      if (name !== "_annotations") {
+        _.extend(result, _findAnnotations(child));
+      }
+    });
+
+    return result;
+  };
+
+  var _getAnnotations = function(path, recurse) {
+    var index = _resolve.call(this, path);
+
+    var result;
+
+    if (recurse) {
+      result = _findAnnotations(index);
+    } else {
+      result = index._annotations;
+    }
+
+    return result;
+  };
+
+  var _addAnnotationToIndex = function(annotation) {
+    var index = _resolve.call(this, annotation.path);
+    index._annotations[annotation.id] = annotation;
+  };
+
+  var _removeAnnotationFromIndex = function(annotation) {
+    var index = _resolve.call(this, annotation.path);
+    delete index._annotations[annotation.id];
+  };
+
+
+  this.createIndex = function() {
+    var schema = this.document.schema;
+    var nodes = this.document.nodes;
+
+    _.each(nodes, function(annotation) {
+      var baseType = schema.baseType(annotation.type);
+      if (baseType === 'annotation') {
+        _addAnnotationToIndex.call(this, annotation);
+      }
+    }, this);
+  };
+
 
   // Creates a new annotation
   // --------
@@ -106,6 +141,81 @@ Annotator.Prototype = function() {
     self.document.apply(Operator.ObjectOperation.Set([annotation.id, "range"], annotation.range, newRange));
   };
 
+  // TODO: extract range overlap checking logic into a dedicated Range class
+  var _filterByNodeAndRange = function(nodeId, range) {
+    // HACK: using "content" - we should somehow generalize this...
+    var annotations = _getAnnotations.call(this, [nodeId, "content"]);
+
+    if (range) {
+      var sStart = range[0];
+      var sEnd = range[1];
+
+      // Note: this treats all annotations as if they were inclusive (left+right)
+      // TODO: maybe we should apply the same rules as for Transformations?
+      annotations = _.select(annotations, function(a) {
+        var aStart = a.range[0];
+        var aEnd = a.range[1];
+
+        var overlap = (aEnd >= sStart);
+
+        // Note: it is allowed to give only omit the end part
+        if (sEnd) {
+          overlap &= aStart <= sEnd;
+        }
+
+        return overlap;
+      });
+    }
+
+    return annotations;
+  };
+
+
+  // Truncates an existing annotation
+  // --------
+  // Deletes an annotation that has a collapsed range after truncation.
+  // If the annotation is splittable and the given range is an inner segment,
+  // the first will be truncated and a second one will be created to annotate the tail.
+  // If the annotation is not splittable it will be deleted.
+
+  var _truncate = function(self, annotation, range) {
+    var s1 = annotation.range[0];
+    var s2 = range[0];
+    var e1 = annotation.range[1];
+    var e2 = range[1];
+
+    var newRange;
+
+    // truncate all = delete
+    if (s1 >= s2 && e1 <= e2) {
+      _delete(self, annotation);
+
+    // truncate the head
+    } else if (s1 >= s2  && e1 > e2) {
+      newRange = [e2, e1];
+      _update(self, annotation, newRange);
+    }
+
+    // truncate the tail
+    else if (s1 < s2 && e1 <= e2) {
+      newRange = [s1, s2];
+      _update(self, annotation, newRange);
+    }
+    // from the middle: split or delete
+    else {
+      if (self.isSplittable(annotation.type)) {
+        newRange = [s1, s2];
+        _update(self, annotation, newRange);
+
+        var tailRange = [e2, e1];
+        _create(self, annotation.path, annotation.type, tailRange);
+
+      } else {
+        _delete(self, annotation);
+      }
+    }
+  };
+
   // Takes care of updating annotations whenever an graph operation is applied.
   // --------
   // Triggers new events dedicated to annotation changes.
@@ -113,21 +223,34 @@ Annotator.Prototype = function() {
 
     // TODO: it would be great to have some API to retrieve reflection information for an object operation.
 
-    var typeChain, annotation;
+    var typeChain, annotations, annotation, i;
 
     if (op.type === "delete" || op.type === "create") {
-      annotation = this.document.get(op.value.type);
 
-      typeChain = this.document.schema.typeChain(annotation);
-      if (typeChain.indexOf("annotation") < 0) return;
+      typeChain = this.document.schema.typeChain(op.val.type);
 
-      if (op.type === "delete") {
-        _removeAnnotationFromIndex.call(this, annotation);
-      } else if (op.type === "create") {
-        _addAnnotationToIndex.call(this, annotation);
+      // handle creation or deletion of annotations
+      if (typeChain.indexOf("annotation") >= 0) {
+        annotation = op.val;
+
+        if (op.type === "delete") {
+          _removeAnnotationFromIndex.call(this, annotation);
+
+        } else if (op.type === "create") {
+          // get the real instance from the document
+          annotation = this.document.get(annotation.id);
+          _addAnnotationToIndex.call(this, annotation);
+        }
+
+        this.triggerLater("annotation:changed", op.type, annotation);
       }
-
-      this.triggerLater("annotation:changed", op.type, annotation);
+      // handle deletion of other nodes, i.e., remove associated annotations
+      else {
+        annotations = _getAnnotations.call(this, op.path);
+        _.each(annotations, function(a) {
+          _delete(this, a);
+        }, this);
+      }
     }
 
     else if (op.type === "update" || op.type === "set") {
@@ -142,13 +265,12 @@ Annotator.Prototype = function() {
         this.triggerLater("annotation:changed", "update", node);
 
       } else {
-        var annotations = _getAnnotationsForProperty.call(this, op.path);
-        for (var i = 0; i < annotations.length; i++) {
-          this.transform(op, annotations[i]);
-        }
+        annotations = _getAnnotations.call(this, op.path);
+        _.each(annotations, function(a) {
+          this.transform(op, a);
+        }, this);
       }
     }
-
   };
 
   this.create = function(annotation) {
@@ -176,6 +298,9 @@ Annotator.Prototype = function() {
         expandLeft = this.expansion[annotation.type].left(annotation);
         expandRight = this.expansion[annotation.type].right(annotation);
       }
+
+      // TODO: how can this be readonly???
+      annotation.range[0] = annotation.range[0];
 
       var changed = Operator.TextOperation.Range.transform(annotation.range, op.diff, expandLeft, expandRight);
       if (changed) {
@@ -207,7 +332,6 @@ Annotator.Prototype = function() {
       }
       this.create(annotation);
     }
-    this.propagateChanges();
   };
 
   var _getRanges = function(self, sel) {
@@ -278,35 +402,6 @@ Annotator.Prototype = function() {
     return result;
   };
 
-
-  // TODO: extract range overlap checking logic into a dedicated Range class
-  var _filterByNodeAndRange = function(doc, nodeId, range) {
-    var annotations = doc.find('annotations', nodeId);
-
-    if (range) {
-      var sStart = range[0];
-      var sEnd = range[1];
-
-      // Note: this treats all annotations as if they were inclusive (left+right)
-      // TODO: maybe we should apply the same rules as for Transformations?
-      annotations = _.select(annotations, function(a) {
-        var aStart = a.range[0];
-        var aEnd = a.range[1];
-
-        var overlap = (aEnd >= sStart);
-
-        // Note: it is allowed to give only omit the end part
-        if (sEnd) {
-          overlap &= aStart <= sEnd;
-        }
-
-        return overlap;
-      });
-    }
-
-    return annotations;
-  };
-
   // Retrieve annotations
   // --------
   // The selection can be filtered via
@@ -324,8 +419,10 @@ Annotator.Prototype = function() {
     var range, node;
 
     if (options.node) {
-      annotations = _filterByNodeAndRange(doc, options.node, options.range);
-    } else if (options.selection) {
+      annotations = _filterByNodeAndRange.call(this, options.node, options.range);
+    }
+
+    else if (options.selection) {
 
       var sel = options.selection;
       var nodes = sel.getNodes(sel);
@@ -346,11 +443,13 @@ Annotator.Prototype = function() {
           range[1] = sel.end[1];
         }
 
-        annotations.push(_filterByNodeAndRange(doc, node.id, range));
+        // Note: pushing an array and do flattening afterwards
+        annotations.push(_filterByNodeAndRange.call(this, node.id, range));
       }
 
       annotations = Array.prototype.concat.apply([], annotations);
     } else {
+
       annotations = _.select(doc.nodes, function(node) {
         var baseType = doc.schema.baseType(node.type);
         return baseType === 'annotation';
@@ -362,51 +461,6 @@ Annotator.Prototype = function() {
     }
 
     return annotations;
-  };
-
-  // Truncates an existing annotation
-  // --------
-  // Deletes an annotation that has a collapsed range after truncation.
-  // If the annotation is splittable and the given range is an inner segment,
-  // the first will be truncated and a second one will be created to annotate the tail.
-  // If the annotation is not splittable it will be deleted.
-
-  var _truncate = function(self, annotation, range) {
-    var s1 = annotation.range[0];
-    var s2 = range[0];
-    var e1 = annotation.range[1];
-    var e2 = range[1];
-
-    var newRange;
-
-    // truncate all = delete
-    if (s1 >= s2 && e1 <= e2) {
-      _delete(self, annotation);
-
-    // truncate the head
-    } else if (s1 >= s2  && e1 > e2) {
-      newRange = [e2, e1];
-      _update(self, annotation, newRange);
-    }
-
-    // truncate the tail
-    else if (s1 < s2 && e1 <= e2) {
-      newRange = [s1, s2];
-      _update(self, annotation, newRange);
-    }
-    // from the middle: split or delete
-    else {
-      if (self.isSplittable(annotation.type)) {
-        newRange = [s1, s2];
-        _update(self, annotation, newRange);
-
-        var tailRange = [e2, e1];
-        _create(self, annotation.path, annotation.type, tailRange);
-
-      } else {
-        _delete(self, annotation);
-      }
-    }
   };
 
   // Returns true if two annotation types are mutually exclusive
