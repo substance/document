@@ -25,7 +25,8 @@ test.setup = function() {
     created_at: new Date()
   });
 
-  // this.doc = new 
+  // TODO: we should move annotation buisness to extra test
+  this.annotator = new Annotator(this.doc);
 };
 
 test.actions = [
@@ -118,10 +119,10 @@ test.actions = [
       "range": {start: 1, length: 3}
     };
 
-    this.doc.annotate(["t1", "content"], annotation);
+    this.annotator.annotate(["t1", "content"], annotation);
 
     // Get annotations for text:1
-    var annotations = this.doc.find("annotations", "t1");
+    var annotations = this.annotator.getAnnotations({node: "t1"});
     assert.isEqual(1, annotations.length);
 
     var a1 = this.doc.get('a1');
