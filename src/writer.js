@@ -189,13 +189,13 @@ Writer.Prototype = function() {
     var node = sel.getRanges()[0].node;
 
     if (node.type === "node") {
-      var charPos = sel.getCursor().charPos;
+      var charPos = sel.cursor.charPos;
       var targetType = node.content[charPos].type;
       if (targetType) {
         this.transformer.morphNode(doc, node, targetType, data);
       }
     } else {
-      this.transformer.insertNode(doc, sel.getCursor(), type, data);
+      this.transformer.insertNode(doc, sel.cursor, type, data);
     }
 
     // Commit
