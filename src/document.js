@@ -101,13 +101,9 @@ Document.Prototype = function() {
 
   this.get = function(path) {
     var node = __super__.get.call(this, path);
-    if (node) {
-      // return this.nodes[node.type]();
-      // TODO: wrap in nodetype constructor
-      return node;
-    } else {
-      return node;
-    }
+    if (!node) return node;
+    var NodeType = this.nodeTypes[node.type];
+    return NodeType ? new NodeType(node) : node;
   };
 
   // Get node object from a given view and position
