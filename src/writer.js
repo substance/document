@@ -178,30 +178,51 @@ Writer.Prototype = function() {
     doc.save();
   };
 
-  // Based on current selection, insert new node
+  // Really?
+  // --------
+  //
+
+  this.insertImage = function(data) {
+    var doc = this.__document.startSimulation();
+    var sel = new Selection(doc, this.selection);
+    var cursor = sel.cursor;
+    if (!sel.isCollapsed()) return;
+
+    this.transformer.morphNode(doc, sel, 'image', data);
+
+    // Commit
+    doc.save();
+    this.selection.set(sel);
+  };
+
+  // Split 
   // --------
   //
 
   this.modifyNode = function(type, data) {
     var doc = this.__document.startSimulation();
     var sel = new Selection(doc, this.selection);
+    var cursor = sel.cursor;
     if (!sel.isCollapsed()) return;
-    var node = sel.getRanges()[0].node;
 
-    if (node.type === "node") {
-      var charPos = sel.getCursor().charPos;
-      var targetType = node.content[charPos].type;
+    if (cursor.node.type === "constructor") {
+      var charPos = cursor.charPos;
+      var targetType = cursor.node.content[charPos].type;
+      
+      console.log('targetType', targetType);
       if (targetType) {
-        this.transformer.morphNode(doc, node, targetType, data);
+        this.transformer.morphNode(doc, sel, targetType, data);
       }
     } else {
-      this.transformer.insertNode(doc, sel.getCursor(), type, data);
+
+      this.transformer.insertNode(doc, sel, type, data);
     }
 
     // Commit
     doc.save();
     this.selection.set(sel);
   };
+
 
   // Based on current selection, insert new node
   // --------
