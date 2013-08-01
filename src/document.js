@@ -30,11 +30,6 @@ var SCHEMA = {
     "comments": {
       "type": "comment",
       "properties": ["node"]
-    },
-    // All annotations are now indexed by node
-    "annotations": {
-      "type": "annotation",
-      "properties": ["node"]
     }
   },
 
