@@ -2,192 +2,388 @@
 
 var _ = require("underscore");
 var util = require("substance-util");
-var SRegExp = require("substance-regexp");
+var Cursor = require("./cursor");
 
-
-// Document.Selection.Cursor
+// Document.Selection
 // ================
-// 
-// Hi, I'm an iterator, just so you know.
+//
+// A selection refers to a sub-fragment of a Substance.Document. It holds
+// start/end positions for node and character offsets as well as a direction.
+//
+//     {
+//       start: [NODE_POS, CHAR_POS]
+//       end: [NODE_POS, CHAR_POS]
+//       direction: "left"|"right"
+//     }
+//
+// NODE_POS: Node offset in the document (0 = first node)
+// CHAR_POS: Character offset within a textnode (0 = first char)
+//
+// Example
+// --------
+//
+// Consider a document `doc` consisting of 3 paragraphs.
+//
+//           0 1 2 3 4 5 6
+//     -------------------
+//     P0  | a b c d e f g
+//     -------------------
+//     P1: | h i j k l m n
+//     -------------------
+//     P2: | o p q r s t u
+//
+//
+// Create a selection operating on that document.
+//     var sel = new Substance.Document.Selection(doc);
+//
+//     sel.set({
+//       start: [0, 4],
+//       end: [1, 2],
+//       direction: "right"
+//     });
+//
+// This call results in the following selection:
+//
+//           0 1 2 3 4 5 6
+//     -------------------
+//     P0  | a b c d > > >
+//     -------------------
+//     P1: | > > > k l m n
+//     -------------------
+//     P2: | o p q r s t u
+//
 
-var Cursor = function(document, nodePos, charPos) {
+var Selection = function(document, selection) {
   this.document = document;
-  this.view = 'content';
-
-  this.nodePos = nodePos;
-  this.charPos = charPos;
+  
+  this.start = null;
+  this.__cursor = new Cursor(document, null, null);
+  
+  if (selection) this.set(selection);
 };
 
+Selection.Prototype = function() {
 
-Cursor.Prototype = function() {
-
-  this.copy = function() {
-    return new Cursor(this.document, this.nodePos, this.charPos);
-  };
-
-  this.isRightBound = function() {
-    return this.charPos === this.node.content.length;
-  };
-
-  this.isLeftBound = function() {
-    return this.charPos === 0;
-  };
-
-  this.isEndOfDocument = function() {
-    return this.isRightBound() && !this.document.hasSuccessor(this.view, this.nodePos);
-  };
-
-  this.isBeginOfDocument = function() {
-    return this.isLeftBound() && !this.document.hasPredecessor(this.view, this.nodePos);
-  };
-
-
-  // Return previous node boundary for a given node/character position
+  // Get node from position in contnet view
   // --------
   //
 
-  this.prevNode = function() {
-    if (!this.isLeftBound()) {
-      this.charPos = 0;
-    } else if (this.document.hasPredecessor(this.view, this.nodePos)) {
-      this.nodePos -= 1;
-      this.charPos = this.node.content.length;
-    }
-  };
-
-  // Return next node boundary for a given node/character position
-  // --------
-  //
-
-  this.nextNode = function() {
-    if (!this.isRightBound()) {
-      this.charPos = this.node.content.length;
-    } else if (this.document.hasSuccessor(this.view, this.nodePos)) {
-      this.nodePos += 1;
-      this.charPos = 0;
-    }
-  };
-
-  // Return previous occuring word for a given node/character position
-  // --------
-  //
-
-  this.prevWord = function() {
-    if (!this.node) throw new Error('Invalid node position');
-
-    // Cursor is at first position -> move to prev paragraph if there is any
-    if (this.isLeftBound()) return this.prevChar();
-
-    var content = this.node.content;
-
-    // Matches all word boundaries in a string
-    var wordBounds = new SRegExp(/\b\w/g).match(content);
-    var prevBounds = _.select(wordBounds, function(m) {
-      return m.index < this.charPos;
-    }, this);
-    this.charPos = _.last(prevBounds).index;
-  };
-
-  // Return next occuring word for a given node/character position
-  // --------
-  //
-
-  this.nextWord = function() {
-    if (!this.node) throw new Error('Invalid node position');
-
-    // Cursor is a last position -> move to next paragraph if there is any
-    if (this.isRightBound()) return this.nextChar();
-
-    var content = this.node.content;
-
-    // Matches all word boundaries in a string
-    var wordBounds = new SRegExp(/\w\b/g).match(content);
-    var nextBound = _.find(wordBounds, function(m) {
-      return m.index > this.charPos;
-    }, this);
-
-    this.charPos = nextBound.index + 1;
+  this.__node = function(pos) {
+    return this.document.getNodeFromPosition('content', pos);
   };
 
 
-  // Return next char, for a given node/character position
+  // Set selection
   // --------
   //
-  // Useful when navigating over paragraph boundaries
+  // Direction defaults to right
 
-  this.nextChar = function() {
-    if (!this.node) throw new Error('Invalid node position');
-
-    // Last char in paragraph
-    if (this.isRightBound()) {
-      if (this.document.hasSuccessor(this.view, this.nodePos)) {
-        this.nodePos += 1;
-        this.charPos = 0;
-      }
+  this.set = function(sel) {
+    if (sel instanceof Selection) {
+      var cursor = sel.__cursor;
+      this.start = sel.start;
+      this.__cursor.set(cursor.nodePos, cursor.charPos);
     } else {
-      this.charPos += 1;
+      this.start = sel.start;
+      this.__cursor.set(sel.end[0], sel.end[1]);
     }
+    this.trigger('selection:changed', this.range());
+    return this;
   };
 
+  this.clear = function() {
+    this.start = null;
+    this.__cursor.set(null, null);
+    this.trigger('selection:changed', null);
+  };
 
-  // Return next char, for a given node/character position
-  // --------
-  //
-  // Useful when navigating over paragraph boundaries
+  this.range = function() {
+    var pos1 = this.start;
+    var pos2 = this.__cursor.position();
 
-  this.prevChar = function() {
-    if (!this.node) throw new Error('Invalid node position');
-    if (this.charPos<0) throw new Error('Invalid char position');
-
-    if (this.isLeftBound()) {
-      if (this.nodePos > 0) {
-        this.nodePos -= 1;
-        this.charPos = this.node.content.length;
-      }
+    if (this.isReverse()) {
+      return {
+        start: pos2,
+        end: pos1
+      };
     } else {
-      this.charPos -= 1;
+      return {
+        start: pos1,
+        end: pos2
+      };
     }
   };
 
-  // Move
+  this.isReverse = function() {
+    var cursor = this.__cursor;
+    return (cursor.nodePos < this.start[0]) || (cursor.nodePos === this.start[0] && cursor.charPos < this.start[1]);
+  };
+
+  // Set cursor to position
   // --------
   //
-  // Useful helper to find char,word and node boundaries
+  // Convenience for placing the single cusor where start=end
+
+  this.setCursor = function(pos) {
+    this.__cursor.set(pos);
+    this.start = pos;
+    return this;
+  };
+
+  // Fully selects a the node with the given id
+  // --------
   //
-  //     find('right', 'char');
-  //     find('left', 'word');
-  //     find('left', 'node');
+
+  this.selectNode = function(nodeId) {
+    var node = this.document.get(nodeId);
+    var nodePos = this.document.getPosition('content', nodeId);
+    this.set({
+      start: [nodePos, 0],
+      end: [nodePos, node.content.length]
+    });
+  };
+
+  // Get predecessor node of a given node pos
+  // --------
+  //
+
+  this.getPredecessor = function() {
+    var nodePos = this.isReverse() ? this.__cursor.nodePos: this.start[0];
+    if (nodePos === 0) return null;
+    return this.__node(nodePos-1);
+  };
+
+  // Get successor node of a given node pos
+  // --------
+  //
+
+  this.getSuccessor = function() {
+    var nodePos = this.isReverse() ? this.start[0] : this.__cursor.nodePos;
+    return this.__node(nodePos+1);
+  };
+
+  // Check if the given position has a successor
+  // --------
+  //
+
+  // TODO: is this really necessary? ~> document.hasPredecessor
+  this.hasPredecessor = function(nodePos) {
+    return nodePos > 0;
+  };
+
+  // Check if the given node has a successor
+  // --------
+  //
+
+  // TODO: is this really necessary? ~> document.hasSuccessor
+  this.hasSuccessor = function(nodePos) {
+    var view = this.document.get('content').nodes;
+    return nodePos < view.length-1;
+  };
+
+  // move selection to position
+  // --------
+  //
+  // Convenience for placing the single cusor where start=end
 
   this.move = function(direction, granularity) {
-    if (direction === "left") {
-      if (granularity === "word") {
-        return this.prevWord();
-      } else if (granularity === "char") {
-        return this.prevChar();
-      } else if (granularity === "node") {
-        return this.prevNode();
-      }
-    } else {
-      if (granularity === "word") {
-        return this.nextWord();
-      } else if (granularity === "char") {
-        return this.nextChar();
-      } else if (granularity === "node") {
-        return this.nextNode();
+    var cursor = this.__cursor;
+
+    // moving an expanded selection by char collapses the selection
+    // and sets the cursor to the boundary of the direction
+    if (!this.isCollapsed() && granularity === "char") {
+      if (direction === 'left') {
+        cursor.set(this.start);  
+      } else {
+        this.start = cursor.position();
       }
     }
+    // otherwise the cursor gets moved (together with start)
+    else {
+      cursor.move(direction, granularity);
+      this.start = cursor.position();
+    }
+
+    this.trigger('selection:changed', this.range());
   };
 
+
+  // Expand current selection
+  // ---------
+  //
+  // Selections keep the direction as a state
+  // They can either be right-bound or left-bound
+  //
+
+  this.expand = function(direction, granularity) {
+    // expanding is done by moving the cursor
+    this.__cursor.move(direction, granularity);
+
+    this.trigger('selection:changed', this.range());
+  };
+
+  // JSON serialization
+  // --------
+  //
+
+  this.toJSON = function() {
+    return this.range();
+  };
+
+  // For a given document return the selected nodes
+  // --------
+  // 
+  // TODO: is now covered by this.ranges
+
+  this.getNodes = function() {
+    var view = this.document.get('content').nodes;
+    if (this.isNull()) return [];
+    var range = this.range();
+
+    return _.map(view.slice(range.start[0], range.end[0]+1), function(n) {
+      return this.document.get(n);
+    }, this);
+  };
+
+  // Derives Range objects for the selection
+  // --------
+  // 
+
+  this.getRanges = function() {
+    // var nodes = this.getNodes();
+    var ranges = [];
+
+    var sel = this.range();
+
+    for (var i = sel.start[0]; i <= sel.end[0]; i++) {
+      var startChar = 0;
+      var endChar = null;
+
+      // in the first node search only in the trailing part
+      if (i === sel.start[0]) {
+        startChar = sel.start[1];
+      }
+
+      // in the last node search only in the leading part
+      if (i === sel.end[0]) {
+        endChar = sel.end[1];
+      }
+
+      if (!_.isNumber(endChar)) {
+        var node = this.__node(i);
+        endChar = node.content.length;
+      }
+      ranges.push(new Selection.Range(this, i, startChar, endChar));
+    }
+    return ranges;
+  };
+
+  // Returns start node offset
+  // --------
+  //
+
+  this.startNode = function() {
+    return this.isReverse() ? this.__cursor.nodePos : this.start[0];
+  };
+
+  // Returns end node offset
+  // --------
+  //
+
+  this.endNode = function() {
+    return this.isReverse() ? this.start[0] : this.__cursor.nodePos;
+  };
+
+
+  // Returns start node offset
+  // --------
+  //
+
+  this.startChar = function() {
+    return this.isReverse() ? this.__cursor.charPos : this.start[1];
+  };
+
+  // Returns end node offset
+  // --------
+  //
+
+  this.endChar = function() {
+    return this.isReverse() ? this.start[1] : this.__cursor.charPos;
+  };
+
+
+  // No selection
+  // --------
+  //
+  // Returns true if there's just a single cursor not a selection spanning
+  // over 1+ characters
+
+  this.isNull = function() {
+    return this.start === null;
+  };
+
+
+  // Collapsed
+  // --------
+  //
+  // Returns true if there's just a single cursor not a selection spanning
+  // over 1+ characters
+
+  this.isCollapsed = function() {
+    return this.start[0] === this.__cursor.nodePos && this.start[1] === this.__cursor.charPos;
+  };
+
+
+  // Multinode
+  // --------
+  //
+  // Returns true if the selection refers to multiple nodes
+
+  this.hasMultipleNodes = function() {
+    return this.startNode() !== this.endNode();
+  };
+
+
+  // For a given document return the selected text
+  // --------
+
+  this.getText = function() {
+    var text = "";
+
+    if (this.isNull()) return text;
+
+    // start node
+    var nodes = this.getNodes();
+    var sel = this.range();
+
+    if (nodes.length === 1) {
+      return nodes[0].content.slice(sel.start[1], sel.end[1]);
+    }
+
+    _.each(nodes, function(n, index) {
+      if (n.content) {
+        if (index === 0) {
+          text += nodes[0].content.slice(sel.start[1]);
+        } else if (index === nodes.length-1) {
+          text += nodes[index].content.slice(0, sel.end[1]);
+        } else {
+          text += n.content;
+        }
+      }
+    }, this);
+    return text;
+  };
 };
 
+Selection.Prototype.prototype = util.Events;
+Selection.prototype = new Selection.Prototype();
 
-Cursor.prototype = new Cursor.Prototype();
-
-Object.defineProperties(Cursor.prototype, {
-  node: {
+Object.defineProperties(Selection.prototype, {
+  cursor: {
     get: function() {
-      return this.document.getNodeFromPosition(this.view, this.nodePos);
-    }
+      return this.__cursor.copy();
+    },
+    set: function() { throw "immutable property"; }
   }
 });
 
@@ -304,480 +500,8 @@ Range.Prototype = function() {
 
 Range.prototype = new Range.Prototype();
 
-
-
-// Document.Selection
-// ================
-//
-// A selection refers to a sub-fragment of a Substance.Document. It holds
-// start/end positions for node and character offsets as well as a direction.
-//
-//     {
-//       start: [NODE_POS, CHAR_POS]
-//       end: [NODE_POS, CHAR_POS]
-//       direction: "left"|"right"
-//     }
-//
-// NODE_POS: Node offset in the document (0 = first node)
-// CHAR_POS: Character offset within a textnode (0 = first char)
-//
-// Example
-// --------
-//
-// Consider a document `doc` consisting of 3 paragraphs.
-//
-//           0 1 2 3 4 5 6
-//     -------------------
-//     P0  | a b c d e f g
-//     -------------------
-//     P1: | h i j k l m n
-//     -------------------
-//     P2: | o p q r s t u
-//
-//
-// Create a selection operating on that document.
-//     var sel = new Substance.Document.Selection(doc);
-//
-//     sel.set({
-//       start: [0, 4],
-//       end: [1, 2],
-//       direction: "right"
-//     });
-//
-// This call results in the following selection:
-//
-//           0 1 2 3 4 5 6
-//     -------------------
-//     P0  | a b c d > > >
-//     -------------------
-//     P1: | > > > k l m n
-//     -------------------
-//     P2: | o p q r s t u
-//
-
-var Selection = function(document, selection) {
-  this.document = document;
-  // if (selection) {
-  this.set(selection);
-  // }
-};
-
-
-Selection.Prototype = function() {
-
-  function compare(a, b) {
-    if (a[0]>b[0]) {
-      return 1;
-    } else if (a[0]<b[0]) {
-      return -1;
-    } else {
-      if (a[1]>b[1]) {
-        return 1;
-      } else if (a[1]<b[1]) {
-        return -1;
-      } else {
-        return 0;
-      }
-    }
-  }
-
-  // Return left if start > end
-  // Returns null if start === end
-  // Returns right if start < end
-  // Ensures start <= end afterwards
-
-  // Transformations which are equivalent
-  // but we want to ensure start < end
-
-  // ____2>>1___   -> ____1<<2___
-  // ____2<<1___   -> ____1>>2___
-
-  function normalize(sel) {
-    var res = util.deepclone(sel);
-    var signum = compare(sel.start, sel.end);
-
-    // Right-bound
-    if (signum === -1) {
-      // ooo>>oo
-      // ooo<<oo
-      // default case do nothing
-      if (!sel.direction) res.direction = 'right';
-
-    } else if (signum === 1) {
-      // ooo>>oo (start>end)
-      // ooo<<oo (start>end)
-        res.start = sel.end;
-        res.end = sel.start;
-
-        if (!sel.direction) {
-          res.direction = 'left';
-        } else {
-          res.direction = sel.direction === 'left' ? 'right' : 'left';
-        }
-    } else {
-      // Collapsed
-      res.direction = null;
-    }
-    return res;
-  }
-
-  // Get node from position in contnet view
-  // --------
-  //
-
-  this.__node = function(pos) {
-    return this.document.getNodeFromPosition('content', pos);
-  };
-
-
-  // Set selection
-  // --------
-  //
-  // Direction defaults to right
-
-  this.set = function(sel) {
-    this.start = null;
-    this.end = null;
-    this.direction = null;
-    this.cursor = null;
-
-    sel = util.deepclone(sel);
-    // if (!sel) return this;
-    if (sel) {
-      var dir = sel.direction || 'right';
-      if (_.isArray(sel)) {
-        this.start = [sel[0], sel[1]];
-        this.end = [sel[2], sel[3]];
-        this.direction = this.isCollapsed() ? null : dir;
-      } else {
-        // TODO: Make smarter
-        // should also check for out of range errors
-        if (sel && sel.start && sel.start.length === 2 && sel.start[0]>=0 && sel.start[1]>=0) {
-          this.start = sel.start;
-        }
-        if (sel && sel.end && sel.end.length === 2 && sel.end[0]>=0 && sel.end[1]>=0) {
-          this.end = sel.end;
-        }
-        this.direction = this.isNull() || this.isCollapsed() ? null : dir;
-      }
-      
-      // Init cursor if selection is valid
-      if (!this.isNull()) {
-        var pos;
-        if (this.direction === "left") {
-          pos = this.start;
-        } else {
-          pos = this.end;
-        }
-
-        this.cursor = new Cursor(this.document, pos[0], pos[1]);
-      }
-    }
-
-    this.trigger('selection:changed', this.toJSON());
-    return this;
-  };
-
-  // Always returns the cursor position
-  // even for a multi-char selection
-  // and takes into consideration the selection direction
-  // --------
-  //
-
-  // this.getCursor = function() {
-  //   if (this.isNull()) return null;
-  //   var pos;
-  //   if (this.direction === "left") {
-  //     pos = start;
-  //   } else {
-  //     pos = end;
-  //   };
-  //   return new Cursor(this.document, pos[0], pos[1])
-  // };
-
-  // Set cursor to position
-  // --------
-  //
-  // Convenience for placing the single cusor where start=end
-
-  this.setCursor = function(pos) {
-    if (pos instanceof Cursor) {
-      pos = [pos.nodePos, pos.charPos];
-    }
-    this.set({
-      start: pos,
-      end: pos
-    });
-    return this;
-  };
-
-  // Fully selects a the node with the given id
-  // --------
-  //
-
-  this.selectNode = function(nodeId) {
-    var node = this.document.get(nodeId);
-    var nodePos = this.document.getPosition('content', nodeId);
-    this.set({
-      start: [nodePos, 0],
-      end: [nodePos, node.content.length]
-    });
-  };
-
-  // Get predecessor node of a given node pos
-  // --------
-  //
-
-  this.getPredecessor = function(nodePos) {
-    nodePos = nodePos || this.start[0];
-    if (nodePos === 0) return null;
-    return this.__node(nodePos-1);
-  };
-
-  // Get successor node of a given node pos
-  // --------
-  //
-
-  this.getSuccessor = function(nodePos) {
-    nodePos = nodePos || this.end[0];
-    return this.__node(nodePos+1);
-  };
-
-  // Check if the given position has a successor
-  // --------
-  //
-
-  this.hasPredecessor = function(nodePos) {
-    return nodePos > 0;
-  };
-
-  // Check if the given node has a successor
-  // --------
-  //
-
-  this.hasSuccessor = function(nodePos) {
-    var view = this.document.get('content').nodes;
-    return nodePos < view.length-1;
-  };
-
-  // move selection to position
-  // --------
-  //
-  // Convenience for placing the single cusor where start=end
-
-  this.move = function(direction, granularity) {
-    direction = direction || 'right';
-    granularity = granularity || 'char';
-
-    if (!this.isCollapsed() && granularity === "char") {
-      // TODO: Does not yet consider granularity word
-      if (direction === 'left') {
-        this.setCursor(this.start);
-      } else {
-        this.setCursor(this.end);
-      }
-    } else {
-      // Collapsed: a b c|d e f g
-      this.cursor.move(direction, granularity);
-      this.setCursor(this.cursor);
-      // After (direction=left):  a b|c d e f g
-      // After (direction=right): a b c d|e f g
-    }
-  };
-
-
-  // Expand current selection
-  // ---------
-  //
-  // Selections keep the direction as a state
-  // They can either be right-bound or left-bound
-  //
-
-  this.expand = function(direction, granularity) {
-    direction = direction || 'right';
-    granularity = granularity || 'char';
-
-    // Create a copy to ensure consistency during transformation
-    var newSel = this.toJSON();
-
-    // New cursor pos
-    this.cursor.move(direction, granularity);
-
-    if (this.direction === 'right') {
-      newSel.end = [this.cursor.nodePos, this.cursor.charPos];
-    }
-    else if (this.direction === 'left') {
-      newSel.start = [this.cursor.nodePos, this.cursor.charPos];
-    } else {
-      // Collapsed: a|b c d e f g
-      newSel.end = [this.cursor.nodePos, this.cursor.charPos];
-      // After: < b c d e f g
-      // After: a > c d e f g
-    }
-
-    // Update selection
-    this.set(normalize(newSel));
-  };
-
-
-  // JSON serialization
-  // --------
-  //
-
-  this.toJSON = function() {
-    return {
-      "start": _.clone(this.start),
-      "end": _.clone(this.end),
-      "direction": this.direction
-    };
-  };
-
-  // For a given document return the selected nodes
-  // --------
-  // 
-  // TODO: is now covered by this.ranges
-
-  this.getNodes = function() {
-    var view = this.document.get('content').nodes;
-    if (this.isNull()) return [];
-
-    return _.map(view.slice(this.start[0], this.end[0]+1), function(n) {
-      return this.document.get(n);
-    }, this);
-  };
-
-  // Derives Range objects for the selection
-  // --------
-  // 
-
-  this.getRanges = function() {
-    // var nodes = this.getNodes();
-    var ranges = [];
-
-    for (var i = this.startNode(); i <= this.endNode(); i++) {
-      var startChar = 0;
-      var endChar = null;
-
-      // in the first node search only in the trailing part
-      if (i === this.startNode()) {
-        startChar = this.start[1];
-      }
-
-      // in the last node search only in the leading part
-      if (i === this.endNode()) {
-        endChar = this.end[1];
-      }
-
-      if (!_.isNumber(endChar)) {
-        var node = this.__node(i);
-        endChar = node.content.length;
-      }
-      ranges.push(new Range(this, i, startChar, endChar));
-    }
-    return ranges;
-  };
-
-  // Returns start node offset
-  // --------
-  //
-
-  this.startNode = function() {
-    return this.start[0];
-  };
-
-  // Returns end node offset
-  // --------
-  //
-
-  this.endNode = function() {
-    return this.end[0];
-  };
-
-
-  // Returns start node offset
-  // --------
-  //
-
-  this.startChar = function() {
-    return this.start[1];
-  };
-
-  // Returns end node offset
-  // --------
-  //
-
-  this.endChar = function() {
-    return this.end[1];
-  };
-
-
-  // No selection
-  // --------
-  //
-  // Returns true if there's just a single cursor not a selection spanning
-  // over 1+ characters
-
-  this.isNull = function() {
-    return !this.start || !this.end;
-  };
-
-
-  // Collapsed
-  // --------
-  //
-  // Returns true if there's just a single cursor not a selection spanning
-  // over 1+ characters
-
-  this.isCollapsed = function() {
-    return this.start[0] === this.end[0] && this.start[1] === this.end[1];
-  };
-
-
-  // Multinode
-  // --------
-  //
-  // Returns true if the selection refers to multiple nodes
-
-  this.hasMultipleNodes = function() {
-    return this.startNode() !== this.endNode();
-  };
-
-
-  // For a given document return the selected text
-  // --------
-
-  this.getText = function() {
-    var text = "";
-
-    if (this.isNull()) return text;
-
-    // start node
-    var nodes = this.getNodes();
-
-    if (nodes.length === 1) {
-      return nodes[0].content.slice(this.start[1], this.end[1]);
-    }
-
-    _.each(nodes, function(n, index) {
-      if (n.content) {
-        if (index === 0) {
-          text += nodes[0].content.slice(this.start[1]);
-        } else if (index === nodes.length-1) {
-          text += nodes[index].content.slice(0, this.end[1]);
-        } else {
-          text += n.content;
-        }
-      }
-    }, this);
-    return text;
-  };
-};
-
-Selection.Prototype.prototype = util.Events;
-Selection.prototype = new Selection.Prototype();
-
 Selection.Range = Range;
-Selection.Cursor = Cursor;
+
 
 // Export
 // ========
