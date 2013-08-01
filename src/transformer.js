@@ -60,14 +60,12 @@ Transformer.Prototype = function() {
   // --------
   //
 
-  this.morphNode = function(doc, nodePos, node, type, data) {
-    console.log('morphing into ' + sel, type);
-
-    console.log('old node', node);
-    console.log('nodePOs', nodePos);
-
-    this.deleteNode(node.id);
+  this.morphNode = function(doc, sel, type, data) {
+    var cursor = sel.cursor;
+    var nodePos = cursor.nodePos;
     this.insertNode(doc, sel, type, data);
+    this.deleteNode(doc, cursor.node.id);
+    sel.setCursor([nodePos, 0]);
   };
 
   // this.transformer.morphNode(doc, node, type);
@@ -76,19 +74,17 @@ Transformer.Prototype = function() {
   // --------
   //
 
-  this.insertNode = function(doc, range, type, data) {
-    // var node = sel.getNodes()[0];
-    var nodePos = pos[0];
-    var charPos = pos[1];
+  this.insertNode = function(doc, sel, type, data) {
+    var cursor = sel.cursor;
     
     // Split and use
-    if (this.split(doc, node, charPos)) {
+    if (this.split(doc, cursor.node, cursor.charPos)) {
       // Lookup some config for dealing with edge cases
-      var NodeType = Transformer.nodeTypes[node.type];
+      var NodeType = Transformer.nodeTypes[cursor.node.type];
       var splittedType = NodeType.properties.splitInto;
 
       if (!type || type === splittedType) {
-        sel.setCursor([nodePos+1, 0]);
+        sel.setCursor([sel.nodePos+1, 0]);
         return;
       }
     }
@@ -96,19 +92,22 @@ Transformer.Prototype = function() {
     // Default to new paragraph node
     type = type || 'paragraph';
 
-    var content = "";
-    if (type === "image") content = " ";
+    // var content = "";
+    // if (type === "image") content = " ";
 
-    // or insert and abuse
+    // Move to particular nodetype
+    // Something like that: doc.nodeTypes[type].create();
+
     var newNode = {
       id: type+"_"+util.uuid(),
       type: type,
-      content: content
+      content: ""
     };
 
     _.extend(newNode, data);
-    newNode = this.createNode(doc, newNode, nodePos+1);
-    sel.setCursor([nodePos+1, 0]);
+    newNode = this.createNode(doc, newNode, cursor.nodePos+1);
+
+    sel.setCursor([cursor.nodePos+1, 0]);
   };
 
   // Copy 
