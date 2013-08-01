@@ -210,6 +210,7 @@ var SEED = function(options) {
 
 var Document = function(options) {
   options.seed = options.seed || SEED(options);
+  // Schema needs to be derived from the nodes plugged in
   Data.Graph.call(this, options.schema || SCHEMA, options);
 };
 

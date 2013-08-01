@@ -189,7 +189,8 @@ Writer.Prototype = function() {
     var node = sel.getRanges()[0].node;
 
     if (node.type === "node") {
-      this.transformer.morphNode(doc, sel, node, type);
+      console.log('meh', node);
+      // this.transformer.morphNode(doc, sel, node, type);
     } else {
       // does a split ()
       this.transformer.insertNode(doc, sel, type, options);  

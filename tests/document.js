@@ -10,6 +10,8 @@ var assert = Test.assert;
 var registerTest = Test.registerTest;
 var Document = require('../index');
 
+var Document = require('../index');
+
 
 // Test
 // ========
@@ -22,6 +24,8 @@ test.setup = function() {
     creator: "michael",
     created_at: new Date()
   });
+
+  // this.doc = new 
 };
 
 test.actions = [
@@ -47,21 +51,21 @@ test.actions = [
     assert.isEqual(0, this.doc.get('h1').level);
   },
 
-  "Create a new text nodes", function() {
+  "Create a new paragraph node", function() {
 
     this.doc.create({
-      "id": "t1",
-      "type": "text",
+      "id": "p1",
+      "type": "paragraph",
       "content": "Text 1"
     });
     this.doc.create({
-      "id": "t2",
-      "type": "text",
+      "id": "p2",
+      "type": "paragraph",
       "content": "Text 2"
     });
 
-    assert.isDefined(this.doc.get('t1'));
-    assert.isDefined(this.doc.get('t2'));
+    assert.isDefined(this.doc.get('tp'));
+    assert.isDefined(this.doc.get('tp'));
   },
 
   "Add nodes to content view", function() {

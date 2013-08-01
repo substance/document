@@ -61,12 +61,13 @@ Transformer.Prototype = function() {
   //
 
   this.morphNode = function(doc, sel, node, type, data) {
-    console.log('morphing into ' + type);
+    console.log('morphing into ' + sel, type);
     var nodePos = sel.startNode();
+    console.log('old node', node);
+    console.log('nodePOs', nodePos);
 
-    this.deleteNode(node.id);
-
-    this.insertNode(doc, sel, type, data);
+    // this.deleteNode(node.id);
+    // this.insertNode(doc, sel, type, data);
   };
 
   // this.transformer.morphNode(doc, node, type);
@@ -82,7 +83,6 @@ Transformer.Prototype = function() {
     
     // Split and use
     if (this.split(doc, node, charPos)) {
-      console.log('I splitted it');
       // Lookup some config for dealing with edge cases
       var NodeType = Transformer.nodeTypes[node.type];
       var splittedType = NodeType.properties.splitInto;
@@ -97,10 +97,7 @@ Transformer.Prototype = function() {
     type = type || 'paragraph';
 
     var content = "";
-
     if (type === "image") content = " ";
-    if (type === "node") content = "PHIC";
-
 
     // or insert and abuse
     var newNode = {
