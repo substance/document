@@ -197,7 +197,7 @@ Transformer.Prototype = function() {
     // var annotations = this.annotator.copy(sel);
     // for (var i = 0; i < annotations.length; i++) {
     //   var annotation = annotations[i];
-    //   annotation.node = idMap[annotation.node];
+    //   annotation.path[0] = idMap[annotation.path[0]];
     //   content.create(annotation);
     // }
 

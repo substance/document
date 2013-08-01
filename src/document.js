@@ -112,10 +112,8 @@ var SCHEMA = {
     // Annotations
     "annotation": {
       "properties": {
-        "node": "content",
-        "property": "string",
+        "path": ["array", "string"], // -> e.g. ["text_1", "content"]
         "range": "object"
-        // path: ["array", "string"] -> could be ["text_1", "content"]
       }
     },
 
@@ -253,7 +251,6 @@ Document.Prototype = function() {
   //
 
   this.getSuccessor = function(view, id) {
-    var view = this.get(view);
     var pos = this.getPosition(view, id);
     // if (pos === view.length - 1) return null;
     return this.getNodeFromPosition(view, pos+1);
@@ -364,13 +361,11 @@ Document.Prototype = function() {
   // `path` defines the referenced content node and property
 
   this.annotate = function(path, annotation) {
-    // TODO: check if source exists, otherwise reject annotation
-    if (path.length !== 2) throw new DocumentError("Invalid target: " + path);
 
-    // TODO: generalize the path stuff
+    console.error("This method is deprecated. This is now done by Substance.Document.Annotator.");
+
     annotation = util.clone(annotation);
-    annotation.node = path[0];
-    annotation.property = path[1];
+    annotation.path = path;
 
     return this.create(annotation);
   };
