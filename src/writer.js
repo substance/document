@@ -178,6 +178,23 @@ Writer.Prototype = function() {
     doc.save();
   };
 
+  // Really?
+  // --------
+  //
+
+  this.insertImage = function(data) {
+    var doc = this.__document.startSimulation();
+    var sel = new Selection(doc, this.selection);
+    var cursor = sel.cursor;
+    if (!sel.isCollapsed()) return;
+
+    this.transformer.morphNode(doc, sel, 'image', data);
+
+    // Commit
+    doc.save();
+    this.selection.set(sel);
+  };
+
   // Split 
   // --------
   //
@@ -205,6 +222,7 @@ Writer.Prototype = function() {
     doc.save();
     this.selection.set(sel);
   };
+
 
   // Based on current selection, insert new node
   // --------

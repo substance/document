@@ -63,9 +63,14 @@ Transformer.Prototype = function() {
   this.morphNode = function(doc, sel, type, data) {
     var cursor = sel.cursor;
     var nodePos = cursor.nodePos;
-    this.insertNode(doc, sel, type, data);
-    this.deleteNode(doc, cursor.node.id);
-    sel.setCursor([nodePos, 0]);
+
+    if (type === "image" && !data) {
+      $('.image-files').click();
+    } else {
+      this.insertNode(doc, sel, type, data);
+      this.deleteNode(doc, cursor.node.id);
+      sel.setCursor([nodePos, 0]);
+    }
   };
 
   // this.transformer.morphNode(doc, node, type);
