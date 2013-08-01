@@ -84,7 +84,7 @@ Writer.Prototype = function() {
     // 
 
     function attemptMerge(direction) {
-      var node = sel.getRanges()[0].node
+      var node = sel.getRanges()[0].node;
       var sourceNode;
       var targetNode;
       var insertionPos;
@@ -223,9 +223,7 @@ Writer.Prototype = function() {
   //
 
   this.annotate = function(type) {
-    var annotation = this.annotator.annotate(this.selection, type);
-    this.annotator.propagateChanges();
-    return annotation;
+    return this.annotator.annotate(this.selection, type);
   };
 
 
@@ -255,19 +253,6 @@ Writer.Prototype = function() {
       end: [nodeIdx, pos+text.length]
     });
 
-    // need to call thas explicitely as the annotator does not dispatch
-    // this automatically to have the changes to the node in place first
-    this.annotator.propagateChanges();
-  };
-
-
-  // Note: as there are events of different types it is quite messy currently.
-  // We should consider defining controller specific events here
-  // and do event mapping properly
-
-  // For Substance.Events on document
-  this.on = function() {
-    this.__document.on.apply(this.__document, arguments);
   };
 
   // Delegate getter
@@ -275,31 +260,43 @@ Writer.Prototype = function() {
     return this.__document.get.apply(this.__document, arguments);
   };
 
-  // For property change events on document.nodes.content.nodes
-  this.onViewChange = function(arrayAdapter) {
-    this.__document.propertyChanges().bind(arrayAdapter, {path: ["content", "nodes"]});
-  };
-
-  // For property change events on document.nodes.*.content (string properties)
-  // TODO: we probably need to be more specific here later
-  // for now the Surface is only interested in changes on content of text-nodes.
-  this.onTextNodeChange = function(handler, context) {
-    this.__document.propertyChanges().bind(handler, {path: ["*", "content"]}, context);
-  };
-
-  this.onPropertyChange = function(handler, context) {
-    this.__document.propertyChanges().bind(handler, {}, context);
-  };
-
-  // a generic unbinder
-  this.unbind = function(name, handler) {
-    if (arguments.length === 1) {
-      handler = name;
-      this.__document.propertyChanges().unbind(handler);
+  // Bind event handlers
+  // --------
+  // Note: we are not providing a generic util.Events interface here
+  // but instead delegate the registration to appropriate sub-components
+  //
+  // - 'selection:changed' (): the selection is changed by the user ()
+  // - 'view:changed' (): a node has been added or removed from the view
+  // - 'textnode:changed' (): the content property of a textnode has been adapted
+  // - 'annotation:changed' (mode, annotation): an annotation has been created, deleted, or updated 
+  this.on = function(message, handler, context) {
+    if (message === "selection:changed") {
+      this.selection.on("selection:changed", handler, context);
+    } else if (message === "view:changed") {
+      this.__document.propertyChanges().bind(handler, {path: ["content", "nodes"]});
+    } else if (message === "textnode:changed") {
+      this.__document.propertyChanges().bind(handler, {path: ["*", "content"]}, context);
+    } else if (message === "annotation:changed") {
+      this.annotator.on("annotation:changed", handler, context);
     } else {
-      this.__document.unbind(name, handler);
+      throw new Error("Unsupported event: " + message);
     }
   };
+
+  this.off = function(message, handler, context) {
+    if (message === "selection:changed") {
+      this.selection.off("selection:changed", handler, context);
+    } else if (message === "view:changed") {
+      this.__document.propertyChanges().unbind(handler);
+    } else if (message === "textnode:changed") {
+      this.__document.propertyChanges().unbind(handler);
+    } else if (message === "annotation:changed") {
+      this.annotator.off("annotation:changed", handler, context);
+    } else {
+      throw new Error("Unsupported event: " + message);
+    }
+  };
+
 };
 
 // Inherit the prototype of Substance.Document which extends util.Events
