@@ -147,8 +147,8 @@ Annotator.Prototype = function() {
     var annotations = _getAnnotations.call(this, [nodeId, "content"]);
 
     if (range) {
-      var sStart = range[0];
-      var sEnd = range[1];
+      var sStart = range.start;
+      var sEnd = range.end;
 
       // Note: this treats all annotations as if they were inclusive (left+right)
       // TODO: maybe we should apply the same rules as for Transformations?
@@ -223,7 +223,7 @@ Annotator.Prototype = function() {
 
     // TODO: it would be great to have some API to retrieve reflection information for an object operation.
 
-    var typeChain, annotations, annotation, i;
+    var typeChain, annotations, annotation;
 
     if (op.type === "delete" || op.type === "create") {
 
@@ -334,30 +334,6 @@ Annotator.Prototype = function() {
     }
   };
 
-  var _getRanges = function(self, sel) {
-    var nodes = new Selection(self.document, sel).getNodes();
-    var ranges = {};
-
-    for (var i = 0; i < nodes.length; i++) {
-      var node = nodes[i];
-      var range = [0,null];
-
-      // in the first node search only in the trailing part
-      if (i === 0) {
-        range[0] = sel.start[1];
-      }
-
-      // in the last node search only in the leading part
-      if (i === nodes.length-1) {
-        range[1] = sel.end[1];
-      }
-
-      ranges[node.id] = range;
-    }
-
-    return ranges;
-  };
-
   // Copy annotations in the given selection.
   // --------
   // This is the pendant to the writer's copy method.
@@ -366,27 +342,29 @@ Annotator.Prototype = function() {
 
   this.copy = function(sel) {
     sel = new Selection(this.document, sel);
-    var ranges = _getRanges(this, sel);
+
+    var ranges = {};
+    _.each(sel.getRanges(), function(r) {
+      ranges[r.node.id] = r;
+    });
 
     // get all affected annotations
     var annotations = this.getAnnotations({selection: sel});
     var result = [];
 
-    for (var i = 0; i < annotations.length; i++) {
-      var annotation = annotations[i];
+    _.each(annotations, function(annotation) {
 
       // TODO: determine if an annotation would be split by the given selection.
       var range = ranges[annotation.path[0]];
-      var isPartial = (range[0] > annotation.range[0] || range[1] < annotation.range[1]);
 
       var newAnnotation;
-      if (isPartial) {
+      if (range.isPartial()) {
         // for the others create a new fragment (depending on type) and truncate the original
         if (this.isSplittable(annotation.type)) {
           newAnnotation = util.clone(annotation);
           // make the range relative to the selection
           newAnnotation.id = util.uuid();
-          newAnnotation.range = [Math.max(0, annotation.range[0] - range[0]), annotation.range[1] - range[0]];
+          newAnnotation.range = [Math.max(0, annotation.range[0] - range.start), annotation.range[1] - range.end];
           result.push(newAnnotation);
         }
       } else {
@@ -394,10 +372,11 @@ Annotator.Prototype = function() {
         // TODO: need more control over uuid generation
         newAnnotation = util.clone(annotation);
         newAnnotation.id = util.uuid();
-        newAnnotation.range = [newAnnotation.range[0] - range[0], newAnnotation.range[1] - range[0]];
+        newAnnotation.range = [newAnnotation.range[0] - range.start, newAnnotation.range[1] - range.end];
         result.push(newAnnotation);
       }
-    }
+
+    }, this);
 
     return result;
   };
@@ -416,7 +395,7 @@ Annotator.Prototype = function() {
     var doc = this.document;
 
     var annotations;
-    var range, node;
+    var range;
 
     if (options.node) {
       annotations = _filterByNodeAndRange.call(this, options.node, options.range);
@@ -425,39 +404,35 @@ Annotator.Prototype = function() {
     else if (options.selection) {
 
       var sel = options.selection;
-      var nodes = sel.getNodes(sel);
+      var ranges = sel.getRanges();
 
-      annotations = [];
+      annotations = {};
 
-      for (var i = 0; i < nodes.length; i++) {
-        node = nodes[i];
-        range = [0,null];
-
-        // in the first node search only in the trailing part
-        if (i === 0) {
-          range[0] = sel.start[1];
-        }
-
-        // in the last node search only in the leading part
-        if (i === nodes.length-1) {
-          range[1] = sel.end[1];
-        }
-
+      for (var i = 0; i < ranges.length; i++) {
         // Note: pushing an array and do flattening afterwards
-        annotations.push(_filterByNodeAndRange.call(this, node.id, range));
+        _.extend(annotations, _filterByNodeAndRange.call(this, ranges[i].node.id, range));
       }
 
-      annotations = Array.prototype.concat.apply([], annotations);
     } else {
 
-      annotations = _.select(doc.nodes, function(node) {
+      annotations = {};
+
+      _.each(doc.nodes, function(node) {
         var baseType = doc.schema.baseType(node.type);
-        return baseType === 'annotation';
+        if(baseType === 'annotation') {
+          annotations[node.id] = node;
+        }
       });
     }
 
     if (options.filter) {
-      annotations = _.select(annotations, options.filter);
+      var filtered = {};
+      _.each(annotations, function(a) {
+        if(options.filter(a)) {
+          filtered[a.id] = a;
+        }
+      });
+      annotations = filtered;
     }
 
     return annotations;
@@ -491,13 +466,12 @@ Annotator.Prototype = function() {
   // - truncate one or more annotations
 
   this.annotate = function(sel, type) {
-    var range = [sel.start[1], sel.end[1]];
+    var range = sel.range();
 
-    if (sel.start[0] !== sel.end[0]) throw new DocumentError('Multi-node annotations are not supported.');
-    var node = sel.getNodes()[0];
+    if (range.start[0] !== range.end[0]) throw new DocumentError('Multi-node annotations are not supported.');
 
-    var filter = {node: node.id, range: range};
-    var annotations = this.getAnnotations(filter);
+    var node = sel.cursor.node;
+    var annotations = this.getAnnotations({node: node.id, range: range});
 
     var i, annotation;
 
@@ -506,24 +480,22 @@ Annotator.Prototype = function() {
       // TODO: discuss
 
       // toggle annotations of same type
-      for (i = 0; i < annotations.length; i++) {
-        annotation = annotations[i];
-        if (annotation.type === type) {
-          _delete(this, annotation);
+      _.each(annotations, function(a) {
+        if (a.type === type) {
+          _delete(this, a);
         }
-      }
+      }, this);
 
     } else {
 
       // truncate all existing annotations of the same type (or group)
       var toggled = false;
-      for (i = 0; i < annotations.length; i++) {
-        annotation = annotations[i];
-        if (this.isExclusive(type, annotation.type)) {
-          _truncate(this, annotation, range);
-          if (type === annotation.type) toggled = true;
+      _.each(annotations, function(a) {
+        if (this.isExclusive(type, a.type)) {
+          _truncate(this, a, range);
+          if (type === a.type) toggled = true;
         }
-      }
+      }, this);
 
       // create a new annotation
       if (!toggled) {

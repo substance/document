@@ -3,7 +3,7 @@ var SRegExp = require("substance-regexp");
 
 // Document.Selection.Cursor
 // ================
-// 
+//
 // Hi, I'm an iterator, just so you know.
 
 var Cursor = function(document, nodePos, charPos) {
@@ -12,6 +12,15 @@ var Cursor = function(document, nodePos, charPos) {
 
   this.nodePos = nodePos;
   this.charPos = charPos;
+
+  if (nodePos !== null && !_.isNumber(nodePos)) {
+    throw new Error("Illegal argument: expected nodePos as number");
+  }
+
+  if (charPos !== null && !_.isNumber(charPos)) {
+    throw new Error("Illegal argument: expected charPos as number");
+  }
+
 };
 
 
@@ -86,7 +95,13 @@ Cursor.Prototype = function() {
     var prevBounds = _.select(wordBounds, function(m) {
       return m.index < this.charPos;
     }, this);
-    this.charPos = _.last(prevBounds).index;
+
+    // happens if there is some leading non word stuff
+    if (prevBounds.length === 0) {
+      this.charPos = 0;
+    } else {
+      this.charPos = _.last(prevBounds).index;
+    }
   };
 
   // Return next occuring word for a given node/character position
@@ -102,14 +117,18 @@ Cursor.Prototype = function() {
     var content = this.node.content;
 
     // Matches all word boundaries in a string
-    var wordBounds = new SRegExp(/\w\b/g).match(content);
-    var nextBound = _.find(wordBounds, function(m) {
-      return m.index > this.charPos;
-    }, this);
+    var wordBounds = new SRegExp(/\w\b/g).match(content.substring(this.charPos));
 
-    this.charPos = nextBound.index + 1;
+    // at the end there might be trailing stuff which is not detected as word boundary
+    if (wordBounds.length === 0) {
+      this.charPos = content.length;
+    }
+    // before, there should be some boundaries
+    else {
+      var nextBound = wordBounds[0];
+      this.charPos += nextBound.index + 1;
+    }
   };
-
 
   // Return next char, for a given node/character position
   // --------
@@ -182,6 +201,14 @@ Cursor.Prototype = function() {
   this.set = function(nodePos, charPos) {
     this.nodePos = nodePos;
     this.charPos = charPos;
+
+    if (nodePos !== null && !_.isNumber(nodePos)) {
+      throw new Error("Illegal argument: expected nodePos as number");
+    }
+
+    if (charPos !== null && !_.isNumber(charPos)) {
+      throw new Error("Illegal argument: expected charPos as number");
+    }
   };
 
   this.position = function() {

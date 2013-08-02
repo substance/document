@@ -80,13 +80,11 @@ Selection.Prototype = function() {
 
   this.set = function(sel) {
     if (sel instanceof Selection) {
-      var cursor = sel.__cursor;
-      this.start = sel.start;
-      this.__cursor.set(cursor.nodePos, cursor.charPos);
+      this.__cursor.set(sel.__cursor.nodePos, sel.__cursor.charPos);
     } else {
-      this.start = sel.start;
       this.__cursor.set(sel.end[0], sel.end[1]);
     }
+    this.start = _.clone(sel.start);
     this.trigger('selection:changed', this.range());
     return this;
   };
@@ -125,7 +123,7 @@ Selection.Prototype = function() {
   // Convenience for placing the single cusor where start=end
 
   this.setCursor = function(pos) {
-    this.__cursor.set(pos);
+    this.__cursor.set(pos[0], pos[1]);
     this.start = pos;
     return this;
   };
@@ -181,32 +179,45 @@ Selection.Prototype = function() {
     return nodePos < view.length-1;
   };
 
+  this.collapse = function(direction) {
+    var range = this.range();
+    var pos = (direction === 'left') ? range.start : range.end;
+
+    if (this.isReverse()) {
+      if (direction === 'left') {
+        this.start = range.start;
+      } else {
+        this.__cursor.set(range.end[0], range.end[1]);
+      }
+    } else {
+      if (direction === 'left') {
+        this.__cursor.set(range.start[0], range.start[1]);
+      } else {
+        this.start = range.end;
+      }
+    }
+  };
+
   // move selection to position
   // --------
   //
   // Convenience for placing the single cusor where start=end
 
   this.move = function(direction, granularity) {
-    var cursor = this.__cursor;
 
     // moving an expanded selection by char collapses the selection
     // and sets the cursor to the boundary of the direction
     if (!this.isCollapsed() && granularity === "char") {
-      if (direction === 'left') {
-        cursor.set(this.start);  
-      } else {
-        this.start = cursor.position();
-      }
+      this.collapse(direction);
     }
     // otherwise the cursor gets moved (together with start)
     else {
-      cursor.move(direction, granularity);
-      this.start = cursor.position();
+      this.__cursor.move(direction, granularity);
+      this.start = this.__cursor.position();
     }
 
     this.trigger('selection:changed', this.range());
   };
-
 
   // Expand current selection
   // ---------

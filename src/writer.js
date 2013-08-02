@@ -56,8 +56,8 @@ Writer.Prototype = function() {
   // --------
   //
 
-  this.getAnnotations = function(filter) {
-    return this.annotator.getAnnotations(filter);
+  this.getAnnotations = function(options) {
+    return this.annotator.getAnnotations(options);
   };
 
   // Delete current selection
@@ -76,7 +76,7 @@ Writer.Prototype = function() {
     function removeChar(direction) {
       sel.expand(direction, 'char');
       that.transformer.deleteSelection(doc, sel);
-      sel.setCursor(sel.start);      
+      sel.collapse("left");
     }
 
     // Attempt merge
@@ -125,7 +125,7 @@ Writer.Prototype = function() {
     }
 
     if (sel.isCollapsed()) {
-      var cursor = sel.getRanges()[0];
+      var cursor = sel.cursor;
       if (cursor.isLeftBound() && direction === "left") {
         attemptMerge('left');
       } else if (cursor.isRightBound() && direction =="right") {

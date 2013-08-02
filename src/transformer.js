@@ -89,7 +89,7 @@ Transformer.Prototype = function() {
       var splittedType = NodeType.properties.splitInto;
 
       if (!type || type === splittedType) {
-        sel.setCursor([sel.nodePos+1, 0]);
+        sel.setCursor([cursor.nodePos+1, 0]);
         return;
       }
     }
