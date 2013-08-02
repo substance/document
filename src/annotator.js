@@ -37,11 +37,9 @@ var Annotator = function(doc) {
   this.expansion = {
     "emphasis": {
       left: Annotator.isOnNodeStart,
-      right: Annotator.isTrue
     },
     "strong": {
       left: Annotator.isOnNodeStart,
-      right: Annotator.isTrue
     }
   };
 
@@ -102,6 +100,29 @@ Annotator.Prototype = function() {
     delete index._annotations[annotation.id];
   };
 
+  var _getRanges = function(self, sel) {
+    var nodes = new Selection(self.document, sel).getNodes();
+    var ranges = {};
+
+    for (var i = 0; i < nodes.length; i++) {
+      var node = nodes[i];
+      var range = [0,null];
+
+      // in the first node search only in the trailing part
+      if (i === 0) {
+        range[0] = sel.startChar();
+      }
+
+      // in the last node search only in the leading part
+      if (i === nodes.length-1) {
+        range[1] = sel.endChar();
+      }
+
+      ranges[node.id] = range;
+    }
+
+    return ranges;
+  };
 
   this.createIndex = function() {
     var schema = this.document.schema;
@@ -147,12 +168,14 @@ Annotator.Prototype = function() {
     var annotations = _getAnnotations.call(this, [nodeId, "content"]);
 
     if (range) {
-      var sStart = range.start;
-      var sEnd = range.end;
+      var sStart = range[0];
+      var sEnd = range[1];
+
+      var filtered = {};
 
       // Note: this treats all annotations as if they were inclusive (left+right)
       // TODO: maybe we should apply the same rules as for Transformations?
-      annotations = _.select(annotations, function(a) {
+      _.each(annotations, function(a) {
         var aStart = a.range[0];
         var aEnd = a.range[1];
 
@@ -163,8 +186,12 @@ Annotator.Prototype = function() {
           overlap &= aStart <= sEnd;
         }
 
-        return overlap;
+        if (overlap) {
+          filtered[a.id] = a;
+        }
       });
+
+      annotations = filtered;
     }
 
     return annotations;
@@ -294,13 +321,11 @@ Annotator.Prototype = function() {
       var expandLeft = false;
       var expandRight = false;
 
-      if (this.expansion[annotation.type]) {
-        expandLeft = this.expansion[annotation.type].left(annotation);
-        expandRight = this.expansion[annotation.type].right(annotation);
+      var expandSpec = this.expansion[annotation.type];
+      if (expandSpec) {
+        if (expandSpec.left) expandLeft =  expandSpec.left(annotation);
+        if (expandSpec.right) expandRight = expandSpec.right(annotation);
       }
-
-      // TODO: how can this be readonly???
-      annotation.range[0] = annotation.range[0];
 
       var changed = Operator.TextOperation.Range.transform(annotation.range, op.diff, expandLeft, expandRight);
       if (changed) {
@@ -343,10 +368,7 @@ Annotator.Prototype = function() {
   this.copy = function(sel) {
     sel = new Selection(this.document, sel);
 
-    var ranges = {};
-    _.each(sel.getRanges(), function(r) {
-      ranges[r.node.id] = r;
-    });
+    var ranges = _getRanges(this, sel);
 
     // get all affected annotations
     var annotations = this.getAnnotations({selection: sel});
@@ -356,15 +378,16 @@ Annotator.Prototype = function() {
 
       // TODO: determine if an annotation would be split by the given selection.
       var range = ranges[annotation.path[0]];
+      var isPartial = (range[0] > annotation.range[0] || range[1] < annotation.range[1]);
 
       var newAnnotation;
-      if (range.isPartial()) {
+      if (isPartial) {
         // for the others create a new fragment (depending on type) and truncate the original
         if (this.isSplittable(annotation.type)) {
           newAnnotation = util.clone(annotation);
           // make the range relative to the selection
           newAnnotation.id = util.uuid();
-          newAnnotation.range = [Math.max(0, annotation.range[0] - range.start), annotation.range[1] - range.end];
+          newAnnotation.range = [Math.max(0, annotation.range[0] - range[0]), annotation.range[1] - range[0]];
           result.push(newAnnotation);
         }
       } else {
@@ -372,7 +395,7 @@ Annotator.Prototype = function() {
         // TODO: need more control over uuid generation
         newAnnotation = util.clone(annotation);
         newAnnotation.id = util.uuid();
-        newAnnotation.range = [newAnnotation.range[0] - range.start, newAnnotation.range[1] - range.end];
+        newAnnotation.range = [newAnnotation.range[0] - range[0], newAnnotation.range[1] - range[0]];
         result.push(newAnnotation);
       }
 
@@ -394,8 +417,7 @@ Annotator.Prototype = function() {
     options = options || {};
     var doc = this.document;
 
-    var annotations;
-    var range;
+    var annotations = {};
 
     if (options.node) {
       annotations = _filterByNodeAndRange.call(this, options.node, options.range);
@@ -406,17 +428,13 @@ Annotator.Prototype = function() {
       var sel = options.selection;
       var ranges = sel.getRanges();
 
-      annotations = {};
-
       for (var i = 0; i < ranges.length; i++) {
         // Note: pushing an array and do flattening afterwards
-        _.extend(annotations, _filterByNodeAndRange.call(this, ranges[i].node.id, range));
+        var range = ranges[i];
+        _.extend(annotations, _filterByNodeAndRange.call(this, range.node.id, [range.start, range.end]));
       }
 
     } else {
-
-      annotations = {};
-
       _.each(doc.nodes, function(node) {
         var baseType = doc.schema.baseType(node.type);
         if(baseType === 'annotation') {
@@ -465,17 +483,16 @@ Annotator.Prototype = function() {
   // - toggle delete one or more annotations
   // - truncate one or more annotations
 
-  this.annotate = function(sel, type) {
-    var range = sel.range();
+  this.annotate = function(selection, type) {
+    var sel = selection.range();
+    var node = selection.cursor.node;
 
-    if (range.start[0] !== range.end[0]) throw new DocumentError('Multi-node annotations are not supported.');
+    if (sel.start[0] !== sel.end[0]) throw new DocumentError('Multi-node annotations are not supported.');
 
-    var node = sel.cursor.node;
+    var range = [sel.start[1], sel.end[1]];
     var annotations = this.getAnnotations({node: node.id, range: range});
 
-    var i, annotation;
-
-    if (sel.isCollapsed()) {
+    if (selection.isCollapsed()) {
       // Note: creating annotations without selection is not supported yet
       // TODO: discuss
 
@@ -503,7 +520,6 @@ Annotator.Prototype = function() {
       }
     }
   };
-
 };
 
 Annotator.Prototype.prototype = util.Events;
