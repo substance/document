@@ -135,8 +135,9 @@ Writer.Prototype = function() {
         removeChar(direction);
       }
     } else {
+      var shouldMerge = sel.hasMultipleNodes();
       deleteSelection(direction);
-      attemptMerge("right", false);
+      if (shouldMerge) attemptMerge("right", false);
     }
 
     // Commit changes
