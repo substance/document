@@ -24,7 +24,7 @@ var Writer = function(document) {
   this.__document = document;
 
   this.annotator = new Annotator(document);
-  
+
   // Document.Transformer
   // Contains higher level operations to transform (change) a document
   this.transformer = new Transformer(document);
@@ -71,7 +71,7 @@ Writer.Prototype = function() {
 
     // Remove character (backspace behavior)
     // --------
-    // 
+    //
 
     function removeChar(direction) {
       sel.expand(direction, 'char');
@@ -81,9 +81,9 @@ Writer.Prototype = function() {
 
     // Attempt merge
     // --------
-    // 
+    //
 
-    function attemptMerge(direction) {
+    function attemptMerge(direction, select) {
       var node = sel.getRanges()[0].node;
       var sourceNode;
       var targetNode;
@@ -102,41 +102,43 @@ Writer.Prototype = function() {
         // insertionPos = node.content.length;
       }
 
-      if (that.transformer.mergeNodes(doc, sourceNode, targetNode)) {
+      var merged = that.transformer.mergeNodes(doc, sourceNode, targetNode);
+
+      if (merged) {
         // Consider this API instead?
         // sel.setCursor([targetNode.id, insertionPos]);
         if (direction === "left") {
-          sel.setCursor([doc.getPosition('content', targetNode.id), insertionPos]);  
+          sel.setCursor([doc.getPosition('content', targetNode.id), insertionPos]);
         }
-      } else {
-        // Attempt to select the previous node
-        // E.g. if cursor is preceded by an image
+      } else if(select) {
         sel.selectNode(targetNode.id);
       }
+
     }
 
     // Regular deletion
     // --------
-    // 
+    //
 
     function deleteSelection(direction) {
-      that.transformer.deleteSelection(doc, sel); 
+      that.transformer.deleteSelection(doc, sel);
       sel.collapse("left");
     }
 
     if (sel.isCollapsed()) {
       var cursor = sel.cursor;
       if (cursor.isLeftBound() && direction === "left") {
-        attemptMerge('left');
+        attemptMerge('left', true);
       } else if (cursor.isRightBound() && direction =="right") {
-        attemptMerge('right');
+        attemptMerge('right', true);
       } else {
         removeChar(direction);
       }
     } else {
       deleteSelection(direction);
+      attemptMerge("right", false);
     }
-    
+
     // Commit changes
     // --------
 
@@ -195,7 +197,7 @@ Writer.Prototype = function() {
     this.selection.set(sel);
   };
 
-  // Split 
+  // Split
   // --------
   //
 
@@ -208,7 +210,7 @@ Writer.Prototype = function() {
     if (cursor.node.type === "constructor") {
       var charPos = cursor.charPos;
       var targetType = cursor.node.content[charPos].type;
-      
+
       console.log('targetType', targetType);
       if (targetType) {
         this.transformer.morphNode(doc, sel, targetType, data);
@@ -292,7 +294,7 @@ Writer.Prototype = function() {
   // - 'selection:changed' (): the selection is changed by the user ()
   // - 'view:changed' (): a node has been added or removed from the view
   // - 'textnode:changed' (): the content property of a textnode has been adapted
-  // - 'annotation:changed' (mode, annotation): an annotation has been created, deleted, or updated 
+  // - 'annotation:changed' (mode, annotation): an annotation has been created, deleted, or updated
   this.on = function(message, handler, context) {
     if (message === "selection:changed") {
       this.selection.on("selection:changed", handler, context);
