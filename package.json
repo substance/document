@@ -20,7 +20,6 @@
     "substance-operator": "git+https://github.com/substance/operator.git#master",
     "substance-chronicle": "git+https://github.com/substance/chronicle.git#master",
     "substance-data": "git+https://github.com/substance/data.git#master",
-    "substance-article": "git+https://github.com/substance/article.git#master",
     "substance-regexp": "git+https://github.com/substance/regexp.git#master"
   },
   "devDependencies": {
