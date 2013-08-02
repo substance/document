@@ -119,9 +119,9 @@ Writer.Prototype = function() {
     // --------
     // 
 
-    function deleteSelection() {
+    function deleteSelection(direction) {
       that.transformer.deleteSelection(doc, sel); 
-      sel.setCursor(sel.start);
+      sel.collapse("left");
     }
 
     if (sel.isCollapsed()) {
