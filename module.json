@@ -1,0 +1,29 @@
+{
+  "name": "substance-document",
+  "description": "A document representation and transformation toolkit.",
+  "url": "http://github.com/substance/document",
+  "keywords": ["document", "substance", "server", "client", "browser", "realtime", "git"],
+  "author": "Michael Aufreiter",
+  "contributors": ["Oliver Buchtala", "Victor Saiz"],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/substance/document.git"
+  },
+  "dependencies": {
+    "underscore": "",
+    "substance-util": "",
+    "substance-operator": "",
+    "substance-chronicle": "",
+    "substance-data": "",
+    "substance-article": "",
+    "substance-regexp": ""
+  },
+  "devDependencies": {
+    "mocha": "",
+    "substance-test": ""
+  },
+  "scripts": {
+    "test": "mocha -R spec tests/run.js"
+  },
+  "version": "0.5.0"
+}
