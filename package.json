@@ -2,31 +2,43 @@
   "name": "substance-document",
   "description": "A document representation and transformation toolkit.",
   "url": "http://github.com/substance/document",
-  "keywords": ["document", "substance", "server", "client", "browser", "realtime", "git"],
+  "keywords": [
+    "document",
+    "substance",
+    "server",
+    "client",
+    "browser",
+    "realtime",
+    "git"
+  ],
   "author": "Michael Aufreiter",
-  "contributors": ["Oliver Buchtala", "Victor Saiz"],
-  "version": "0.5.0-alpha",
-  "engines": {
-    "node": ">=0.8.x"
-  },
+  "contributors": [
+    "Oliver Buchtala",
+    "Victor Saiz"
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/substance/document.git"
   },
   "dependencies": {
-    "underscore": ">=1.5.x",
-    "mocha": "1.12.x",
-    "substance-util": "git+https://github.com/substance/util.git#master",
-    "substance-operator": "git+https://github.com/substance/operator.git#master",
-    "substance-chronicle": "git+https://github.com/substance/chronicle.git#master",
-    "substance-data": "git+https://github.com/substance/data.git#master",
-    "substance-regexp": "git+https://github.com/substance/regexp.git#master"
+    "underscore": "1.5.x",
+    "substance-util": "git+https://github.com/substance/util.git#0.2.1",
+    "substance-operator": "git+https://github.com/substance/operator.git#0.2.1",
+    "substance-chronicle": "git+https://github.com/substance/chronicle.git#0.2.1",
+    "substance-data": "git+https://github.com/substance/data.git#0.8.1",
+    "substance-article": "git+https://github.com/substance/article.git#0.1.1",
+    "substance-regexp": "git+https://github.com/substance/regexp.git#0.1.1"
   },
   "devDependencies": {
-    "substance-test": "git+https://github.com/substance/test.git#master"
+    "mocha": "1.12.x",
+    "substance-test": "git+https://github.com/substance/test.git#0.2.1"
   },
-  "main": "document",
   "scripts": {
     "test": "mocha -R spec tests/run.js"
+  },
+  "version": "0.5.1",
+  "engines": {
+    "node": ">=0.8.x",
+    "npm": ">=1.1.x"
   }
 }
