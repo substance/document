@@ -23,6 +23,8 @@ var Transformer = require('./transformer');
 var Writer = function(document) {
   this.__document = document;
 
+  this.chronicle = document.chronicle;
+
   this.annotator = new Annotator(document);
 
   // Document.Transformer
@@ -285,6 +287,14 @@ Writer.Prototype = function() {
   // Delegate getter
   this.get = function() {
     return this.__document.get.apply(this.__document, arguments);
+  };
+
+  this.undo = function() {
+    this.chronicle.rewind();
+  };
+
+  this.redo = function() {
+    this.chronicle.forward();
   };
 
   // Bind event handlers
