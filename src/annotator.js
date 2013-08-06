@@ -22,7 +22,7 @@ var Annotator = function(doc) {
   this.document = doc;
 
   // register for co-transformations to keep annotations up2date.
-  this.document.propertyChanges().bind(this.handleOperation, null, this);
+  this.document.on("operation:applied", this.handleOperation, this);
 
   // defines groups of annotations that will be mutually exclusive
   this.group = {

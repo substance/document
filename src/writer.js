@@ -297,43 +297,6 @@ Writer.Prototype = function() {
     this.chronicle.forward();
   };
 
-  // Bind event handlers
-  // --------
-  // Note: we are not providing a generic util.Events interface here
-  // but instead delegate the registration to appropriate sub-components
-  //
-  // - 'selection:changed' (): the selection is changed by the user ()
-  // - 'view:changed' (): a node has been added or removed from the view
-  // - 'textnode:changed' (): the content property of a textnode has been adapted
-  // - 'annotation:changed' (mode, annotation): an annotation has been created, deleted, or updated
-  this.on = function(message, handler, context) {
-    if (message === "selection:changed") {
-      this.selection.on("selection:changed", handler, context);
-    } else if (message === "view:changed") {
-      this.__document.propertyChanges().bind(handler, {path: ["content", "nodes"]});
-    } else if (message === "textnode:changed") {
-      this.__document.propertyChanges().bind(handler, {path: ["*", "content"]}, context);
-    } else if (message === "annotation:changed") {
-      this.annotator.on("annotation:changed", handler, context);
-    } else {
-      throw new Error("Unsupported event: " + message);
-    }
-  };
-
-  this.off = function(message, handler, context) {
-    if (message === "selection:changed") {
-      this.selection.off("selection:changed", handler, context);
-    } else if (message === "view:changed") {
-      this.__document.propertyChanges().unbind(handler);
-    } else if (message === "textnode:changed") {
-      this.__document.propertyChanges().unbind(handler);
-    } else if (message === "annotation:changed") {
-      this.annotator.off("annotation:changed", handler, context);
-    } else {
-      throw new Error("Unsupported event: " + message);
-    }
-  };
-
 };
 
 // Inherit the prototype of Substance.Document which extends util.Events
