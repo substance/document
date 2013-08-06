@@ -240,9 +240,16 @@ Document.Prototype = function() {
     };
 
     simulation.save = function() {
+      var _ops = [];
       for (var i = 0; i < ops.length; i++) {
-        self.apply(ops[i]);
+        if (ops[i].type !== "compound") {
+          _ops.push(ops[i]);
+        } else {
+          _ops = _ops.concat(ops[i].ops);
+        }
       }
+      var compound = Operator.ObjectOperation.Compound(_ops);
+      self.apply(compound);
       console.log("Saved simulated ops", self);
     };
 
