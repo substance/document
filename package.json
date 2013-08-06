@@ -26,7 +26,6 @@
     "substance-operator": "git+https://github.com/substance/operator.git#0.2.x",
     "substance-chronicle": "git+https://github.com/substance/chronicle.git#0.2.x",
     "substance-data": "git+https://github.com/michael/data.git#0.8.x",
-    "substance-article": "git+https://github.com/substance/article.git#0.1.x",
     "substance-regexp": "git+https://github.com/substance/regexp.git#0.1.x"
   },
   "devDependencies": {
