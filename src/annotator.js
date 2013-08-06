@@ -283,6 +283,14 @@ Annotator.Prototype = function() {
     else if (op.type === "update" || op.type === "set") {
 
       var node = this.document.get(op.path[0]);
+
+      // FIXME: due to the use of Compunds and the rather late fired property change events
+      // it happens, that there arrive atomic operations with the original node being deleted already
+      // or should we tolerate this?
+      if (node === undefined) {
+        return;
+      }
+
       typeChain = this.document.schema.typeChain(node.type);
 
       if (typeChain.indexOf("annotation") >= 0) {
