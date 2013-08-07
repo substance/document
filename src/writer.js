@@ -20,7 +20,10 @@ var Transformer = require('./transformer');
 //     var editor = new Substance.Document.Writer(doc);
 //     var editor.insert("Hello World");
 
-var Writer = function(document) {
+var Writer = function(document, options) {
+  options = options || {};
+  this.view = options.view || 'content';
+
   this.__document = document;
 
   this.chronicle = document.chronicle;
@@ -42,8 +45,8 @@ Writer.Prototype = function() {
   // --------
 
   this.getNodes = function(idsOnly) {
-    if (idsOnly) return this.__document.get(["content", "nodes"]);
-    else return this.__document.query(["content", "nodes"]);
+    if (idsOnly) return this.__document.get([this.view, "nodes"]);
+    else return this.__document.query([this.view, "nodes"]);
   };
 
   // Given a node id, get position in the document
@@ -51,7 +54,7 @@ Writer.Prototype = function() {
   //
 
   this.getPosition = function(id) {
-    return this.__document.getPosition('content', id);
+    return this.__document.getPosition(this.view, id);
   };
 
   // See Annotator
@@ -110,7 +113,7 @@ Writer.Prototype = function() {
         // Consider this API instead?
         // sel.setCursor([targetNode.id, insertionPos]);
         if (direction === "left") {
-          sel.setCursor([doc.getPosition('content', targetNode.id), insertionPos]);
+          sel.setCursor([doc.getPosition(that.options.view, targetNode.id), insertionPos]);
         }
       } else if(select) {
         sel.selectNode(targetNode.id);
@@ -275,7 +278,7 @@ Writer.Prototype = function() {
     var pos = this.selection.start[1];
 
     // TODO: future. This only works for text nodes....
-    this.__document.update([node.id, "content"], [pos, text]);
+    this.__document.update([node.id, this.view], [pos, text]);
 
     this.selection.set({
       start: [nodeIdx, pos+text.length],
