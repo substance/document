@@ -275,8 +275,8 @@ Annotator.Prototype = function() {
         this.triggerLater("annotation:changed", op.type, annotation);
       }
       // handle deletion of other nodes, i.e., remove associated annotations
-      else {
-        annotations = _getAnnotations.call(this, op.path);
+      else if (op.type === "delete") {
+        annotations = _getAnnotations.call(this, op.path, true);
         _.each(annotations, function(a) {
           _delete(this, a);
         }, this);
