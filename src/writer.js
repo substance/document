@@ -71,7 +71,7 @@ Writer.Prototype = function() {
 
   this.delete = function(direction) {
     var that = this;
-    var doc = this.__document.startSimulation();
+    var doc = this.startSimulation();
     var sel = new Selection(doc, this.selection);
 
     // Remove character (backspace behavior)
@@ -180,7 +180,7 @@ Writer.Prototype = function() {
 
   this.paste = function() {
     if (true) throw new Error('Soon.');
-    var doc = this.__document.startSimulation();
+    var doc = this.startSimulation();
     var sel = new Selection(doc, this.selection);
     this.transformer.paste(doc, this.clipboard.getContent(), sel);
     doc.save();
@@ -191,7 +191,7 @@ Writer.Prototype = function() {
   //
 
   this.insertImage = function(data) {
-    var doc = this.__document.startSimulation();
+    var doc = this.startSimulation();
     var sel = new Selection(doc, this.selection);
     var cursor = sel.cursor;
     if (!sel.isCollapsed()) return;
@@ -208,7 +208,7 @@ Writer.Prototype = function() {
   //
 
   this.modifyNode = function(type, data) {
-    var doc = this.__document.startSimulation();
+    var doc = this.startSimulation();
     var sel = new Selection(doc, this.selection);
     var cursor = sel.cursor;
     if (!sel.isCollapsed()) return;
@@ -237,7 +237,7 @@ Writer.Prototype = function() {
   //
 
   this.insertNode = function(type, data) {
-    var doc = this.__document.startSimulation();
+    var doc = this.startSimulation();
     var sel = new Selection(doc, this.selection);
 
     // Remove selected text and get a cursor
@@ -259,6 +259,12 @@ Writer.Prototype = function() {
   };
 
 
+  this.startSimulation = function() {
+    var doc = this.__document.startSimulation();
+    new Annotator(doc, {withTransformation: true});
+    return doc;
+  };
+
   // Inserts text at the current position
   // --------
   //
@@ -278,13 +284,14 @@ Writer.Prototype = function() {
     var pos = this.selection.start[1];
 
     // TODO: future. This only works for text nodes....
-    this.__document.update([node.id, this.view], [pos, text]);
+    var doc = this.startSimulation();
+    doc.update([node.id, this.view], [pos, text]);
+    doc.save();
 
     this.selection.set({
       start: [nodeIdx, pos+text.length],
       end: [nodeIdx, pos+text.length]
     });
-
   };
 
   // Delegate getter
