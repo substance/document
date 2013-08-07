@@ -17,7 +17,8 @@ var Operator = require("substance-operator");
 // --------
 //
 
-var Annotator = function(doc) {
+var Annotator = function(doc, options) {
+  options = options || {};
 
   this.document = doc;
 
@@ -45,6 +46,8 @@ var Annotator = function(doc) {
 
   this.splittable = ["emphasis", "strong"];
   this._annotationIndex = {};
+
+  this.withTransformation = options.withTransformation;
 
   this.createIndex();
 };
@@ -299,11 +302,14 @@ Annotator.Prototype = function() {
 
         this.triggerLater("annotation:changed", "update", node);
 
-      } else {
-        annotations = _getAnnotations.call(this, op.path);
-        _.each(annotations, function(a) {
-          this.transform(op, a);
-        }, this);
+      } 
+
+      // It turns out that it is not enough to co-transform annotations.
+      // E.g., when text gets deleted and the operation is undone
+      // the annotation could not be reconstructed.
+      // So we have to trigger annotation updates explicitely
+      else if (this.withTransformation) {
+        this.transform(op);
       }
     }
   };
@@ -319,8 +325,14 @@ Annotator.Prototype = function() {
   // The provided operation is an ObjectOperation which has been applied
   // to the document already.
 
-  this.transform = function(op, annotation) {
-    // only apply the transformation on annotations with the same property
+  // TODO: this needs to be rethought.
+  // On the one hand, we need explicit changes to be able to undo e.g. deletions.
+  // OTOH, such co-transforms would then be applied twice... i.e., during simulation
+  // co-transformation but when applying the simulation we would not want to have them anymore.
+  // Also not when redoing changes (as they would be contained in the change).
+
+  var _transform = function(op, annotation) {
+        // only apply the transformation on annotations with the same property
     // Note: currently we only have annotations on the `content` property of nodes
     if (!_.isEqual(annotation.path, op.path)) return;
 
@@ -335,12 +347,13 @@ Annotator.Prototype = function() {
         if (expandSpec.right) expandRight = expandSpec.right(annotation);
       }
 
-      var changed = Operator.TextOperation.Range.transform(annotation.range, op.diff, expandLeft, expandRight);
+      var newRange = util.clone(annotation.range);
+      var changed = Operator.TextOperation.Range.transform(newRange, op.diff, expandLeft, expandRight);
       if (changed) {
-        if (annotation.range[0] === annotation.range[1]) {
+        if (newRange[0] === newRange[1]) {
           _delete(this, annotation);
         } else {
-          this.triggerLater("annotation:changed", "update", annotation);
+          this.document.set([annotation.id, "range"], newRange);            
         }
       }
     }
@@ -348,7 +361,13 @@ Annotator.Prototype = function() {
     else if (op.type === "delete" || op.type === "set") {
       _delete(this, annotation);
     }
+  };
 
+  this.transform = function(op) {
+    var annotations = _getAnnotations.call(this, op.path);
+    _.each(annotations, function(a) {
+      _transform.call(this, op, a);
+    }, this);
   };
 
   this.paste = function(annotations, newNodeId, offset) {
