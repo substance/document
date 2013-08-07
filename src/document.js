@@ -271,17 +271,8 @@ _.extend(Document.prototype, util.Events);
 
 Document.fromSnapshot = function(data, options) {
   options = options || {};
-  // options.seed = [];
-  var doc = new Document(options);
-
-  _.each(data.nodes, function(n) {
-    if (doc.get(n.id)) {
-      doc.delete(n.id); // skip existing nodes
-    }
-    doc.create(n);
-  });
-
-  return doc;
+  options.seed = data;
+  return new Document(options);
 };
 
 Document.DocumentError = DocumentError;
