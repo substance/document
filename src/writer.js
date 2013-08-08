@@ -113,7 +113,7 @@ Writer.Prototype = function() {
         // Consider this API instead?
         // sel.setCursor([targetNode.id, insertionPos]);
         if (direction === "left") {
-          sel.setCursor([doc.getPosition(that.options.view, targetNode.id), insertionPos]);
+          sel.setCursor([doc.getPosition(that.view, targetNode.id), insertionPos]);
         }
       } else if(select) {
         sel.selectNode(targetNode.id);
