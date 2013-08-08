@@ -55,12 +55,42 @@ Document.schema = {
   }
 };
 
-
-
-
 Document.Prototype = function() {
 
   var __super__ = util.prototype(this);
+
+  this.create = function(node) {
+    __super__.create.call(this, node);
+    return this.get(node.id);
+  };
+
+  // Delegates to Graph.get but wraps the result in the particular node constructor
+  // --------
+  //
+
+  this.get = function(path) {
+    var node = __super__.get.call(this, path);
+
+    if (!node) return node;
+
+    // wrap the node into a rich object
+    // and replace the instance stored in the graph
+    var NodeType = this.nodeTypes[node.type];
+    if (NodeType && !(node instanceof NodeType)) {
+      node = new NodeType(node);
+      this.nodes[node.id] = node;
+    }
+
+    return node;
+  };
+
+  // Get node position for a given view and node id
+  // --------
+  //
+
+  this.getPosition = function(view, id) {
+    return this.get(view).nodes.indexOf(id);
+  };
 
   // Get predecessor node for a given view and node id
   // --------
@@ -88,7 +118,7 @@ Document.Prototype = function() {
   //
 
   this.hasSuccessor = function(view, nodePos) {
-    var view = this.get(view).nodes;
+    view = this.get(view).nodes;
     return nodePos < view.length - 1;
   };
 
@@ -108,31 +138,6 @@ Document.Prototype = function() {
     var pos = this.getPosition(view, id);
     // if (pos === view.length - 1) return null;
     return this.getNodeFromPosition(view, pos+1);
-  };
-
-
-  // Get node position for a given view and node id
-  // --------
-  //
-
-  this.getPosition = function(view, id) {
-    return this.get(view).nodes.indexOf(id);
-  };
-
-  this.create = function(node) {
-    __super__.create.call(this, node);
-    return this.get(node.id);
-  };
-
-  // Delegates to Graph.get but wraps the result in the particular node constructor
-  // --------
-  //
-
-  this.get = function(path) {
-    var node = __super__.get.call(this, path);
-    if (!node) return node;
-    var NodeType = this.nodeTypes[node.type];
-    return NodeType ? new NodeType(node) : node;
   };
 
   // Get node object from a given view and position
@@ -262,7 +267,6 @@ Document.prototype = new Document.Prototype();
 
 // Add event support
 _.extend(Document.prototype, util.Events);
-
 
 Document.fromSnapshot = function(data, options) {
   options = options || {};
