@@ -1,5 +1,9 @@
 var _ = require("underscore");
 var SRegExp = require("substance-regexp");
+var util = require("substance-util");
+var errors = util.errors;
+
+var CursorError = errors.define("CursorError");
 
 // Document.Selection.Cursor
 // ================
@@ -14,13 +18,12 @@ var Cursor = function(document, nodePos, charPos) {
   this.charPos = charPos;
 
   if (nodePos !== null && !_.isNumber(nodePos)) {
-    throw new Error("Illegal argument: expected nodePos as number");
+    throw new CursorError("Illegal argument: expected nodePos as number");
   }
 
   if (charPos !== null && !_.isNumber(charPos)) {
-    throw new Error("Illegal argument: expected charPos as number");
+    throw new CursorError("Illegal argument: expected charPos as number");
   }
-
 };
 
 
@@ -91,7 +94,7 @@ Cursor.Prototype = function() {
   //
 
   this.prevWord = function() {
-    if (!this.node) throw new Error('Invalid node position');
+    if (!this.node) throw new CursorError('Invalid node position');
 
     // Cursor is at first position -> move to prev paragraph if there is any
     if (this.isLeftBound()) return this.prevChar();
@@ -117,7 +120,7 @@ Cursor.Prototype = function() {
   //
 
   this.nextWord = function() {
-    if (!this.node) throw new Error('Invalid node position');
+    if (!this.node) throw new CursorError('Invalid node position');
 
     // Cursor is a last position -> move to next paragraph if there is any
     if (this.isRightBound()) return this.nextChar();
@@ -144,7 +147,7 @@ Cursor.Prototype = function() {
   // Useful when navigating over paragraph boundaries
 
   this.nextChar = function() {
-    if (!this.node) throw new Error('Invalid node position');
+    if (!this.node) throw new CursorError('Invalid node position');
 
     // Last char in paragraph
     if (this.isRightBound()) {
@@ -164,8 +167,8 @@ Cursor.Prototype = function() {
   // Useful when navigating over paragraph boundaries
 
   this.prevChar = function() {
-    if (!this.node) throw new Error('Invalid node position');
-    if (this.charPos<0) throw new Error('Invalid char position');
+    if (!this.node) throw new CursorError('Invalid node position');
+    if (this.charPos<0) throw new CursorError('Invalid char position');
 
     if (this.isLeftBound()) {
       if (this.nodePos > 0) {
@@ -211,11 +214,26 @@ Cursor.Prototype = function() {
     this.charPos = charPos;
 
     if (nodePos !== null && !_.isNumber(nodePos)) {
-      throw new Error("Illegal argument: expected nodePos as number");
+      throw new CursorError("Illegal argument: expected nodePos as number");
     }
 
     if (charPos !== null && !_.isNumber(charPos)) {
-      throw new Error("Illegal argument: expected charPos as number");
+      throw new CursorError("Illegal argument: expected charPos as number");
+    }
+
+    if (nodePos !== null) {
+      if(!_.isNumber(nodePos)) {
+        throw new CursorError("Illegal argument: expected nodePos as number");
+      }
+      var nodes = this.document.get(this.view).nodes;
+      var n = nodes.length;
+      if (nodePos < 0 || nodePos >= n) {
+        throw new CursorError("Invalid node position: " + nodePos);
+      }
+      var l = this.document.get(nodes[nodePos])["content"].length;
+      if (charPos < 0 || charPos > l) {
+        throw new CursorError("Invalid char position: " + charPos);
+      }
     }
   };
 
