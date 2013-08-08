@@ -6,7 +6,7 @@ require("./document_test");
 // Selection Tests
 // ---------------
 
-// require("./selection");
+require("./selection_test");
 
 // Writer Tests
 // ---------------
