@@ -3,14 +3,11 @@
 // Import
 // ========
 
-var _ = require("underscore");
 var Test = require('substance-test');
 var assert = Test.assert;
 var registerTest = Test.registerTest;
-var Operator = require('substance-operator');
 var TestDocument = require('./test_document');
 var Document = require("../index");
-var Annotator = Document.Annotator;
 
 // Test
 // ========
@@ -97,9 +94,21 @@ var DocumentTest = function () {
       assert.isNull(this.doc.getNodeFromPosition("content", -1));
     },
 
-    "hide()", function() {
+    "hide(<viewId>, <array-of-ids>)", function() {
       this.doc.hide("content", ["h2", "p3"]);
       assert.isArrayEqual(["h1", "p1", "p2", "p4"], this.doc.get(["content", "nodes"]));
+    },
+
+    "hide(<viewId>, <nodeId>): calling with single node id", function() {
+      this.fixture();
+      this.doc.hide("content", "h2");
+      assert.isArrayEqual(["h1", "p1", "p2", "p3", "p4"], this.doc.get(["content", "nodes"]));
+    },
+
+    "hide() should reject an invalid view id", function() {
+      assert.exception(Document.DocumentError, function() {
+        this.doc.hide("bla", "p1");
+      }, this);
     },
 
     "hide() should do nothing if no ids are given", function() {
@@ -134,12 +143,26 @@ var DocumentTest = function () {
       assert.isArrayEqual(["h1", "p1", "p2"], this.doc.get(["content", "nodes"]));
     },
 
+    "show(<viewId>, <nodeId>): called with single id", function() {
+      this.fixture();
+      this.doc.hide("content", ["h1", "p1", "p2", "h2", "p3", "p4"]);
+
+      this.doc.show("content", "h1", 0);
+      assert.isArrayEqual(["h1"], this.doc.get(["content", "nodes"]));
+    },
+
     "show() nodes at back", function() {
       this.fixture();
       this.doc.hide("content", ["h1", "p1", "p2"]);
 
       this.doc.show("content", ["h1", "p1", "p2"], -1);
       assert.isArrayEqual(["h2", "p3", "p4", "h1", "p1", "p2"], this.doc.get(["content", "nodes"]));
+    },
+
+    "show() should reject an invalid view id", function() {
+      assert.exception(Document.DocumentError, function() {
+        this.doc.show("bla", "blupp", 0);
+      }, this);
     },
 
     "show() does not care about duplicates", function() {
