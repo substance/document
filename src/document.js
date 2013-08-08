@@ -226,91 +226,44 @@ Document.Prototype = function() {
   //
 
   this.startSimulation = function() {
-    // TODO: this should be implemented in a more cleaner and efficient way.
-    // Though, for now and sake of simplicity done by creating a copy
-    var self = this;
 
-    // experimental: if we have a chronicle then we can do our work on a temporary branch
-    if (this.isVersioned) {
+    var parent = this;
 
-      // disconnect the listeners temporarily
-      var listeners = this._events;
-      this._events = [];
+    var doc = _.extend({}, this);
+    doc._events = [];
 
-      // remember the original state
-      var initialState = this.chronicle.getState();
+    // remember the original state
+    var initialState = this.chronicle.getState();
 
-      // create a temporary index
-      var index = this.chronicle.index;
-      this.chronicle.index = new Chronicle.TmpIndex(index);
+    // create a temporary chronicle index
+    doc.chronicle = _.extend({}, this.chronicle);
+    doc.chronicle.index = new Chronicle.TmpIndex(this.chronicle.index);
 
-      // inject a recording apply method
-      var ops = [];
-      var __apply__ = this.apply;
-      this.apply = function(op) {
-        op = __apply__.call(this, op);
-        ops.push(op);
-        return op;
-      };
+    // inject a recording apply method
+    var ops = [];
+    var __apply__ = this.apply;
+    doc.apply = function(op) {
+      op = __apply__.call(this, op);
+      ops.push(op);
+      return op;
+    };
 
-      this.save = function() {
-        var _ops = [];
-        for (var i = 0; i < ops.length; i++) {
-          if (ops[i].type !== "compound") {
-            _ops.push(ops[i]);
-          } else {
-            _ops = _ops.concat(ops[i].ops);
-          }
+    doc.save = function() {
+      var _ops = [];
+      for (var i = 0; i < ops.length; i++) {
+        if (ops[i].type !== "compound") {
+          _ops.push(ops[i]);
+        } else {
+          _ops = _ops.concat(ops[i].ops);
         }
-        var compound = Operator.ObjectOperation.Compound(_ops);
+      }
+      var compound = Operator.ObjectOperation.Compound(_ops);
+      this.chronicle.reset(initialState);
 
-        this.chronicle.reset(initialState);
+      parent.apply(compound);
+    };
 
-        // Restore the initial state
-        this._events = listeners;
-        this.apply = __apply__;
-        this.chronicle.index = index;
-        delete this.save;
-
-        this.apply(compound);
-      };
-
-      return this;
-    }
-
-    // TODO: to discuss. Should Document always be chronicled?
-    else {
-      var simulation = this.fromSnapshot(this.toJSON());
-      var ops = [];
-
-      var __apply__ = simulation.apply;
-
-      simulation.apply = function(op) {
-        op = __apply__.call(simulation, op);
-        ops.push(op);
-        return op;
-      };
-
-      simulation.save = function() {
-        var _ops = [];
-        for (var i = 0; i < ops.length; i++) {
-          if (ops[i].type !== "compound") {
-            _ops.push(ops[i]);
-          } else {
-            _ops = _ops.concat(ops[i].ops);
-          }
-        }
-        var compound = Operator.ObjectOperation.Compound(_ops);
-        self.apply(compound);
-        console.log("Saved simulated ops", self);
-      };
-
-      return simulation;
-    }
-  };
-
-  this.fromSnapshot = function(data, options) {
-    return Document.fromSnapshot(data, options);
+    return doc;
   };
 
 };
