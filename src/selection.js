@@ -2,7 +2,10 @@
 
 var _ = require("underscore");
 var util = require("substance-util");
+var errors = util.errors;
 var Cursor = require("./cursor");
+
+var SelectionError = errors.define("SelectionError");
 
 // Document.Selection
 // ================
@@ -55,10 +58,10 @@ var Cursor = require("./cursor");
 
 var Selection = function(document, selection) {
   this.document = document;
-  
+
   this.start = null;
   this.__cursor = new Cursor(document, null, null);
-  
+
   if (selection) this.set(selection);
 };
 
@@ -76,15 +79,28 @@ Selection.Prototype = function() {
   // Set selection
   // --------
   //
-  // Direction defaults to right
 
   this.set = function(sel) {
-    if (sel instanceof Selection) {
-      this.__cursor.set(sel.__cursor.nodePos, sel.__cursor.charPos);
-    } else {
-      this.__cursor.set(sel.end[0], sel.end[1]);
-    }
+    var cursor = this.__cursor;
     this.start = _.clone(sel.start);
+    var start = this.start;
+
+    if (sel instanceof Selection) {
+      cursor.set(sel.__cursor.nodePos, sel.__cursor.charPos);
+    } else {
+      cursor.set(sel.end[0], sel.end[1]);
+    }
+
+    // being hysterical about the integrity of selections
+    var n = this.document.get("content").nodes.length;
+    if (start[0] < 0 || start[0] >= n) {
+      throw new SelectionError("Invalid node position: " + start[0]);
+    }
+    var l = this.__node(start[0]).content.length;
+    if (start[1] < 0 || start[1] > l) {
+      throw new SelectionError("Invalid char position: " + start[1]);
+    }
+
     this.trigger('selection:changed', this.range());
     return this;
   };
@@ -96,6 +112,8 @@ Selection.Prototype = function() {
   };
 
   this.range = function() {
+    if (this.isNull()) return null;
+
     var pos1 = this.start;
     var pos2 = this.__cursor.position();
 
@@ -128,13 +146,29 @@ Selection.Prototype = function() {
     return this;
   };
 
+  // Get the selection's  cursor
+  // --------
+  //
+
+  this.getCursor = function() {
+    return this.__cursor.copy();
+  };
+
   // Fully selects a the node with the given id
   // --------
   //
 
   this.selectNode = function(nodeId) {
     var node = this.document.get(nodeId);
+    if (!node) {
+      throw new SelectionError("Illegal node id: " + nodeId);
+    }
+
     var nodePos = this.document.getPosition('content', nodeId);
+    if (nodePos < 0) {
+      throw new SelectionError("Node is not visible: " + nodeId);
+    }
+
     this.set({
       start: [nodePos, 0],
       end: [nodePos, node.content.length]
@@ -179,9 +213,19 @@ Selection.Prototype = function() {
     return nodePos < view.length-1;
   };
 
+
+  // Collapses the selection into a given direction
+  // --------
+  //
+
   this.collapse = function(direction) {
+    if (direction !== "right" && direction !== "left") {
+      throw new SelectionError("Invalid direction: " + direction);
+    }
+
+    if (this.isCollapsed() || this.isNull()) return;
+
     var range = this.range();
-    var pos = (direction === 'left') ? range.start : range.end;
 
     if (this.isReverse()) {
       if (direction === 'left') {
@@ -243,8 +287,7 @@ Selection.Prototype = function() {
 
   // For a given document return the selected nodes
   // --------
-  // 
-  // TODO: is now covered by this.ranges
+  //
 
   this.getNodes = function() {
     var view = this.document.get('content').nodes;
@@ -258,10 +301,9 @@ Selection.Prototype = function() {
 
   // Derives Range objects for the selection
   // --------
-  // 
+  //
 
   this.getRanges = function() {
-    // var nodes = this.getNodes();
     var ranges = [];
 
     var sel = this.range();
@@ -351,9 +393,8 @@ Selection.Prototype = function() {
   // Returns true if the selection refers to multiple nodes
 
   this.hasMultipleNodes = function() {
-    return this.startNode() !== this.endNode();
+    return !this.isNull() && (this.startNode() !== this.endNode());
   };
-
 
   // For a given document return the selected text
   // --------
@@ -400,7 +441,7 @@ Object.defineProperties(Selection.prototype, {
 
 // Document.Selection.Range
 // ================
-// 
+//
 // A Document.Selection consists of 1..n Ranges
 // Each range belongs to a node in the document
 // This allows us to ask the range about the selected text
@@ -512,7 +553,7 @@ Range.Prototype = function() {
 Range.prototype = new Range.Prototype();
 
 Selection.Range = Range;
-
+Selection.SelectionError = SelectionError;
 
 // Export
 // ========
