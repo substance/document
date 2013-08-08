@@ -1,4 +1,5 @@
 var _ = require("underscore");
+var Document = require("./document");
 var Annotator = require("./annotator");
 var Selection = require("./selection");
 var util = require("substance-util");
@@ -19,7 +20,7 @@ var Transformer = function() {
 
 Transformer.Prototype = function() {
 
-  // Split 
+  // Split
   // --------
   //
 
@@ -75,13 +76,13 @@ Transformer.Prototype = function() {
 
   // this.transformer.morphNode(doc, node, type);
 
-  // Insert Node 
+  // Insert Node
   // --------
   //
 
   this.insertNode = function(doc, sel, type, data) {
     var cursor = sel.cursor;
-    
+
     // Split and use
     if (this.split(doc, cursor.node, cursor.charPos)) {
       // Lookup some config for dealing with edge cases
@@ -115,178 +116,120 @@ Transformer.Prototype = function() {
     sel.setCursor([cursor.nodePos+1, 0]);
   };
 
-  // Copy 
+  // Copy
   // --------
   //
   // Returns a new document, which contains the contents of a selection
 
   this.copy = function(doc, sel) {
-    // Convenience vars
-    // var sel = this.selection;
-    // var startOffset = sel.start[1];
-    // var endOffset = sel.end[1];
-    // var nodes = sel.getNodes();
 
-    // var content = new Document({id: "clipboard"});
+    var ranges = sel.getRanges();
+    var annotator = new Annotator(doc);
+    var content = new Document({id: "clipboard"});
+    content.schema = doc.schema;
+    content.nodeTypes = doc.nodeTypes;
+    content.nodes["content"] = {
+      id: "content",
+      type: "view",
+      nodes: []
+    };
 
-    // // keep a mapping of ids to be able to map extracted annotations
-    // // to the newly created nodes
-    // var idMap = {};
-    // var nodeId;
+    // !!! TODO !!! : we should do the copying in the node implementations.
+    // For now, only TextNodes will be partially copied. Others will be copied fully
+    // even if the selection does not span the whole node
 
-    // if (nodes.length > 1) {
-    //   // Remove trailing stuff
-    //   _.each(nodes, function(node, index) {
-    //     // only consider textish nodes for now
-    //     if (node.content) {
-    //       if (index === 0) {
-    //         var trailingText = node.content.slice(startOffset);
+    for (var i = 0; i < ranges.length; i++) {
+      var range = ranges[i];
 
-    //         // Add trailing text to clipboard
-    //         nodeId = util.uuid();
-    //         content.create({
-    //           id: nodeId,
-    //           type: "text",
-    //           content: trailingText
-    //         });
-    //         // and the clipboards content view
-    //         content.update(["content", "nodes"], ["+", index, nodeId]);
+      var NodeType = Transformer.nodeTypes[range.node.type];
+      var isSplittable = (!!NodeType.properties.splitInto);
 
-    //         idMap[node.id] = nodeId;
-    //       } else if (index === nodes.length-1) {
-    //         // Last node of selection
-    //         var text = node.content.slice(0, endOffset);
+      var newNode = util.clone(range.node);
+      newNode.id = util.uuid();
 
-    //         // Add selected text from last node to clipboard
-    //         nodeId = util.uuid();
-    //         content.create({
-    //           id: nodeId,
-    //           type: "text",
-    //           content: text
-    //         });
-    //         content.update(["content", "nodes"], ["+", index, nodeId]);
+      if(range.isPartial() && isSplittable) {
+        newNode.content = range.node.content.substring(range.start, range.end);
+      }
 
-    //         idMap[node.id] = nodeId;
-    //       } else {
-    //         nodeId = util.uuid();
-    //         // Insert node in clipboard document
-    //         content.create(_.extend(_.clone(node), {id: nodeId}));
-    //         // ... and view
-    //         content.update(["content", "nodes"], ["+", index, nodeId]);
+      content.create(newNode);
+      content.update(["content", "nodes"], ["+", i, newNode.id]);
 
-    //         idMap[node.id] = nodeId;
-    //       }
-    //     }
-    //   }, this);
-    // } else {
-    //   var node = nodes[0];
-    //   var text = node.content.slice(startOffset, endOffset);
+      var annotations = annotator.copy({
+        start: [range.nodePos, range.start],
+        end: [range.nodePos, range.end]
+      });
 
-    //   nodeId = util.uuid();
-    //   content.create({
-    //     id: nodeId,
-    //     type: "text",
-    //     content: text
-    //   });
-    //   content.update(["content", "nodes"], ["+", 0, nodeId]);
+      for (var id in annotations) {
+        var annotation = annotations[id];
+        annotation.path[0] = newNode.id;
+        content.create(annotation);
+      }
+    }
 
-    //   idMap[node.id] = nodeId;
-    // }
-
-    // // get a copy of annotations within the selection
-    // // and bind them to the newly created nodes using the previously stored id map.
-    // var annotations = this.annotator.copy(sel);
-    // for (var i = 0; i < annotations.length; i++) {
-    //   var annotation = annotations[i];
-    //   annotation.path[0] = idMap[annotation.path[0]];
-    //   content.create(annotation);
-    // }
-
-    // this.clipboard.setContent(content);
+    return content;
   };
 
-  // Paste 
+  // Paste
   // --------
   //
   // Paste `content` at given selection
 
   this.paste = function(doc, content, sel) {
-    // var content = this.clipboard.getContent();
 
-    // // First off, delete the selection
-    // if (!this.selection.isCollapsed()) this.delete();
+    if (!sel.isCollapsed()) {
+      throw new Error("Call delete first.");
+    }
 
-    // if (!content) return;
-    // var doc = this.__document;
+    var range = sel.getRanges()[0];
+    var nodes = content.get("content").nodes;
 
-    // // After delete selection we can be sure
-    // // that the collection is collapsed
-    // var startNode = this.selection.start[0];
-    // var startOffset = this.selection.start[1];
+    // stop if there are no nodes
+    if (nodes.length === 0) return;
 
-    // // This is where the pasting stuff starts
-    // var referenceNode = this.selection.getNodes()[0];
+    // insert in-place if there is only one node and it is mergable
+    if (nodes.length === 1) {
+      var node = content.get(nodes[0]);
 
-    // // Nodes from the clipboard to insert
-    // var nodes = content.query(["content", "nodes"]);
+      if (node.type === range.node.type) {
+        // TODO: let the node insert the content inplace
+        doc.update([range.node.id, "content"], [range.start, node.content]);
+        return;
+      }
+    }
 
-    // var sel = this.selection;
-    // var newSel;
+    var splitted = this.split(doc, range.node, range.start);
 
-    // if (nodes.length > 1) {
-    //   // Remove trailing stuff
-    //   _.each(nodes, function(node, index) {
-    //     // only consider textish nodes for now
-    //     if (node.content) {
-    //       if (index === 0) {
-    //         var trailingText = referenceNode.content.slice(startOffset);
-    //         var r = [startOffset, -trailingText.length, node.content];
+    if (splitted === null) {
+      console.log("Cannot paste into an un-splittable node");
+      return;
+    }
 
-    //         // remove trailing text from first node at the beginning of the selection
-    //         doc.update([referenceNode.id, "content"], r);
+    // create the visible nodes
+    // TODO: should we add invisible nodes, too?
+    var contentAnnotator = new Annotator(content);
 
-    //         // Move the trailing text into a new node
-    //         var nodeId = util.uuid();
-    //         doc.create({
-    //           id: nodeId,
-    //           type: "text",
-    //           content: _.last(nodes).content + trailingText
-    //         });
+    for (var i = 0; i < nodes.length; i++) {
+      var nodeId = nodes[i];
+      doc.create(content.get(nodeId));
+      doc.update(["content", "nodes"], ["+", range.nodePos+1+i, nodeId]);
+      var annotations = contentAnnotator.getAnnotations({node: nodeId});
+      for (var j = 0; j < annotations.length; j++) {
+        doc.create(annotations[j]);
+      }
+    }
 
-    //         // and the clipboards content view
-    //         doc.update(["content", "nodes"], ["+", startNode+index+1, nodeId]);
+    // try to merge the first node
+    var first = doc.get(nodes[0]);
+    if (first.type === range.node.type) {
+      this.mergeNodes(doc, first, range.node);
+    }
 
-    //         var annotations = content.find("annotations", node.id);
-    //         this.annotator.paste(annotations, referenceNode.id, startOffset);
+    // try to merge the last node
+    var last = doc.get(doc.getPredecessor("content", splitted.id));
+    if (last.type === splitted.type) {
+      this.mergeNodes(doc, splitted, last);
+    }
 
-    //       } else if (index === nodes.length-1) {
-    //         // Skip last node of the clipboard document
-    //         // TODO why?
-    //       } else {
-    //         // Create a copy of the 
-    //         doc.create(node);
-    //         doc.update(["content", "nodes"], ["+", startNode+index, node.id]);
-    //         var annotations = content.find("annotations", node.id);
-    //         this.annotator.paste(annotations);
-    //       }
-    //     }
-    //   }, this);
-    // } else {
-    //   // Only one node to insert
-    //   var node = nodes[0];
-    //   doc.update([referenceNode.id, "content"], [startOffset, node.content]);
-
-    //   var annotations = content.find("annotations", node.id);
-    //   this.annotator.paste(annotations, referenceNode.id, startOffset);
-
-    //   // Move selection to the end of the pasted content
-    //   newSel = {
-    //     start: [sel.start[0], sel.start[1]+node.content.length],
-    //     end: [sel.start[0], sel.start[1]+node.content.length]
-    //   };
-    // }
-
-    // if (newSel) sel.set(newSel);
   };
 
   // Merges two text nodes
@@ -298,7 +241,7 @@ Transformer.Prototype = function() {
     if (!source || !target) return false;
 
     var SourceNodeType = Transformer.nodeTypes[source.type];
-    var TargetNodeType = Transformer.nodeTypes[target.type];
+    //var TargetNodeType = Transformer.nodeTypes[target.type];
 
     // Check if source node is mergable with targetnode
     var allowedBuddies = SourceNodeType.properties.mergeableWith;
@@ -325,7 +268,7 @@ Transformer.Prototype = function() {
 
   // Delete content node
   // --------
-  // 
+  //
   // Delete node from document and removes it from the content view
 
   this.deleteNode = function(doc, nodeId) {
@@ -335,7 +278,7 @@ Transformer.Prototype = function() {
 
   // Create node and insert at a given position
   // --------
-  // 
+  //
 
   this.createNode = function(doc, node, pos) {
     var newNode = doc.create(node);
@@ -345,7 +288,7 @@ Transformer.Prototype = function() {
 
   // Deletes a given selection from the document
   // --------
-  // 
+  //
 
   this.deleteSelection = function(doc, sel) {
     _.each(sel.getRanges(), function(range) {
@@ -354,9 +297,9 @@ Transformer.Prototype = function() {
       } else {
         var ContentNodeTransformer = Transformer.nodeTypes[range.node.type].Transformer;
         var t = new ContentNodeTransformer(doc, range.node);
-        t.deleteRange(range);  
+        t.deleteRange(range);
       }
-    }, this);    
+    }, this);
   };
 };
 

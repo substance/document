@@ -160,7 +160,6 @@ Writer.Prototype = function() {
   //
 
   this.copy = function() {
-    if (true) throw new Error('Soon.');
     // Delegate
     var content = this.transformer.copy(this.__document, this.selection);
     this.clipboard.setContent(content);
@@ -182,10 +181,15 @@ Writer.Prototype = function() {
   //
 
   this.paste = function() {
-    if (true) throw new Error('Soon.');
     var doc = this.startSimulation();
+
+    if (!this.selection.isCollapsed()) {
+      _delete.call(this, doc);
+    }
+
     var sel = new Selection(doc, this.selection);
     this.transformer.paste(doc, this.clipboard.getContent(), sel);
+
     doc.save();
   };
 
