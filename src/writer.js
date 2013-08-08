@@ -65,14 +65,11 @@ Writer.Prototype = function() {
     return this.annotator.getAnnotations(options);
   };
 
-  // Delete current selection
-  // --------
-  //
+  var _delete = function(doc, direction) {
 
-  this.delete = function(direction) {
-    var that = this;
-    var doc = this.startSimulation();
     var sel = new Selection(doc, this.selection);
+    var transformer = this.transformer;
+    var view = this.view;
 
     // Remove character (backspace behavior)
     // --------
@@ -80,7 +77,7 @@ Writer.Prototype = function() {
 
     function removeChar(direction) {
       sel.expand(direction, 'char');
-      that.transformer.deleteSelection(doc, sel);
+      transformer.deleteSelection(doc, sel);
       sel.collapse("left");
     }
 
@@ -103,30 +100,27 @@ Writer.Prototype = function() {
         sourceNode = sel.getSuccessor();
         if (!sourceNode) return;
         targetNode = node;
-        // Cusor stays at current position
-        // insertionPos = node.content.length;
       }
 
-      var merged = that.transformer.mergeNodes(doc, sourceNode, targetNode);
+      var merged = transformer.mergeNodes(doc, sourceNode, targetNode);
 
       if (merged) {
         // Consider this API instead?
         // sel.setCursor([targetNode.id, insertionPos]);
         if (direction === "left") {
-          sel.setCursor([doc.getPosition(that.view, targetNode.id), insertionPos]);
+          sel.setCursor([doc.getPosition(view, targetNode.id), insertionPos]);
         }
       } else if(select) {
         sel.selectNode(targetNode.id);
       }
-
     }
 
     // Regular deletion
     // --------
     //
 
-    function deleteSelection(direction) {
-      that.transformer.deleteSelection(doc, sel);
+    function deleteSelection() {
+      transformer.deleteSelection(doc, sel);
       sel.collapse("left");
     }
 
@@ -145,11 +139,20 @@ Writer.Prototype = function() {
       if (shouldMerge) attemptMerge("right", false);
     }
 
-    // Commit changes
-    // --------
-
-    doc.save();
     this.selection.set(sel);
+  };
+
+  // Delete current selection
+  // --------
+  //
+
+  this.delete = function(direction) {
+    var doc = this.startSimulation();
+
+    _delete.call(this, doc, direction);
+
+    // commit changes
+    doc.save();
   };
 
   // Copy current selection
@@ -190,28 +193,33 @@ Writer.Prototype = function() {
   // --------
   //
 
-  this.insertImage = function(data) {
-    var doc = this.startSimulation();
-    var sel = new Selection(doc, this.selection);
-    var cursor = sel.cursor;
-    if (!sel.isCollapsed()) return;
+  // this.insertImage = function(data) {
+  //   var doc = this.startSimulation();
+  //   var sel = new Selection(doc, this.selection);
 
-    this.transformer.morphNode(doc, sel, 'image', data);
+  //   if (!sel.isCollapsed()) return;
 
-    // Commit
-    doc.save();
-    this.selection.set(sel);
-  };
+  //   this.transformer.morphNode(doc, sel, 'image', data);
+
+  //   // Commit
+  //   doc.save();
+  //   this.selection.set(sel);
+  // };
 
   // Split
   // --------
   //
 
   this.modifyNode = function(type, data) {
+
     var doc = this.startSimulation();
+
+    if (!this.selection.isCollapsed()) {
+      _delete.call(this, doc);
+    }
+
     var sel = new Selection(doc, this.selection);
     var cursor = sel.cursor;
-    if (!sel.isCollapsed()) return;
 
     if (cursor.node.type === "constructor") {
       var charPos = cursor.charPos;
