@@ -31,8 +31,16 @@ Cursor.Prototype = function() {
   };
 
   this.isValid = function() {
-    // TODO: check if the positions are valid document positions
-    return (this.nodePos !== null && this.charPos !== null);
+    if (this.nodePos === null || this.charPos === null) return false;
+    if (this.nodePos < 0 || this.charPos < 0) return false;
+
+    var nodes = this.document.get(this.view).nodes;
+    var node = this.document.get(nodes[this.nodePos]);
+
+    if (node === undefined) return false;
+    if (this.charPos >= node.content.length) return false;
+
+    return true;
   };
 
   this.isRightBound = function() {
