@@ -162,15 +162,18 @@ Document.Prototype = function() {
   this.hide = function(viewId, nodes) {
     var view = this.get(viewId).nodes;
 
-    var indices = [];
+    var indexes = [];
     _.each(nodes, function(n) {
       var i = view.indexOf(n);
-      if (i>=0) indices.push(i);
+      if (i>=0) indexes.push(i);
     }, this);
 
-    indices = indices.sort().reverse();
+    if (indexes.length === 0) return;
 
-    var ops = _.map(indices, function(index) {
+    indexes = indexes.sort().reverse();
+    indexes = _.uniq(indexes);
+
+    var ops = _.map(indexes, function(index) {
       return Operator.ArrayOperation.Delete(index, view[index]);
     });
 
@@ -179,47 +182,33 @@ Document.Prototype = function() {
     return this.apply(op);
   };
 
-
-  // Position nodes in document
+  // Adds nodes to a view
   // --------
   //
 
-  this.position = function(viewId, nodes, target) {
+  this.show = function(viewId, nodes, target) {
+
     var view = this.get(viewId).nodes;
-    var ops = [];
-    var idx;
-
-    // Create a sequence of atomic array operations that
-    // are bundled into a Compound operation
-    // 1. Remove elements (from right to left)
-    // 2. Insert at the very position
-
-    // the sequence contains selected nodes in the order they
-    // occurr in the view
-    var seq = _.intersection(view, nodes);
     var l = view.length;
-
-    while(seq.length > 0) {
-      var id = seq.pop();
-      idx = view.indexOf(id);
-      if (idx >= 0) {
-        ops.push(Operator.ArrayOperation.Delete(idx, id));
-        l--;
-      }
-    }
 
     // target index can be given as negative number (as known from python/ruby)
     target = Math.min(target, l);
     if (target<0) target = Math.max(0, l+target+1);
 
-    for (idx = 0; idx < nodes.length; idx++) {
-      ops.push(Operator.ArrayOperation.Insert(target + idx, nodes[idx]));
+    var ops = [];
+    for (var idx = 0; idx < nodes.length; idx++) {
+      var nodeId = nodes[idx];
+      if (this.nodes[nodeId] === undefined) {
+        throw new DocumentError("Invalid node id: " + nodeId);
+      }
+      ops.push(Operator.ArrayOperation.Insert(target + idx, nodeId));
     }
 
-    var update = Operator.ObjectOperation.Update([viewId, "nodes"], Operator.ArrayOperation.Compound(ops));
-    return this.apply(update);
+    if (ops.length > 0) {
+      var update = Operator.ObjectOperation.Update([viewId, "nodes"], Operator.ArrayOperation.Compound(ops));
+      return this.apply(update);
+    }
   };
-
 
   // Start simulation, which conforms to a transaction (think databases)
   // --------
