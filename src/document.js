@@ -165,11 +165,19 @@ Document.Prototype = function() {
   //
 
   this.hide = function(viewId, nodes) {
-    var view = this.get(viewId).nodes;
+    var view = this.get(viewId);
+
+    if (!view) {
+      throw new DocumentError("Invalid view id: "+ viewId);
+    }
+
+    if (_.isString(nodes)) {
+      nodes = [nodes];
+    }
 
     var indexes = [];
     _.each(nodes, function(n) {
-      var i = view.indexOf(n);
+      var i = view.nodes.indexOf(n);
       if (i>=0) indexes.push(i);
     }, this);
 
@@ -179,7 +187,7 @@ Document.Prototype = function() {
     indexes = _.uniq(indexes);
 
     var ops = _.map(indexes, function(index) {
-      return Operator.ArrayOperation.Delete(index, view[index]);
+      return Operator.ArrayOperation.Delete(index, view.nodes[index]);
     });
 
     var op = Operator.ObjectOperation.Update([viewId, "nodes"], Operator.ArrayOperation.Compound(ops));
@@ -192,9 +200,20 @@ Document.Prototype = function() {
   //
 
   this.show = function(viewId, nodes, target) {
+    if (arguments.length !== 3) {
+      throw new DocumentError("Invalid arguments: expecting (viewId, nodes, target)");
+    }
 
-    var view = this.get(viewId).nodes;
-    var l = view.length;
+    var view = this.get(viewId);
+    if (!view) {
+      throw new DocumentError("Invalid view id: " + viewId);
+    }
+
+    if (_.isString(nodes)) {
+      nodes = [nodes];
+    }
+
+    var l = view.nodes.length;
 
     // target index can be given as negative number (as known from python/ruby)
     target = Math.min(target, l);
