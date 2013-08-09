@@ -166,9 +166,8 @@ Annotator.Prototype = function() {
   };
 
   // TODO: extract range overlap checking logic into a dedicated Range class
-  var _filterByNodeAndRange = function(nodeId, range) {
-    // HACK: using "content" - we should somehow generalize this...
-    var annotations = _getAnnotations.call(this, [nodeId, "content"]);
+  var _filterByNodeAndRange = function(view, nodeId, range) {
+    var annotations = _getAnnotations.call(this, [nodeId, view]);
 
     if (range) {
       var sStart = range[0];
@@ -442,23 +441,24 @@ Annotator.Prototype = function() {
 
   this.getAnnotations = function(options) {
     options = options || {};
+    if (!options.view) options.view = "content";
+
     var doc = this.document;
 
     var annotations = {};
 
     if (options.node) {
-      annotations = _filterByNodeAndRange.call(this, options.node, options.range);
+      annotations = _filterByNodeAndRange.call(this, options.view, options.node, options.range);
     }
 
     else if (options.selection) {
-
       var sel = options.selection;
       var ranges = sel.getRanges();
 
       for (var i = 0; i < ranges.length; i++) {
         // Note: pushing an array and do flattening afterwards
         var range = ranges[i];
-        _.extend(annotations, _filterByNodeAndRange.call(this, range.node.id, [range.start, range.end]));
+        _.extend(annotations, _filterByNodeAndRange.call(this, options.view, range.node.id, [range.start, range.end]));
       }
 
     } else {
