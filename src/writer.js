@@ -57,6 +57,10 @@ Writer.Prototype = function() {
     return this.__document.getPosition(this.view, id);
   };
 
+  this.getNodeFromPosition = function(nodePos) {
+    return this.__document.getNodeFromPosition(this.view, nodePos);
+  };
+
   // See Annotator
   // --------
   //

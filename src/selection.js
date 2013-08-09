@@ -76,6 +76,13 @@ Selection.Prototype = function() {
   };
 
 
+  this.copy = function() {
+    var copy = new Selection(this.document);
+    if (!this.isNull()) copy.set(this);
+    return copy;
+  };
+
+
   // Set selection
   // --------
   //
@@ -152,6 +159,10 @@ Selection.Prototype = function() {
 
   this.getCursor = function() {
     return this.__cursor.copy();
+  };
+
+  this.getCursorPosition = function() {
+    return [this.__cursor.nodePos, this.__cursor.charPos];
   };
 
   // Fully selects a the node with the given id
