@@ -66,6 +66,8 @@ Writer.Prototype = function() {
   //
 
   this.getAnnotations = function(options) {
+    options = options || {};
+    options.view = this.view;
     return this.annotator.getAnnotations(options);
   };
 
