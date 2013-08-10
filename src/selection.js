@@ -230,27 +230,38 @@ Selection.Prototype = function() {
   //
 
   this.collapse = function(direction) {
-    if (direction !== "right" && direction !== "left") {
+    if (direction !== "right" && direction !== "left" && direction !== "start" && direction !== "cursor") {
       throw new SelectionError("Invalid direction: " + direction);
     }
 
     if (this.isCollapsed() || this.isNull()) return;
 
-    var range = this.range();
+    if (direction === "start") {
+      this.__cursor.set(this.start[0], this.start[1]);
 
-    if (this.isReverse()) {
-      if (direction === 'left') {
-        this.start = range.start;
-      } else {
-        this.__cursor.set(range.end[0], range.end[1]);
-      }
+    } else if (direction === "cursor") {
+      this.start[0] = this.__cursor.nodePos;
+      this.start[1] = this.__cursor.charPos;
+
     } else {
-      if (direction === 'left') {
-        this.__cursor.set(range.start[0], range.start[1]);
+      var range = this.range();
+
+      if (this.isReverse()) {
+        if (direction === 'left') {
+          this.start = range.start;
+        } else {
+          this.__cursor.set(range.end[0], range.end[1]);
+        }
       } else {
-        this.start = range.end;
+        if (direction === 'left') {
+          this.__cursor.set(range.start[0], range.start[1]);
+        } else {
+          this.start = range.end;
+        }
       }
     }
+
+    this.trigger('selection:changed', this.range());
   };
 
   // move selection to position
