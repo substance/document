@@ -1,5 +1,8 @@
 "use strict";
 
+var _ = require("underscore");
+var util = require("substance-util");
+var Operator = require('substance-operator');
 var Selection = require("./selection");
 var Annotator = require("./annotator");
 var Clipboard = require("./clipboard");
@@ -27,7 +30,6 @@ var Writer = function(document, options) {
   this.__document = document;
 
   this.chronicle = document.chronicle;
-
   this.annotator = new Annotator(document);
 
   // Document.Transformer
@@ -36,8 +38,9 @@ var Writer = function(document, options) {
 
   this.selection = new Selection(this.__document, null);
   this.clipboard = new Clipboard();
-};
 
+  this.listenTo(document, 'operation:applied', this.updateSelection);
+};
 
 Writer.Prototype = function() {
 
@@ -288,9 +291,6 @@ Writer.Prototype = function() {
     var doc = this.startSimulation();
     doc.update([node.id, this.view], [charPos, text]);
     doc.save();
-
-    var pos = [nodePos, charPos+text.length];
-    this.selection.set(pos);
   };
 
   // Delegate getter
@@ -306,10 +306,41 @@ Writer.Prototype = function() {
     this.chronicle.forward();
   };
 
+  this.updateSelection = function(op) {
+
+    if (op.type === "update" || op.type === "set") {
+      var nodePos = -1;
+      var charPos = -1;
+
+      // handle Show/Hide of nodes
+      if (op.path[0] === this.view && op.path[1] === "nodes") {
+        var lastChange = Operator.Helpers.last(op.diff);
+        if (lastChange.isMove()) {
+          nodePos = lastChange.target;
+        } else {
+          nodePos = lastChange.pos;
+        }
+        charPos = 0;
+      }
+
+      // delegate node updates to the Node implementation
+      else {
+        var node = this.__document.get(op.path[0]);
+        nodePos = this.getPosition(node.id);
+        if (node.getUpdatedCharPos !== undefined) {
+          charPos = node.getUpdatedCharPos(op);
+        }
+      }
+
+      if (nodePos >= 0 && charPos >= 0) {
+        this.selection.set([nodePos, charPos]);
+      }
+    }
+  };
 };
 
 // Inherit the prototype of Substance.Document which extends util.Events
-Writer.prototype = new Writer.Prototype();
+Writer.prototype = _.extend(new Writer.Prototype(), util.Events.Listener);
 
 // Property accessors for convenient access of primary properties
 Object.defineProperties(Writer.prototype, {
