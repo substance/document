@@ -87,7 +87,6 @@ Writer.Prototype = function() {
     function removeChar(direction) {
       sel.expand(direction, 'char');
       transformer.deleteSelection(doc, sel);
-      sel.collapse("left");
     }
 
     // Attempt merge
@@ -117,7 +116,7 @@ Writer.Prototype = function() {
         // Consider this API instead?
         // sel.setCursor([targetNode.id, insertionPos]);
         if (direction === "left") {
-          sel.setCursor([doc.getPosition(view, targetNode.id), insertionPos]);
+          sel.set([doc.getPosition(view, targetNode.id), insertionPos]);
         }
       } else if(select) {
         sel.selectNode(targetNode.id);
@@ -148,7 +147,7 @@ Writer.Prototype = function() {
       if (shouldMerge) attemptMerge("right", false);
     }
 
-    this.selection.set(sel);
+    return sel;
   };
 
   // Delete current selection
@@ -158,10 +157,14 @@ Writer.Prototype = function() {
   this.delete = function(direction) {
     var doc = this.startSimulation();
 
-    _delete.call(this, doc, direction);
+    var sel = _delete.call(this, doc, direction);
 
     // commit changes
     doc.save();
+
+    // important to set this at last, as doc.save() will trigger implicit selection
+    // changes
+    this.selection.set(sel);
   };
 
   // Copy current selection
@@ -192,11 +195,14 @@ Writer.Prototype = function() {
   this.paste = function() {
     var doc = this.startSimulation();
 
+    var sel;
+
     if (!this.selection.isCollapsed()) {
-      _delete.call(this, doc);
+      sel = _delete.call(this, doc);
+      this.selection.set(sel);
     }
 
-    var sel = new Selection(doc, this.selection);
+    sel = sel || new Selection(doc, this.selection);
     this.transformer.paste(doc, this.clipboard.getContent(), sel);
 
     doc.save();
