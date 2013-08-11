@@ -199,23 +199,6 @@ Writer.Prototype = function() {
     doc.save();
   };
 
-  // Really?
-  // --------
-  //
-
-  // this.insertImage = function(data) {
-  //   var doc = this.startSimulation();
-  //   var sel = new Selection(doc, this.selection);
-
-  //   if (!sel.isCollapsed()) return;
-
-  //   this.transformer.morphNode(doc, sel, 'image', data);
-
-  //   // Commit
-  //   doc.save();
-  //   this.selection.set(sel);
-  // };
-
   // Split
   // --------
   //
@@ -298,18 +281,16 @@ Writer.Prototype = function() {
     }
 
     var node = this.selection.getNodes()[0];
-    var nodeIdx = this.selection.start[0];
-    var pos = this.selection.start[1];
+    var nodePos = this.selection.start[0];
+    var charPos = this.selection.start[1];
 
     // TODO: future. This only works for text nodes....
     var doc = this.startSimulation();
-    doc.update([node.id, this.view], [pos, text]);
+    doc.update([node.id, this.view], [charPos, text]);
     doc.save();
 
-    this.selection.set({
-      start: [nodeIdx, pos+text.length],
-      end: [nodeIdx, pos+text.length]
-    });
+    var pos = [nodePos, charPos+text.length];
+    this.selection.set(pos);
   };
 
   // Delegate getter
