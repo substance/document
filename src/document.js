@@ -312,6 +312,12 @@ Document.Prototype = function() {
           _ops = _ops.concat(ops[i].ops);
         }
       }
+
+      if (_ops.length === 0) {
+        // nothing has been recorded
+        return;
+      }
+
       var compound = Operator.ObjectOperation.Compound(_ops);
       self.apply(compound);
       console.log("Saved simulated ops", self);
