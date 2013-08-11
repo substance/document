@@ -86,17 +86,24 @@ Selection.Prototype = function() {
   // Set selection
   // --------
   //
+  // sel: an instanceof Selection
+  //      or a document range `{start: [nodePos, charPos], end: [nodePos, charPos]}`
+  //      or a document position `[nodePos, charPos]`
 
   this.set = function(sel) {
     var cursor = this.__cursor;
-    this.start = _.clone(sel.start);
-    var start = this.start;
 
     if (sel instanceof Selection) {
+      this.start = _.clone(sel.start);
       cursor.set(sel.__cursor.nodePos, sel.__cursor.charPos);
+    } else if (_.isArray(sel)) {
+      this.start = _.clone(sel);
+      cursor.set(sel[0], sel[1]);
     } else {
+      this.start = _.clone(sel.start);
       cursor.set(sel.end[0], sel.end[1]);
     }
+    var start = this.start;
 
     // being hysterical about the integrity of selections
     var n = this.document.get("content").nodes.length;
