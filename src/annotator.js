@@ -35,6 +35,7 @@ var Annotator = function(doc, options) {
     "error": "marker"
   };
 
+
   this.expansion = {
     "emphasis": {
       left: Annotator.isOnNodeStart,
@@ -144,13 +145,15 @@ Annotator.Prototype = function() {
   // --------
   //
 
-  var _create = function(self, path, type, range) {
+  var _create = function(self, path, type, range, data) {
     var annotation = {
       "id": util.uuid(),
       "type": type,
       "path": path,
       "range": range
     };
+
+    if (data) _.extend(annotation, data);
     return self.create(annotation);
   };
 
@@ -192,7 +195,6 @@ Annotator.Prototype = function() {
           filtered[a.id] = a;
         }
       });
-
       annotations = filtered;
     }
 
@@ -495,22 +497,26 @@ Annotator.Prototype = function() {
 
   // Tell if an annotation can be split or should be truncated only.
   // --------
+  // 
   // E.g. when cutting a selection or inserting a new node existing annotations
-  // may be affected. In some cases (e.g., `emphasis` or `strong`)it is wanted that a new annotation of the same
-  // type is created for the cut fragment.
-  //
+  // may be affected. In some cases (e.g., `emphasis` or `strong`) it is wanted
+  // that a new annotation of the same type is created for the cut fragment.
+
   this.isSplittable = function(type) {
     return this.splittable.indexOf(type) >= 0;
   };
 
   // Creates an annotation for the current selection of given type
   // --------
+  // 
   // This action may involve more complex co-actions:
   //
   // - toggle delete one or more annotations
   // - truncate one or more annotations
+  // 
+  // TODO: make aware of views (currently "content" is hard-coded)
 
-  this.annotate = function(selection, type) {
+  this.annotate = function(selection, type, data) {
     var sel = selection.range();
     var node = selection.cursor.node;
 
@@ -543,7 +549,7 @@ Annotator.Prototype = function() {
 
       // create a new annotation
       if (!toggled) {
-        return _create(this, [node.id, "content"], type, range);
+        return _create(this, [node.id, "content"], type, range, data);
       }
     }
   };

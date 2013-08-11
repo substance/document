@@ -264,8 +264,8 @@ Writer.Prototype = function() {
   // --------
   //
 
-  this.annotate = function(type) {
-    return this.annotator.annotate(this.selection, type);
+  this.annotate = function(type, data) {
+    return this.annotator.annotate(this.selection, type, data);
   };
 
 
