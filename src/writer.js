@@ -87,7 +87,7 @@ Writer.Prototype = function() {
     function removeChar(direction) {
       sel.expand(direction, 'char');
       transformer.deleteSelection(doc, sel);
-      sel.collapse("cursor");
+      sel.collapse("left");
     }
 
     // Attempt merge
