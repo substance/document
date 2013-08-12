@@ -55,6 +55,7 @@ Document.schema = {
   }
 };
 
+
 Document.Prototype = function() {
 
   var __super__ = util.prototype(this);
@@ -77,7 +78,9 @@ Document.Prototype = function() {
     // and replace the instance stored in the graph
     var NodeType = this.nodeTypes[node.type];
     if (NodeType && !(node instanceof NodeType)) {
-      node = new NodeType(node);
+      node = new NodeType(node, {
+        get: _.bind(this.get, this)
+      });
       this.nodes[node.id] = node;
     }
 
