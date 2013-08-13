@@ -303,7 +303,7 @@ Annotator.Prototype = function() {
 
         this.triggerLater("annotation:changed", "update", node);
 
-      } 
+      }
 
       // It turns out that it is not enough to co-transform annotations.
       // E.g., when text gets deleted and the operation is undone
@@ -354,7 +354,7 @@ Annotator.Prototype = function() {
         if (newRange[0] === newRange[1]) {
           _delete(this, annotation);
         } else {
-          this.document.set([annotation.id, "range"], newRange);            
+          this.document.set([annotation.id, "range"], newRange);
         }
       }
     }
@@ -497,7 +497,7 @@ Annotator.Prototype = function() {
 
   // Tell if an annotation can be split or should be truncated only.
   // --------
-  // 
+  //
   // E.g. when cutting a selection or inserting a new node existing annotations
   // may be affected. In some cases (e.g., `emphasis` or `strong`) it is wanted
   // that a new annotation of the same type is created for the cut fragment.
@@ -508,12 +508,12 @@ Annotator.Prototype = function() {
 
   // Creates an annotation for the current selection of given type
   // --------
-  // 
+  //
   // This action may involve more complex co-actions:
   //
   // - toggle delete one or more annotations
   // - truncate one or more annotations
-  // 
+  //
   // TODO: make aware of views (currently "content" is hard-coded)
 
   this.annotate = function(selection, type, data) {
@@ -566,7 +566,179 @@ Annotator.isTrue = function() {
   return true;
 };
 
-// TODO: define behaviour on split and merge of nodes
+
+// This is a sweep algorithm wich uses a set of ENTER/EXIT entries
+// to manage a stack of active elements.
+// Whenever a new element is entered it will be appended to its parent element.
+// The stack is ordered by the annotation types.
+//
+// Examples:
+//
+// - simple case:
+//
+//       [top] -> ENTER(idea1) -> [top, idea1]
+//
+//   Creates a new 'idea' element and appends it to 'top'
+//
+// - stacked ENTER:
+//
+//       [top, idea1] -> ENTER(bold1) -> [top, idea1, bold1]
+//
+//   Creates a new 'bold' element and appends it to 'idea1'
+//
+// - simple EXIT:
+//
+//       [top, idea1] -> EXIT(idea1) -> [top]
+//
+//   Removes 'idea1' from stack.
+//
+// - reordering ENTER:
+//
+//       [top, bold1] -> ENTER(idea1) -> [top, idea1, bold1]
+//
+//   Inserts 'idea1' at 2nd position, creates a new 'bold1', and appends itself to 'top'
+//
+// - reordering EXIT
+//
+//       [top, idea1, bold1] -> EXIT(idea1)) -> [top, bold1]
+//
+//   Removes 'idea1' from stack and creates a new 'bold1'
+//
+var _levels = {
+  idea: 1,
+  question: 1,
+  error: 1,
+  link: 1,
+  strong: 2,
+  emphasis: 2,
+  code: 2
+};
+
+var ENTER = 1;
+var EXIT = -1;
+
+var Fragmenter = function(options) {
+  this.levels = options.levels || _levels;
+};
+
+Fragmenter.Prototype = function() {
+
+  // Orders sweep events according to following precedences:
+  //
+  // 1. pos
+  // 2. EXIT < ENTER
+  // 3. if both ENTER: ascending level
+  // 4. if both EXIT: descending level
+
+  var _compare = function(a, b) {
+    if (a.pos < b.pos) return -1;
+    if (a.pos > b.pos) return 1;
+
+    if (a.mode < b.mode) return -1;
+    if (a.mode > b.mode) return 1;
+
+    if (a.mode === ENTER) {
+      if (a.level < b.level) return -1;
+      if (a.level > b.level) return 1;
+    }
+
+    if (a.mode === EXIT) {
+      if (a.level > b.level) return -1;
+      if (a.level < b.level) return 1;
+    }
+
+    return 0;
+  };
+
+  var extractEntries = function(annotations) {
+    var entries = [];
+    _.each(annotations, function(a) {
+      var l = this.levels[a.type];
+      entries.push({ pos : a.range[0], mode: ENTER, level: l, id: a.id, type: a.type });
+      entries.push({ pos : a.range[1], mode: EXIT, level: l, id: a.id, type: a.type });
+    });
+    return entries;
+  };
+
+  this.onText = function(/*ctx, text*/) {};
+
+  // should return the created user context
+  this.onEnter = function(/*entry*/) {
+    return null;
+  };
+
+  this.onExit = function(/*ctx*/) {};
+
+  this.enter = function(entry) {
+    this.onEnter(entry);
+  };
+
+  this.exit = function(ctx) {
+    this.onExit(ctx);
+  };
+
+  this.createText = function(ctx, text) {
+    this.onText(text);
+  };
+
+  this.start = function(rootContext, text, annotations) {
+    var entries = extractEntries.call(this, annotations);
+    entries.sort(_compare.bind(this));
+
+    var stack = [{context: rootContext, entry: null}];
+
+    var pos = 0;
+
+    for (var i = 0; i < entries.length; i++) {
+      var entry = entries[i];
+
+      // in any case we add the last text to the current element
+      this.createText(stack[stack.length-1].context, text.substring(pos, entry.pos));
+
+      pos = entry.pos;
+      var level = 1;
+
+      var idx;
+
+      if (entry.mode === ENTER) {
+        // find the correct position and insert an entry
+        for (; level < stack.length; level++) {
+          if (entry.level < stack[level].entry.level) {
+            break;
+          }
+        }
+        for (idx =level; idx < stack.length; idx++) {
+          this.exit(stack[idx].context);
+        }
+        stack.splice(level, 0, entry);
+      }
+      else if (entry.mode === EXIT) {
+        // find the according entry and remove it from the stack
+        for (; level < stack.length; level++) {
+          if (stack[level].entry.id === entry.id) {
+            break;
+          }
+        }
+        for (idx = level; idx < stack.length; idx++) {
+          this.exit(stack[idx].context);
+        }
+        stack.splice(level, 1);
+      }
+
+      // create new elements for all lower entries
+      for (idx = level; idx < stack.length; idx++) {
+        stack[idx].context = this.enter(stack[idx].entry);
+      }
+    }
+
+    // Finally append a trailing text node
+    this.createText(rootContext, text.substring(pos));
+  };
+
+};
+
+Annotator.Fragmenter = Fragmenter;
+
 
 // Export
 // ========
