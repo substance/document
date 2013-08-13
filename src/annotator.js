@@ -673,14 +673,8 @@ Fragmenter.Prototype = function() {
     return null;
   };
 
-  this.onExit = function(/*context, parentContext*/) {};
-
   this.enter = function(entry, parentContext) {
     return this.onEnter(entry, parentContext);
-  };
-
-  this.exit = function(context, parentContext) {
-    this.onExit(context, parentContext);
   };
 
   this.createText = function(context, text) {
@@ -713,9 +707,6 @@ Fragmenter.Prototype = function() {
             break;
           }
         }
-        for (idx = stack.length-1; idx >= level; idx--) {
-          this.exit(stack[idx].context, stack[idx-1].context);
-        }
         stack.splice(level, 0, {entry: entry});
       }
       else if (entry.mode === EXIT) {
@@ -724,9 +715,6 @@ Fragmenter.Prototype = function() {
           if (stack[level].entry.id === entry.id) {
             break;
           }
-        }
-        for (idx = stack.length-1; idx >= level; idx--) {
-          this.exit(stack[idx].context, stack[idx-1].context);
         }
         stack.splice(level, 1);
       }
