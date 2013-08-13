@@ -335,6 +335,9 @@ Writer.Prototype = function() {
       // delegate node updates to the Node implementation
       else {
         var node = this.__document.get(op.path[0]);
+
+        // TODO: fixme. This does not work with deletions.
+        if (!node) return;
         nodePos = this.getPosition(node.id);
         if (node.getUpdatedCharPos !== undefined) {
           charPos = node.getUpdatedCharPos(op);
