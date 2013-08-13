@@ -298,6 +298,8 @@ Writer.Prototype = function() {
     var doc = this.startSimulation();
     doc.update([node.id, this.view], [charPos, text]);
     doc.save();
+
+    this.selection.set([nodePos, charPos+text.length]);
   };
 
   // Delegate getter
