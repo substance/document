@@ -323,7 +323,7 @@ Document.Prototype = function() {
 
       var compound = Operator.ObjectOperation.Compound(_ops);
       self.apply(compound);
-      console.log("Saved simulated ops", self);
+      // console.log("Saved simulated ops", self);
     };
 
     return simulation;
