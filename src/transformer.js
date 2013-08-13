@@ -25,12 +25,10 @@ Transformer.Prototype = function() {
   //
 
   this.split = function(doc, node, charPos) {
-    var NodeType = Transformer.nodeTypes[node.type];
-
     var nodePos = doc.getPosition('content', node.id);
 
     // Pull off the target type from the node configuaration
-    var targetType = NodeType.properties.splitInto;
+    var targetType = node.constructor.properties.splitInto;
 
     // Skip non-splittable nodes
     if (!targetType) return null;
@@ -86,8 +84,7 @@ Transformer.Prototype = function() {
     // Split and use
     if (this.split(doc, cursor.node, cursor.charPos)) {
       // Lookup some config for dealing with edge cases
-      var NodeType = Transformer.nodeTypes[cursor.node.type];
-      var splittedType = NodeType.properties.splitInto;
+      var splittedType = cursor.node.constructor.properties.splitInto;
 
       if (!type || type === splittedType) {
         sel.setCursor([cursor.nodePos+1, 0]);
@@ -141,8 +138,7 @@ Transformer.Prototype = function() {
     for (var i = 0; i < ranges.length; i++) {
       var range = ranges[i];
 
-      var NodeType = Transformer.nodeTypes[range.node.type];
-      var isSplittable = (!!NodeType.properties.splitInto);
+      var isSplittable = (!!range.node.constructor.properties.splitInto);
 
       var newNode = util.clone(range.node);
       newNode.id = util.uuid();
@@ -240,8 +236,7 @@ Transformer.Prototype = function() {
   this.mergeNodes = function(doc, source, target) {
     if (!source || !target) return false;
 
-    var SourceNodeType = Transformer.nodeTypes[source.type];
-    //var TargetNodeType = Transformer.nodeTypes[target.type];
+    var SourceNodeType = source.constructor;
 
     // Check if source node is mergable with targetnode
     var allowedBuddies = SourceNodeType.properties.mergeableWith;
@@ -295,7 +290,7 @@ Transformer.Prototype = function() {
       if (range.isEnclosed() || range.isFull()) {
         this.deleteNode(doc, range.node.id);
       } else {
-        var ContentNodeTransformer = Transformer.nodeTypes[range.node.type].Transformer;
+        var ContentNodeTransformer = range.node.construtor.Transformer;
         var t = new ContentNodeTransformer(doc, range.node);
         t.deleteRange(range);
       }
