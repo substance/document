@@ -654,31 +654,37 @@ Fragmenter.Prototype = function() {
     var entries = [];
     _.each(annotations, function(a) {
       var l = this.levels[a.type];
+
+      // ignore annotations that are not registered
+      if (l === undefined) {
+        return;
+      }
+
       entries.push({ pos : a.range[0], mode: ENTER, level: l, id: a.id, type: a.type });
       entries.push({ pos : a.range[1], mode: EXIT, level: l, id: a.id, type: a.type });
-    });
+    }, this);
     return entries;
   };
 
-  this.onText = function(/*ctx, text*/) {};
+  this.onText = function(/*context, text*/) {};
 
   // should return the created user context
-  this.onEnter = function(/*entry*/) {
+  this.onEnter = function(/*entry, parentContext*/) {
     return null;
   };
 
-  this.onExit = function(/*ctx*/) {};
+  this.onExit = function(/*context, parentContext*/) {};
 
-  this.enter = function(entry) {
-    this.onEnter(entry);
+  this.enter = function(entry, parentContext) {
+    return this.onEnter(entry, parentContext);
   };
 
-  this.exit = function(ctx) {
-    this.onExit(ctx);
+  this.exit = function(context, parentContext) {
+    this.onExit(context, parentContext);
   };
 
-  this.createText = function(ctx, text) {
-    this.onText(text);
+  this.createText = function(context, text) {
+    this.onText(context, text);
   };
 
   this.start = function(rootContext, text, annotations) {
@@ -707,10 +713,10 @@ Fragmenter.Prototype = function() {
             break;
           }
         }
-        for (idx =level; idx < stack.length; idx++) {
-          this.exit(stack[idx].context);
+        for (idx = stack.length-1; idx >= level; idx--) {
+          this.exit(stack[idx].context, stack[idx-1].context);
         }
-        stack.splice(level, 0, entry);
+        stack.splice(level, 0, {entry: entry});
       }
       else if (entry.mode === EXIT) {
         // find the according entry and remove it from the stack
@@ -719,15 +725,15 @@ Fragmenter.Prototype = function() {
             break;
           }
         }
-        for (idx = level; idx < stack.length; idx++) {
-          this.exit(stack[idx].context);
+        for (idx = stack.length-1; idx >= level; idx--) {
+          this.exit(stack[idx].context, stack[idx-1].context);
         }
         stack.splice(level, 1);
       }
 
       // create new elements for all lower entries
       for (idx = level; idx < stack.length; idx++) {
-        stack[idx].context = this.enter(stack[idx].entry);
+        stack[idx].context = this.enter(stack[idx].entry, stack[idx-1].context);
       }
     }
 
@@ -736,6 +742,7 @@ Fragmenter.Prototype = function() {
   };
 
 };
+Fragmenter.prototype = new Fragmenter.Prototype();
 
 Annotator.Fragmenter = Fragmenter;
 
