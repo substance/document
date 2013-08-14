@@ -104,7 +104,7 @@ Writer.Prototype = function() {
         sourceNode = node;
         targetNode = sel.getPredecessor();
         if (!targetNode) return;
-        insertionPos = targetNode.content.length;
+        insertionPos = targetNode.length;
       } else {
         sourceNode = sel.getSuccessor();
         if (!sourceNode) return;
@@ -224,18 +224,7 @@ Writer.Prototype = function() {
     var sel = new Selection(doc, this.selection);
     var cursor = sel.cursor;
 
-    if (cursor.node.type === "constructor") {
-      var charPos = cursor.charPos;
-      var targetType = cursor.node.content[charPos].type;
-
-      console.log('targetType', targetType);
-      if (targetType) {
-        this.transformer.morphNode(doc, sel, targetType, data);
-      }
-    } else {
-
-      this.transformer.insertNode(doc, sel, type, data);
-    }
+    this.transformer.insertNode(doc, sel, type, data);
 
     // Commit
     doc.save();
