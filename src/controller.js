@@ -12,7 +12,7 @@ var Transformer = require('./transformer');
 // -----------------
 //
 // Provides means for editing and viewing a Substance.Document. It introduces
-// a Selection API in order to move a cursor through the document, support 
+// a Selection API in order to move a cursor through the document, support
 // copy and paste, etc.
 //
 // Note: it is quite intentional not to expose the full Substance.Document interface
@@ -287,8 +287,10 @@ Controller.Prototype = function() {
       return;
     }
 
+    var doc = this.startSimulation();
+
     if (!this.selection.isCollapsed()) {
-      this.delete();
+      _delete.call(this, doc, "right");
     }
 
     var node = this.selection.getNodes()[0];
@@ -296,8 +298,10 @@ Controller.Prototype = function() {
     var charPos = this.selection.start[1];
 
     // TODO: future. This only works for text nodes....
-    var doc = this.startSimulation();
-    doc.update([node.id, this.view], [charPos, text]);
+
+    var update = node.insertOperation(charPos, text);
+    if (update) doc.apply(update);
+
     doc.save();
 
     this.selection.set([nodePos, charPos+text.length]);

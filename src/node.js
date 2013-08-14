@@ -58,7 +58,16 @@ Node.Prototype = function() {
     throw new Error("Node.getCharPosition() is abstract.");
   };
 
-  // Provides an delete operation for a given range.
+  // Provides an operation that can be used to insert
+  // text at the given position.
+  // --------
+  //
+
+  this.insertOperation = function(charPos, text) {
+    throw new Error("Node.insertOperation() is abstract.");
+  };
+
+  // Provides an operation that can be used to delete a given range.
   // --------
   //
 

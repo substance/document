@@ -33,6 +33,11 @@ Text.Prototype = function() {
     return this.properties.content.length;
   };
 
+  this.insertOperation = function(charPos, text) {
+    return ObjectOperation.Update([this.properties.id, "content"],
+      TextOperation.Insert(charPos, text));
+  };
+
   this.deleteOperation = function(startChar, endChar) {
     var content = this.properties.content;
     return ObjectOperation.Update([this.properties.id, "content"],
