@@ -312,6 +312,14 @@ Controller.Prototype = function() {
     return this.__document.get.apply(this.__document, arguments);
   };
 
+  this.on = function() {
+    return this.__document.on.apply(this.__document, arguments);
+  };
+
+  this.off = function() {
+    return this.__document.off.apply(this.__document, arguments);
+  };
+
   this.undo = function() {
     this.chronicle.rewind();
   };

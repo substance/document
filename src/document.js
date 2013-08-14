@@ -79,7 +79,9 @@ Document.Prototype = function() {
     var NodeType = this.nodeTypes[node.type];
     if (NodeType && !(node instanceof NodeType)) {
       node = new NodeType(node, {
-        get: _.bind(this.get, this)
+        get: this.get.bind(this),
+        on: this.on.bind(this),
+        off: this.off.bind(this)
       });
       this.nodes[node.id] = node;
     }
