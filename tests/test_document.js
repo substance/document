@@ -4,32 +4,8 @@ var _ = require("underscore");
 var util = require("substance-util");
 var Document = require("../index");
 
-var Node = function(node) {
-  _.extend(this, node);
-};
-Node.prototype = {
-  toJSON: function() {
-    return _.clone(this);
-  },
-  abstract: true,
-  immutable: true,
-  mergeableWith: [],
-  preventEmpty: true,
-  allowedAnnotations: []
-};
-Node.Transformer = function(document, node) {
-  this.document = document;
-  this.node = node;
-};
-Node.Transformer.prototype = {
-  deleteRange: function(range) {
-    var doc = this.document;
-    doc.update([this.node.id, "content"], [range.start, -range.length()]);
-  }
-};
-
-var Paragraph = function(paragraph) {
-  Node.call(this, paragraph);  
+var Paragraph = function(node, doc) {
+  Document.Text.call(this, node, doc);
 };
 Paragraph.Prototype = function() {
   this.mergeableWith = ["paragraph", "heading"];
@@ -37,8 +13,20 @@ Paragraph.Prototype = function() {
   this.splitInto = 'paragraph';
   this.allowedAnnotations = ["strong", "idea"];
 };
-Paragraph.Prototype.prototype = Node.prototype;
+Paragraph.Prototype.prototype = Document.Text.prototype;
 Paragraph.prototype = new Paragraph.Prototype();
+
+var Heading = function(node, doc) {
+  Document.Text.call(this, node, doc);
+};
+Heading.Prototype = function() {
+  this.mergeableWith = ["paragraph", "heading"];
+  this.preventEmpty = false;
+  this.splitInto = 'paragraph';
+  this.allowedAnnotations = ["strong", "idea"];
+};
+Heading.Prototype.prototype = Document.Text.prototype;
+Heading.prototype = new Heading.Prototype();
 
 var Schema = util.clone(Document.schema);
 _.extend(Schema.types, {
@@ -90,7 +78,8 @@ _.extend(Schema.types, {
 
 var nodeTypes = {
   node: Node,
-  paragraph: Paragraph
+  paragraph: Paragraph,
+  heading: Heading
 };
 
 var TestDocument = function(options) {

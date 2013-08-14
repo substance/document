@@ -43,7 +43,7 @@ var DocumentTest = function () {
 
       var actual = this.doc.get(expected.id);
       assert.isDefined(actual);
-      assert.isObjectEqual(expected, actual);
+      assert.isObjectEqual(expected, actual.toJSON());
     },
 
     "get() should return a rich object", function() {
