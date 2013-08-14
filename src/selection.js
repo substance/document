@@ -110,7 +110,7 @@ Selection.Prototype = function() {
     if (start[0] < 0 || start[0] >= n) {
       throw new SelectionError("Invalid node position: " + start[0]);
     }
-    var l = this.__node(start[0]).content.length;
+    var l = this.__node(start[0]).length;
     if (start[1] < 0 || start[1] > l) {
       throw new SelectionError("Invalid char position: " + start[1]);
     }
@@ -189,7 +189,7 @@ Selection.Prototype = function() {
 
     this.set({
       start: [nodePos, 0],
-      end: [nodePos, node.content.length]
+      end: [nodePos, node.length]
     });
   };
 
@@ -353,7 +353,7 @@ Selection.Prototype = function() {
 
       if (!_.isNumber(endChar)) {
         var node = this.__node(i);
-        endChar = node.content.length;
+        endChar = node.length;
       }
       ranges.push(new Selection.Range(this, i, startChar, endChar));
     }
@@ -534,7 +534,7 @@ Range.Prototype = function() {
   //
 
   this.isRightBound = function() {
-    return this.end === this.node.content.length;
+    return this.end === this.node.length;
   };
 
   // Returns true if the range includes the first character of a node
@@ -558,6 +558,7 @@ Range.Prototype = function() {
   //
 
   this.content = function() {
+    // TODO: rethink. such ranges will only work for for text nodes
     return this.node.content.slice(this.start, this.end);
   };
 

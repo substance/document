@@ -289,10 +289,16 @@ Transformer.Prototype = function() {
     _.each(sel.getRanges(), function(range) {
       if (range.isEnclosed() || range.isFull()) {
         this.deleteNode(doc, range.node.id);
-      } else {
-        var ContentNodeTransformer = range.node.construtor.Transformer;
-        var t = new ContentNodeTransformer(doc, range.node);
-        t.deleteRange(range);
+      }
+      else {
+        // TODO: mapping the range is not enough
+        // Instead the node would have to provide an operation for the desired update
+
+        var node = range.node;
+        var update = node.deleteOperation(range.start, range.end);
+        if (update) {
+          doc.apply(update);
+        }
       }
     }, this);
   };

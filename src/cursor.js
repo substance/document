@@ -10,9 +10,9 @@ var CursorError = errors.define("CursorError");
 //
 // Hi, I'm an iterator, just so you know.
 
-var Cursor = function(document, nodePos, charPos) {
+var Cursor = function(document, nodePos, charPos, view) {
   this.document = document;
-  this.view = 'content';
+  this.view = view || 'content';
 
   this.nodePos = nodePos;
   this.charPos = charPos;
@@ -30,7 +30,7 @@ var Cursor = function(document, nodePos, charPos) {
 Cursor.Prototype = function() {
 
   this.copy = function() {
-    return new Cursor(this.document, this.nodePos, this.charPos);
+    return new Cursor(this.document, this.nodePos, this.charPos, this.view);
   };
 
   this.isValid = function() {
@@ -41,13 +41,13 @@ Cursor.Prototype = function() {
     var node = this.document.get(nodes[this.nodePos]);
 
     if (node === undefined) return false;
-    if (this.charPos >= node.content.length) return false;
+    if (this.charPos >= node.length) return false;
 
     return true;
   };
 
   this.isRightBound = function() {
-    return this.charPos === this.node.content.length;
+    return this.charPos === this.node.length;
   };
 
   this.isLeftBound = function() {
@@ -72,7 +72,7 @@ Cursor.Prototype = function() {
       this.charPos = 0;
     } else if (this.document.hasPredecessor(this.view, this.nodePos)) {
       this.nodePos -= 1;
-      this.charPos = this.node.content.length;
+      this.charPos = this.node.length;
     }
   };
 
@@ -82,7 +82,7 @@ Cursor.Prototype = function() {
 
   this.nextNode = function() {
     if (!this.isRightBound()) {
-      this.charPos = this.node.content.length;
+      this.charPos = this.node.length;
     } else if (this.document.hasSuccessor(this.view, this.nodePos)) {
       this.nodePos += 1;
       this.charPos = 0;
@@ -97,21 +97,12 @@ Cursor.Prototype = function() {
     if (!this.node) throw new CursorError('Invalid node position');
 
     // Cursor is at first position -> move to prev paragraph if there is any
-    if (this.isLeftBound()) return this.prevChar();
-
-    var content = this.node.content;
-
-    // Matches all word boundaries in a string
-    var wordBounds = new SRegExp(/\b\w/g).match(content);
-    var prevBounds = _.select(wordBounds, function(m) {
-      return m.index < this.charPos;
-    }, this);
-
-    // happens if there is some leading non word stuff
-    if (prevBounds.length === 0) {
-      this.charPos = 0;
+    if (this.isLeftBound()) {
+      this.prevChar();
+    } else if (this.node.prevWord) {
+      this.charPos = this.node.prevWord(this.charPos);
     } else {
-      this.charPos = _.last(prevBounds).index;
+      return this.prevChar();
     }
   };
 
@@ -123,21 +114,12 @@ Cursor.Prototype = function() {
     if (!this.node) throw new CursorError('Invalid node position');
 
     // Cursor is a last position -> move to next paragraph if there is any
-    if (this.isRightBound()) return this.nextChar();
-
-    var content = this.node.content;
-
-    // Matches all word boundaries in a string
-    var wordBounds = new SRegExp(/\w\b/g).match(content.substring(this.charPos));
-
-    // at the end there might be trailing stuff which is not detected as word boundary
-    if (wordBounds.length === 0) {
-      this.charPos = content.length;
-    }
-    // before, there should be some boundaries
-    else {
-      var nextBound = wordBounds[0];
-      this.charPos += nextBound.index + 1;
+    if (this.isRightBound()) {
+      this.nextChar();
+    } else if (this.node.nextWord) {
+      this.charPos = this.node.nextWord(this.charPos);
+    } else {
+      this.nextChar();
     }
   };
 
@@ -192,19 +174,19 @@ Cursor.Prototype = function() {
   this.move = function(direction, granularity) {
     if (direction === "left") {
       if (granularity === "word") {
-        return this.prevWord();
+        this.prevWord();
       } else if (granularity === "char") {
-        return this.prevChar();
+        this.prevChar();
       } else if (granularity === "node") {
-        return this.prevNode();
+        this.prevNode();
       }
     } else {
       if (granularity === "word") {
-        return this.nextWord();
+        this.nextWord();
       } else if (granularity === "char") {
-        return this.nextChar();
+        this.nextChar();
       } else if (granularity === "node") {
-        return this.nextNode();
+        this.nextNode();
       }
     }
   };
@@ -230,7 +212,7 @@ Cursor.Prototype = function() {
       if (nodePos < 0 || nodePos >= n) {
         throw new CursorError("Invalid node position: " + nodePos);
       }
-      var l = this.document.get(nodes[nodePos])["content"].length;
+      var l = this.document.get(nodes[nodePos]).length;
       if (charPos < 0 || charPos > l) {
         throw new CursorError("Invalid char position: " + charPos);
       }
