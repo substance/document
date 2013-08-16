@@ -375,6 +375,11 @@ Object.defineProperties(Controller.prototype, {
     },
     set: function() { throw "immutable property"; }
   },
+  nodeTypes: {
+    get: function() {
+      return this.__document.nodeTypes  
+    }
+  },
   title: {
     get: function() {
       return this.__document.get('document').title;
