@@ -553,7 +553,10 @@ var _levels = {
   link: 1,
   strong: 2,
   emphasis: 2,
-  code: 2
+  code: 2,
+  cross_reference: 1,
+  figure_reference: 1,
+  citation_reference: 1
 };
 
 var ENTER = 1;
