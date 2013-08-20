@@ -108,7 +108,7 @@ Annotator.Prototype = function() {
 
   // TODO: extract range overlap checking logic into a dedicated Range class
   var _filterByNodeAndRange = function(view, nodeId, range) {
-    var annotations = this._index.find(nodeId);
+    var annotations = this._index.get(nodeId);
 
     if (range) {
       var sStart = range[0];
@@ -205,7 +205,7 @@ Annotator.Prototype = function() {
       }
       // handle deletion of other nodes, i.e., remove associated annotations
       else if (op.type === "delete") {
-        annotations = this._index.find(op.path);
+        annotations = this._index.get(op.path);
         _.each(annotations, function(a) {
           _delete(this, a);
         }, this);
@@ -293,7 +293,7 @@ Annotator.Prototype = function() {
   };
 
   this.transform = function(op) {
-    var annotations = this._index.find(op.path, true);
+    var annotations = this._index.get(op.path);
     _.each(annotations, function(a) {
       _transform.call(this, op, a);
     }, this);
@@ -494,14 +494,17 @@ Annotator.isTrue = function() {
   return true;
 };
 
+// Creates a shared index for annotations on a given document.
+// --------
+//
+
 Annotator.createIndex = function(doc) {
   if (doc.indexes["annotations"] === undefined) {
-    doc.indexes["annotations"] = new Data.Graph.Index(doc,
-      Data.Graph.Index.typeFilter(doc.schema, "annotation"),
-      function(node) {
-        return node.path;
-      }
-    );
+    var options = {
+      types: ["annotation"],
+      property: "path"
+    };
+    doc.indexes["annotations"] = new Data.Graph.Index(doc, options);
   }
   return doc.indexes["annotations"];
 };
