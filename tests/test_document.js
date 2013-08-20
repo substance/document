@@ -77,7 +77,7 @@ _.extend(Schema.types, {
 });
 
 var nodeTypes = {
-  node: Node,
+  node: Document.Node,
   paragraph: Paragraph,
   heading: Heading
 };
@@ -120,7 +120,7 @@ TestDocument.Seed = {
   }
 };
 
-TestDocument.Node = Node;
 TestDocument.Paragraph = Paragraph;
+TestDocument.Heading = Heading;
 
 module.exports = TestDocument;
