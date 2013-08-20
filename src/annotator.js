@@ -5,6 +5,7 @@
 
 var _ = require("underscore");
 var util = require("substance-util");
+var Data = require("substance-data");
 var Document = require("./document");
 var Selection = require("./selection");
 var DocumentError = Document.DocumentError;
@@ -46,63 +47,13 @@ var Annotator = function(doc, options) {
   };
 
   this.splittable = ["emphasis", "strong"];
-  this._annotationIndex = {};
+
+  this._index = Annotator.createIndex(doc);
 
   this.withTransformation = options.withTransformation;
-
-  this.createIndex();
 };
 
 Annotator.Prototype = function() {
-
-  // Annotation index
-  // --------
-
-  var _resolve = function(path) {
-    var index = this._annotationIndex;
-    for (var i = 0; i < path.length; i++) {
-      var id = path[i];
-      index[id] = index[id] || {_annotations: {} };
-      index = index[id];
-    }
-    return index;
-  };
-
-  var _findAnnotations = function(index) {
-    var result = _.extend({}, index._annotations);
-
-    _.each(index, function(child, name) {
-      if (name !== "_annotations") {
-        _.extend(result, _findAnnotations(child));
-      }
-    });
-
-    return result;
-  };
-
-  var _getAnnotations = function(path, recurse) {
-    var index = _resolve.call(this, path);
-
-    var result;
-
-    if (recurse) {
-      result = _findAnnotations(index);
-    } else {
-      result = index._annotations;
-    }
-
-    return result;
-  };
-
-  var _addAnnotationToIndex = function(annotation) {
-    var index = _resolve.call(this, annotation.path);
-    index._annotations[annotation.id] = annotation;
-  };
-
-  var _removeAnnotationFromIndex = function(annotation) {
-    var index = _resolve.call(this, annotation.path);
-    delete index._annotations[annotation.id];
-  };
 
   var _getRanges = function(self, sel) {
     var nodes = new Selection(self.document, sel).getNodes();
@@ -127,19 +78,6 @@ Annotator.Prototype = function() {
 
     return ranges;
   };
-
-  this.createIndex = function() {
-    var schema = this.document.schema;
-    var nodes = this.document.nodes;
-
-    _.each(nodes, function(annotation) {
-      var baseType = schema.baseType(annotation.type);
-      if (baseType === 'annotation') {
-        _addAnnotationToIndex.call(this, annotation);
-      }
-    }, this);
-  };
-
 
   // Creates a new annotation
   // --------
@@ -170,7 +108,7 @@ Annotator.Prototype = function() {
 
   // TODO: extract range overlap checking logic into a dedicated Range class
   var _filterByNodeAndRange = function(view, nodeId, range) {
-    var annotations = _getAnnotations.call(this, [nodeId, view]);
+    var annotations = this._index.find(nodeId);
 
     if (range) {
       var sStart = range[0];
@@ -263,21 +201,11 @@ Annotator.Prototype = function() {
       // handle creation or deletion of annotations
       if (typeChain.indexOf("annotation") >= 0) {
         annotation = op.val;
-
-        if (op.type === "delete") {
-          _removeAnnotationFromIndex.call(this, annotation);
-
-        } else if (op.type === "create") {
-          // get the real instance from the document
-          annotation = this.document.get(annotation.id);
-          _addAnnotationToIndex.call(this, annotation);
-        }
-
         this.triggerLater("annotation:changed", op.type, annotation);
       }
       // handle deletion of other nodes, i.e., remove associated annotations
       else if (op.type === "delete") {
-        annotations = _getAnnotations.call(this, op.path, true);
+        annotations = this._index.find(op.path);
         _.each(annotations, function(a) {
           _delete(this, a);
         }, this);
@@ -365,7 +293,7 @@ Annotator.Prototype = function() {
   };
 
   this.transform = function(op) {
-    var annotations = _getAnnotations.call(this, op.path);
+    var annotations = this._index.find(op.path, true);
     _.each(annotations, function(a) {
       _transform.call(this, op, a);
     }, this);
@@ -566,6 +494,17 @@ Annotator.isTrue = function() {
   return true;
 };
 
+Annotator.createIndex = function(doc) {
+  if (doc.indexes["annotations"] === undefined) {
+    doc.indexes["annotations"] = new Data.Graph.Index(doc,
+      Data.Graph.Index.typeFilter(doc.schema, "annotation"),
+      function(node) {
+        return node.path;
+      }
+    );
+  }
+  return doc.indexes["annotations"];
+};
 
 // This is a sweep algorithm wich uses a set of ENTER/EXIT entries
 // to manage a stack of active elements.
