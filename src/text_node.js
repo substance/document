@@ -86,15 +86,6 @@ Text.Prototype.prototype = Node.prototype;
 Text.prototype = new Text.Prototype();
 Text.prototype.constructor = Text;
 
-Object.defineProperties(Text.prototype, {
-  content: {
-    get: function () {
-      return this.properties.content;
-    },
-    set: function (content) {
-      this.properties.content = content;
-    }
-  }
-});
+Node.defineProperties(Text.prototype, ["content"]);
 
 module.exports = Text;

@@ -80,23 +80,23 @@ Node.Prototype = function() {
 Node.prototype = new Node.Prototype();
 Node.prototype.constructor = Node;
 
-Object.defineProperties(Node.prototype, {
-  id: {
-    get: function () {
-      return this.properties.id;
+Node.defineProperties = function(NodePrototype, properties, readonly) {
+  _.each(properties, function(name) {
+    var spec = {
+      get: function() {
+        return this.properties[name];
+      }
     }
-  },
-  type: {
-    get: function () {
-      return this.properties.type;
+    if (!readonly) {
+      spec["set"] = function(val) {
+        this.properties[name] = val;
+        return this;
+      }
     }
-  },
-  length: {
-    enumerable: false,
-    get: function () {
-      return this.getLength();
-    }
-  }
-});
+    Object.defineProperty(NodePrototype, name, spec);
+  });
+};
+
+Node.defineProperties(Node.prototype, ["id", "type"]);
 
 module.exports = Node;
