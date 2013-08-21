@@ -97,7 +97,7 @@ var ContainerTest = function () {
 
   this.actions = [
     "Access nodes in the flattened view", function() {
-      var nodes = this.container.getNodes();
+      var nodes = this.container.getNodes("idsOnly");
       assert.isArrayEqual(["h1", "p1", "p10", "p11", "p12", "p2", "h2", "p3", "i1", "p13", "p4"], nodes);
     },
 
@@ -114,28 +114,28 @@ var ContainerTest = function () {
     "Update the view when adding a node to a composite", function() {
       this.setup();
       this.doc.update(["l1", "items"], ["+", 3, "p20"]);
-      var nodes = this.container.getNodes();
+      var nodes = this.container.getNodes("idsOnly");
       assert.isArrayEqual(["h1", "p1", "p10", "p11", "p12", "p20", "p2", "h2", "p3", "i1", "p13", "p4"], nodes);
     },
 
     "Update the view when removing a node from a composite", function() {
       this.setup();
       this.doc.update(["l1", "items"], ["-", 2, "p12"]);
-      var nodes = this.container.getNodes();
+      var nodes = this.container.getNodes("idsOnly");
       assert.isArrayEqual(["h1", "p1", "p10", "p11", "p2", "h2", "p3", "i1", "p13", "p4"], nodes);
     },
 
     "Update the view when changing a reference in a composite", function() {
       this.setup();
       this.doc.set(["f1", "caption"], "p20");
-      var nodes = this.container.getNodes();
+      var nodes = this.container.getNodes("idsOnly");
       assert.isArrayEqual(["h1", "p1", "p10", "p11", "p12", "p2", "h2", "p3", "i1", "p20", "p4"], nodes);
     },
 
     "Update the view when changing a top-level composite", function() {
       this.setup();
       this.doc.update(["content", "nodes"], ["-", 2, "l1"]);
-      var nodes = this.container.getNodes();
+      var nodes = this.container.getNodes("idsOnly");
       assert.isArrayEqual(["h1", "p1", "p2", "h2", "p3", "i1", "p13", "p4"], nodes);
     },
 

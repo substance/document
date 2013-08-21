@@ -56,7 +56,7 @@ var Annotator = function(doc, options) {
 Annotator.Prototype = function() {
 
   var _getRanges = function(self, sel) {
-    var nodes = new Selection(self.document, sel).getNodes();
+    var nodes = sel.getNodes();
     var ranges = {};
 
     for (var i = 0; i < nodes.length; i++) {
@@ -321,13 +321,12 @@ Annotator.Prototype = function() {
   // Partially selected annotations may not get copied depending on the
   // annotation type, for others, new annotation fragments would be created.
 
-  this.copy = function(sel) {
-    sel = new Selection(this.document, sel);
+  this.copy = function(selection) {
 
-    var ranges = _getRanges(this, sel);
+    var ranges = _getRanges(this, selection);
 
     // get all affected annotations
-    var annotations = this.getAnnotations({selection: sel});
+    var annotations = this.getAnnotations({selection: selection});
     var result = [];
 
     _.each(annotations, function(annotation) {
@@ -678,7 +677,6 @@ Fragmenter.Prototype = function() {
 Fragmenter.prototype = new Fragmenter.Prototype();
 
 Annotator.Fragmenter = Fragmenter;
-
 
 // Export
 // ========

@@ -10,8 +10,8 @@ var CursorError = errors.define("CursorError");
 //
 // Hi, I'm an iterator, just so you know.
 
-var Cursor = function(document, nodePos, charPos, view) {
-  this.document = document;
+var Cursor = function(container, nodePos, charPos, view) {
+  this.container = container;
   this.view = view || 'content';
 
   this.nodePos = nodePos;
@@ -30,24 +30,23 @@ var Cursor = function(document, nodePos, charPos, view) {
 Cursor.Prototype = function() {
 
   this.copy = function() {
-    return new Cursor(this.document, this.nodePos, this.charPos, this.view);
+    return new Cursor(this.container, this.nodePos, this.charPos, this.view);
   };
 
   this.isValid = function() {
     if (this.nodePos === null || this.charPos === null) return false;
     if (this.nodePos < 0 || this.charPos < 0) return false;
 
-    var nodes = this.document.get(this.view).nodes;
-    var node = this.document.get(nodes[this.nodePos]);
+    var node = this.container.getNodeFromPosition(this.nodePos);
 
-    if (node === undefined) return false;
-    if (this.charPos >= node.length) return false;
+    if (!node) return false;
+    if (this.charPos >= node.getLength()) return false;
 
     return true;
   };
 
   this.isRightBound = function() {
-    return this.charPos === this.node.length;
+    return this.charPos === this.node.getLength();
   };
 
   this.isLeftBound = function() {
@@ -55,13 +54,12 @@ Cursor.Prototype = function() {
   };
 
   this.isEndOfDocument = function() {
-    return this.isRightBound() && !this.document.hasSuccessor(this.view, this.nodePos);
+    return this.isRightBound() && this.nodePos === this.container.getLength()-1;
   };
 
   this.isBeginOfDocument = function() {
-    return this.isLeftBound() && !this.document.hasPredecessor(this.view, this.nodePos);
+    return this.isLeftBound() && this.nodePos === 0;
   };
-
 
   // Return previous node boundary for a given node/character position
   // --------
@@ -70,7 +68,7 @@ Cursor.Prototype = function() {
   this.prevNode = function() {
     if (!this.isLeftBound()) {
       this.charPos = 0;
-    } else if (this.document.hasPredecessor(this.view, this.nodePos)) {
+    } else if (this.nodePos > 0) {
       this.nodePos -= 1;
       this.charPos = this.node.length;
     }
@@ -83,7 +81,7 @@ Cursor.Prototype = function() {
   this.nextNode = function() {
     if (!this.isRightBound()) {
       this.charPos = this.node.length;
-    } else if (this.document.hasSuccessor(this.view, this.nodePos)) {
+    } else if (this.nodePos < this.container.getLength()-1) {
       this.nodePos += 1;
       this.charPos = 0;
     }
@@ -133,7 +131,7 @@ Cursor.Prototype = function() {
 
     // Last char in paragraph
     if (this.isRightBound()) {
-      if (this.document.hasSuccessor(this.view, this.nodePos)) {
+      if (this.nodePos < this.container.getLength()-1) {
         this.nodePos += 1;
         this.charPos = 0;
       }
@@ -207,12 +205,11 @@ Cursor.Prototype = function() {
       if(!_.isNumber(nodePos)) {
         throw new CursorError("Illegal argument: expected nodePos as number");
       }
-      var nodes = this.document.get(this.view).nodes;
-      var n = nodes.length;
+      var n = this.container.getLength();
       if (nodePos < 0 || nodePos >= n) {
         throw new CursorError("Invalid node position: " + nodePos);
       }
-      var l = this.document.get(nodes[nodePos]).length;
+      var l = this.container.getNodeFromPosition(nodePos).getLength();
       if (charPos < 0 || charPos > l) {
         throw new CursorError("Invalid char position: " + charPos);
       }
@@ -229,7 +226,7 @@ Cursor.prototype = new Cursor.Prototype();
 Object.defineProperties(Cursor.prototype, {
   node: {
     get: function() {
-      return this.document.getNodeFromPosition(this.view, this.nodePos);
+      return this.container.getNodeFromPosition(this.nodePos);
     }
   }
 });

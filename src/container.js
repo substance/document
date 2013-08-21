@@ -65,8 +65,33 @@ Container.Prototype = function() {
     }
   };
 
-  this.getNodes = function() {
-    return _.clone(this.listView);
+  this.getNodes = function(idsOnly) {
+    var nodeIds = this.listView;
+    if (idsOnly) {
+      return _.clone(nodeIds);
+    }
+    else {
+      var result = [];
+      for (var i = 0; i < nodeIds.length; i++) {
+        result.push(this.__document.get(nodeIds[i]));
+      }
+      return result;
+    }
+  };
+
+  this.getPosition = function(nodeId) {
+    var nodeIds = this.listView;
+    return nodeIds.indexOf(nodeId);
+  };
+
+  this.getNodeFromPosition = function(pos) {
+    var nodeIds = this.listView;
+    var id = nodeIds[pos];
+    if (id !== undefined) {
+      return this.__document.get(id);
+    } else {
+      return null;
+    }
   };
 
   this.getParent = function(nodeId) {
@@ -76,6 +101,47 @@ Container.Prototype = function() {
   this.onUpdate = function(path) {
     var needRebuild = (path[0] === this.__view ||  this.__composites[path[0]] !== undefined);
     if (needRebuild) this.rebuild();
+  };
+
+  this.getLength = function() {
+    return this.listView.length;
+  };
+
+  // Returns true if there is another node after a given position.
+  // --------
+  //
+
+  this.hasSuccessor = function(nodePos) {
+    var l = this.getLength();
+    return nodePos < l - 1;
+  };
+
+  // Returns true if given view and node pos has a predecessor
+  // --------
+  //
+
+  this.hasPredecessor = function(nodePos) {
+    return nodePos > 0;
+  };
+
+  // Get predecessor node for a given view and node id
+  // --------
+  //
+
+  this.getPredecessor = function(id) {
+    var pos = this.getPosition(id);
+    if (pos <= 0) return null;
+    return this.getNodeFromPosition(pos-1);
+  };
+
+  // Get successor node for a given view and node id
+  // --------
+  //
+
+  this.getSuccessor = function(id) {
+    var pos = this.getPosition(id);
+    if (pos >= this.getLength() - 1) return null;
+    return this.getNodeFromPosition(pos+1);
   };
 
 };

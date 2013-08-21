@@ -7,6 +7,7 @@ var Selection = require("./selection");
 var Annotator = require("./annotator");
 var Clipboard = require("./clipboard");
 var Transformer = require('./transformer');
+var Container = require('./container');
 
 // Document.Controller
 // -----------------
@@ -29,6 +30,7 @@ var Controller = function(document, options) {
   this.view = options.view || 'content';
 
   this.__document = document;
+  this.container = new Container(document, this.view);
 
   this.chronicle = document.chronicle;
   this.annotator = new Annotator(document);
@@ -48,17 +50,16 @@ Controller.Prototype = function() {
   // Document Facette
   // --------
 
-  this.getNodes = function(idsOnly) {
-    if (idsOnly) return this.__document.get([this.view, "nodes"]);
-    else return this.__document.query([this.view, "nodes"]);
+  this.getNodes = function(flat, idsOnly) {
+    return this.container.getNodes(flat, idsOnly);
   };
 
   // Given a node id, get position in the document
   // --------
   //
 
-  this.getPosition = function(id) {
-    return this.__document.getPosition(this.view, id);
+  this.getPosition = function(id, flat) {
+    return this.container.getPosition(id, flat);
   };
 
   this.getNodeFromPosition = function(nodePos) {
@@ -377,7 +378,7 @@ Object.defineProperties(Controller.prototype, {
   },
   nodeTypes: {
     get: function() {
-      return this.__document.nodeTypes  
+      return this.__document.nodeTypes
     }
   },
   title: {

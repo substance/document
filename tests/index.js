@@ -10,7 +10,7 @@ require("./container_test");
 // Selection Tests
 // ---------------
 
-//require("./selection_test");
+require("./selection_test");
 
 // Writer Tests
 // ---------------
