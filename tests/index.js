@@ -1,12 +1,16 @@
+"use strict";
+
+require("./container_test");
+
 // Document Tests
 // ---------------
 
-require("./document_test");
+//require("./document_test");
 
 // Selection Tests
 // ---------------
 
-require("./selection_test");
+//require("./selection_test");
 
 // Writer Tests
 // ---------------
@@ -17,3 +21,4 @@ require("./selection_test");
 
 // require("./writer/content_deletion");
 // require("./writer/annotation_business");
+

@@ -28,14 +28,44 @@ Heading.Prototype = function() {
 Heading.Prototype.prototype = Document.Text.prototype;
 Heading.prototype = new Heading.Prototype();
 
+var Image = function(node, doc) {
+  Document.Node.call(this, node, doc);
+};
+Image.Prototype = function() {
+  this.mergeableWith = [];
+  this.preventEmpty = true;
+  this.allowedAnnotations = ["strong", "idea"];
+};
+Image.Prototype.prototype = Document.Node.prototype;
+Image.prototype = new Image.Prototype();
+Document.Node.defineProperties(Image.prototype, ["url"]);
+
+var List = function(node, doc) {
+  Document.Composite.call(this, node, doc);
+};
+List.Prototype = function() {
+  this.getNodes = function() {
+    return _.clone(this.properties.items);
+  };
+};
+List.Prototype.prototype = Document.Composite.prototype;
+List.prototype = new List.Prototype();
+Document.Node.defineProperties(List.prototype, ["items"]);
+
+var Figure = function(node, doc) {
+  Document.Composite.call(this, node, doc);
+};
+Figure.Prototype = function() {
+  this.getNodes = function() {
+    return [this.properties.image, this.properties.caption];
+  };
+};
+Figure.Prototype.prototype = Document.Composite.prototype;
+Figure.prototype = new Figure.Prototype();
+Document.Node.defineProperties(Figure.prototype, ["image", "caption"]);
+
 var Schema = util.clone(Document.schema);
 _.extend(Schema.types, {
-  "annotation": {
-    "properties": {
-      "path": ["array", "string"], // -> e.g. ["text_1", "content"]
-      "range": "object"
-    }
-  },
   "document": {
     "properties": {
       "views": ["array", "view"],
@@ -47,21 +77,50 @@ _.extend(Schema.types, {
   },
   "node": {
     "parent": "content",
+    "properties": {}
+  },
+  "composite": {
+    "parent": "node",
     "properties": {
-      "content": ["array", "object"]
+      "nodes": ["array", "node"]
     }
   },
   "paragraph": {
-    "parent": "content",
+    "parent": "node",
     "properties": {
       "content": "string"
     }
   },
   "heading": {
-    "parent": "content",
+    "parent": "node",
     "properties": {
       "content": "string",
       "level": "number"
+    }
+  },
+  "image": {
+    "parent": "node",
+    "properties": {
+      "url": "string"
+    }
+  },
+  "list": {
+    "parent": "composite",
+    "properties": {
+      "items": ["array", "paragraph"]
+    }
+  },
+  "figure": {
+    "parent": "composite",
+    "properties": {
+      "image": "image",
+      "caption": "paragraph"
+    }
+  },
+  "annotation": {
+    "properties": {
+      "path": ["array", "string"], // -> e.g. ["text_1", "content"]
+      "range": "object"
     }
   },
   "strong": {
@@ -77,9 +136,11 @@ _.extend(Schema.types, {
 });
 
 var nodeTypes = {
-  node: Document.Node,
-  paragraph: Paragraph,
-  heading: Heading
+  "paragraph": Paragraph,
+  "heading": Heading,
+  "image": Image,
+  "list": List,
+  "figure": Figure
 };
 
 var TestDocument = function(options) {
