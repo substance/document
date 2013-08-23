@@ -1,8 +1,9 @@
 var _ = require("underscore");
+var util = require("substance-util");
 var Document = require("./document");
 var Annotator = require("./annotator");
 var Selection = require("./selection");
-var util = require("substance-util");
+var Container = require("./container");
 
 // Registered node types
 // --------
@@ -13,9 +14,8 @@ var util = require("substance-util");
 // Manipulation interface for all node types
 // This behavior can overriden by the concrete node types
 
-var Transformer = function() {
-  // Usually you get passed in a simulation here
-  // this.document = document;
+var Transformer = function(view) {
+  this.view = view;
 };
 
 Transformer.Prototype = function() {
@@ -25,7 +25,8 @@ Transformer.Prototype = function() {
   //
 
   this.split = function(doc, node, charPos) {
-    var nodePos = doc.getPosition('content', node.id);
+    var container = new Container(doc, this.view);
+    var nodePos = container.getPosition(node.id);
 
     // Pull off the target type from the node configuaration
     var targetType = node.constructor.properties.splitInto;
@@ -242,7 +243,8 @@ Transformer.Prototype = function() {
     var allowedBuddies = SourceNodeType.properties.mergeableWith;
     if (!_.include(allowedBuddies, target.type)) return false;
 
-    var sel = new Selection(doc);
+    var container = new Container(doc, this.view);
+    var sel = new Selection(container);
     sel.selectNode(source.id);
 
     var annotator = new Annotator(doc);
@@ -267,7 +269,8 @@ Transformer.Prototype = function() {
   // Delete node from document and removes it from the content view
 
   this.deleteNode = function(doc, nodeId) {
-    doc.update(["content", "nodes"], ["-", doc.getPosition('content', nodeId)]);
+    var container = new Container(doc, this.view);
+    doc.update(["content", "nodes"], ["-", container.getPosition('content', nodeId)]);
     return doc.delete(nodeId);
   };
 
