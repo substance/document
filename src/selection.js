@@ -110,7 +110,7 @@ Selection.Prototype = function() {
     if (start[0] < 0 || start[0] >= n) {
       throw new SelectionError("Invalid node position: " + start[0]);
     }
-    var l = this.__node(start[0]).length;
+    var l = this.__node(start[0]).getLength();
     if (start[1] < 0 || start[1] > l) {
       throw new SelectionError("Invalid char position: " + start[1]);
     }
@@ -346,7 +346,7 @@ Selection.Prototype = function() {
 
       if (!_.isNumber(endChar)) {
         var node = this.__node(i);
-        endChar = node.length;
+        endChar = node.getLength();
       }
       ranges.push(new Selection.Range(this, i, startChar, endChar));
     }
@@ -498,7 +498,7 @@ Range.Prototype = function() {
   //
 
   this.isRightBound = function() {
-    return this.end === this.node.length;
+    return this.end === this.node.getLength();
   };
 
   // Returns true if the range includes the first character of a node

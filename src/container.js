@@ -152,6 +152,24 @@ Container.Prototype = function() {
     return this.getNodeFromPosition(pos+1);
   };
 
+  this.firstChild = function(node) {
+    if (node instanceof Composite) {
+      var first = this.__document.get(node.getNodes()[0]);
+      return this.firstChild(first);
+    } else {
+      return node;
+    }
+  };
+
+  this.lastChild = function(node) {
+    if (node instanceof Composite) {
+      var last = this.__document.get(_.last(node.getNodes()));
+      return this.lastChild(last);
+    } else {
+      return node;
+    }
+  };
+
 };
 
 Container.prototype = _.extend(new Container.Prototype(), util.Events.Listener);

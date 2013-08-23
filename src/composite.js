@@ -6,6 +6,10 @@ var Composite = function(node, doc) {
 
 Composite.Prototype = function() {
 
+  this.getLength = function() {
+    throw new Error("Composite.getLength() is abstract.");
+  };
+
   // Provides the ids of all referenced sub-nodes.
   // -------
   //

@@ -6,7 +6,6 @@ var Operator = require('substance-operator');
 var Selection = require("./selection");
 var Annotator = require("./annotator");
 var Clipboard = require("./clipboard");
-var Transformer = require('./transformer');
 var Container = require('./container');
 
 // Document.Controller
@@ -37,7 +36,7 @@ var Controller = function(document, options) {
 
   // Document.Transformer
   // Contains higher level operations to transform (change) a document
-  this.transformer = new Transformer(this.view);
+  //this.transformer = new Transformer(this.view);
 
   this.selection = new Selection(this.container);
   this.clipboard = new Clipboard();
@@ -85,6 +84,7 @@ Controller.Prototype = function() {
   };
 
   var _delete = function(doc, direction) {
+      /*
 
     var container = new Container(doc, this.view);
     var sel = new Selection(container, this.selection);
@@ -160,6 +160,7 @@ Controller.Prototype = function() {
     }
 
     return sel;
+    */
   };
 
   // Delete current selection
@@ -167,6 +168,8 @@ Controller.Prototype = function() {
   //
 
   this.delete = function(direction) {
+  /*
+
     var doc = this.startSimulation();
 
     var sel = _delete.call(this, doc, direction);
@@ -177,6 +180,25 @@ Controller.Prototype = function() {
     // important to set this at last, as doc.save() will trigger implicit selection
     // changes
     this.selection.set(sel);
+  */
+
+    var doc = this.__document;
+    var sel = this.selection;
+    var container = this.container;
+
+    if (sel.isNull()) return;
+
+    var range = sel.range();
+    var startId = this.container.listView[range.start[0]];
+    var endId = this.container.listView[range.end[0]];
+
+    this._deleteSelection(doc, sel);
+
+    if (container.getLength() === 0) {
+      this.selection.clear();
+    } else {
+      this.selection.collapse("left");
+    }
   };
 
   // Copy current selection
@@ -184,9 +206,11 @@ Controller.Prototype = function() {
   //
 
   this.copy = function() {
+    /*
     // Delegate
     var content = this.transformer.copy(this.__document, this.selection);
     this.clipboard.setContent(content);
+    */
   };
 
 
@@ -205,6 +229,7 @@ Controller.Prototype = function() {
   //
 
   this.paste = function() {
+    /*
     var doc = this.startSimulation();
 
     var sel;
@@ -221,6 +246,7 @@ Controller.Prototype = function() {
     this.transformer.paste(doc, this.clipboard.getContent(), sel);
 
     doc.save();
+    */
   };
 
   // Split
@@ -229,6 +255,7 @@ Controller.Prototype = function() {
 
   this.modifyNode = function(type, data) {
 
+    /*
     var doc = this.startSimulation();
 
     if (!this.selection.isCollapsed()) {
@@ -255,6 +282,7 @@ Controller.Prototype = function() {
     // Commit
     doc.save();
     this.selection.set(sel);
+    */
   };
 
 
@@ -263,6 +291,7 @@ Controller.Prototype = function() {
   //
 
   this.insertNode = function(type, data) {
+    /*
     var doc = this.startSimulation();
     var container = new Container(doc, this.view);
     var sel = new Selection(container, this.selection);
@@ -275,6 +304,7 @@ Controller.Prototype = function() {
     // Commit
     doc.save();
     this.selection.set(sel);
+    */
   };
 
   // Creates an annotation based on the current position
@@ -407,12 +437,21 @@ Controller.Prototype = function() {
     this._deleteNode(doc, node2.id);
 
     // Join composites if this is allowed
-    if (parent1 && parent2 && parent1.id !== parent2.id && parent1.canJoin(parent2)) {
-      var pos = parent1.getNodes().indexOf(id1) + 1;
-      var children = parent2.getNodes();
-      this._deleteNode(doc, parent2.id);
-      for (var i = 0; i < children.length; i++) {
-        parent1.insertChild(doc, pos+i, children[i]);
+    // Note: this is experimental...
+    //  currently, this is only used with two succeeding lists
+    if (parent1 && parent2 &&
+      parent1.id !== parent2.id && parent1.canJoin(parent2)) {
+
+      var children1 = parent1.getNodes();
+      var children2 = parent2.getNodes();
+      var pos = children1.indexOf(id1) + 1;
+
+      // only join if we are at the end of the first composite
+      if (pos === children1.length) {
+        this._deleteNode(doc, parent2.id);
+        for (var i = 0; i < children2.length; i++) {
+          parent1.insertChild(doc, pos+i, children2[i]);
+        }
       }
     }
 
@@ -426,11 +465,118 @@ Controller.Prototype = function() {
   this._deleteNode = function(doc, nodeId) {
     var parentId = this.container.getParent(nodeId);
     var parent = (parentId) ? doc.get(parentId) : null;
+
     if (!parentId) {
       doc.hide(this.view, nodeId);
       doc.delete(nodeId);
-    } else if (parent.isMutable()) {
+    }
+    else {
       parent.deleteChild(doc, nodeId);
+      if (parent.getLength() === 0) {
+        this._deleteNode(doc, parent.id);
+      }
+    }
+  };
+
+  this._deleteSelection = function(doc, sel) {
+
+    var self = this;
+    var container = sel.container;
+    var s = sel.range();
+    var ranges = sel.getRanges();
+
+    var tryJoin = (ranges.length > 1 && !ranges[0].isFull() && !_.last(ranges).isFull());
+
+    // Note: this implementation is unfortunately not so easy...
+    // Have chosen a recursion approach to achieve an efficient
+    // opportunistic top-down deletion algorithm.
+    // It is top-down by that it starts deletion from the top-most
+    // node that is fully selected.
+    // For efficiency, using a 'visited' map to keep track which nodes have been processed already.
+
+    var i = 0;
+    var rangeMap = {};
+    for (i = 0; i < ranges.length; i++) {
+      rangeMap[ranges[i].node.id] = ranges[i];
+    }
+
+    var visited = {};
+
+    // Deletes all children nodes and then removes the given composite itself.
+    //
+    // Note: this gets only called for the top-most composite which are fully selected.
+    //
+    function deleteComposite(composite) {
+      var queue = _.clone(composite.getNodes());
+      while(queue.length > 0) {
+        var id = queue.shift();
+        var child = doc.get(id);
+        doc.delete(id);
+        visited[id] = true;
+      }
+      self._deleteNode(doc, composite.id);
+      visited[composite.id] = true;
+    }
+
+    // Recursive call that finds the top-most fully selected composite
+    //
+
+    function processComposite(node) {
+      if (visited[node.id] === undefined) {
+
+        var first = container.firstChild(node);
+        var firstRange = rangeMap[first.id];
+        var last = container.lastChild(node);
+        var lastRange = rangeMap[last.id];
+
+        // If the first and the last range is full then this node is selected fully
+        // In that case we check the parent recursively
+        // and eventually delete nodes
+
+        if (firstRange && lastRange && firstRange.isFull() && lastRange.isFull()) {
+          var parentId = container.getParent(node.id);
+          if (parentId) {
+            processComposite(doc.get(parentId));
+          }
+          if (!visited[parentId]) {
+            deleteComposite(node);
+          }
+        } else {
+          visited[node.id] = false;
+        }
+      }
+      return visited[node.id];
+    }
+
+
+    for (i = 0; i < ranges.length; i++) {
+      var r = ranges[i];
+      var node = r.node;
+      if (visited[node.id]) continue;
+
+      if (r.isFull()) {
+        // If there is a parent composite node,
+        // do the top-down deletion
+        var parentId = container.getParent(node.id);
+        if (parentId) {
+          processComposite(doc.get(parentId));
+        }
+        // otherwise, or if the parent was not fully selected
+        // delete the node regularly
+        if (!visited[parentId]) {
+          this._deleteNode(doc, node.id);
+        }
+      }
+      // for partial deletions ask the node for an (incremental) operation
+      else {
+        var op = r.node.deleteOperation(r.start, r.end);
+        if (op) doc.apply(op);
+      }
+    }
+
+    // TODO: Maybe we want to return whether the join has been rejected or not
+    if (tryJoin) {
+      this.join(ranges[0].node.id, ranges[ranges.length-1].node.id);
     }
   };
 

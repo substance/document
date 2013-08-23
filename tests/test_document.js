@@ -35,6 +35,12 @@ ImageNode.Prototype = function() {
   this.mergeableWith = [];
   this.preventEmpty = true;
   this.allowedAnnotations = ["strong", "idea"];
+  this.getLength = function() {
+    return 1;
+  };
+  this.deleteOperation = function() {
+    return null;
+  };
 };
 ImageNode.Prototype.prototype = Document.Node.prototype;
 ImageNode.prototype = new ImageNode.Prototype();
@@ -44,6 +50,9 @@ var List = function(node, doc) {
   Document.Composite.call(this, node, doc);
 };
 List.Prototype = function() {
+  this.getLength = function() {
+    return this.properties.items.length;
+  };
   this.getNodes = function() {
     return _.clone(this.properties.items);
   };
@@ -70,9 +79,24 @@ var Figure = function(node, doc) {
   Document.Composite.call(this, node, doc);
 };
 Figure.Prototype = function() {
-  this.getNodes = function() {
-    return [this.properties.image, this.properties.caption];
+  this.getLength = function() {
+    return 2;
   };
+  this.getNodes = function() {
+    var result = [];
+    // TODO: we should allow an empty image (e.g., for boot strapping)
+    if (this.properties.image) result.push(this.properties.image);
+    if (this.properties.caption) result.push(this.properties.caption);
+    return result;
+  };
+  this.deleteChild = function(doc, nodeId) {
+    if (nodeId === this.image) {
+      doc.set([this.id, "image"], null);
+      doc.delete(nodeId);
+    } else if (nodeId === this.caption) {
+      doc.set([this.caption, "content"], "");
+    }
+  }
 };
 Figure.Prototype.prototype = Document.Composite.prototype;
 Figure.prototype = new Figure.Prototype();
