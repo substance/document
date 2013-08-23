@@ -37,7 +37,7 @@ var SelectionError = errors.define("SelectionError");
 //
 //
 // Create a selection operating on that document.
-//     var sel = new Substance.Document.Selection(doc);
+//     var sel = new Substance.Document.Selection(container);
 //
 //     sel.set({
 //       start: [0, 4],
