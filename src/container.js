@@ -5,6 +5,7 @@ var util = require("substance-util");
 var Composite = require("./composite");
 
 var Container = function(document, view) {
+  this.__view = view;
   this.__document = document;
 
   this.treeView = document.nodes[view].nodes;
@@ -23,6 +24,7 @@ Container.Prototype = function() {
 
   this.rebuild = function() {
     // clear the list view
+    this.treeView = this.__document.nodes[this.__view].nodes;
     this.listView.splice(0, this.listView.length);
     this.__parents = {};
     this.__composites = {};
@@ -63,6 +65,12 @@ Container.Prototype = function() {
         iterator.call(context, node, item.parent);
       }
     }
+  };
+
+  this.getTopLevelNodes = function() {
+    return _.map(this.treeView, function(id) {
+      return this.__document.get(id);
+    }, this);
   };
 
   this.getNodes = function(idsOnly) {
