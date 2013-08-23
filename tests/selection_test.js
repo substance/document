@@ -83,7 +83,7 @@ var SelectionTest = function() {
     },
 
     "range() should return null for invalid selections", function() {
-      var sel = new Selection(this.doc);
+      var sel = new Selection(this.container);
       assert.isNull(sel.range());
     },
 
