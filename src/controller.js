@@ -37,12 +37,16 @@ var Controller = function(document, options) {
 
   // Document.Transformer
   // Contains higher level operations to transform (change) a document
-  this.transformer = new Transformer(document);
+  this.transformer = new Transformer(this.view);
 
-  this.selection = new Selection(this.__document, null);
+  this.selection = new Selection(this.container);
   this.clipboard = new Clipboard();
 
-  this.listenTo(document, 'operation:applied', this.updateSelection);
+  // TODO: this needs serious re-thinking...
+  // On the one hand, we wan be able to set the cursor after undo or redo.
+  // OTOH, we do not want to update the selection on each micro operation.
+  // Probably, the best would be to do that explicitely in all cases (also undo/redo)...
+  // this.listenTo(document, 'operation:applied', this.updateSelection);
 };
 
 Controller.Prototype = function() {
@@ -50,8 +54,12 @@ Controller.Prototype = function() {
   // Document Facette
   // --------
 
-  this.getNodes = function(flat, idsOnly) {
-    return this.container.getNodes(flat, idsOnly);
+  this.getNodes = function(idsOnly) {
+    return this.container.getNodes(idsOnly);
+  };
+
+  this.getContainer = function() {
+    return this.container;
   };
 
   // Given a node id, get position in the document
@@ -63,7 +71,7 @@ Controller.Prototype = function() {
   };
 
   this.getNodeFromPosition = function(nodePos) {
-    return this.__document.getNodeFromPosition(this.view, nodePos);
+    return this.container.getNodeFromPosition(nodePos);
   };
 
   // See Annotator
@@ -78,7 +86,8 @@ Controller.Prototype = function() {
 
   var _delete = function(doc, direction) {
 
-    var sel = new Selection(doc, this.selection);
+    var container = new Container(doc, this.view);
+    var sel = new Selection(container, this.selection);
     var transformer = this.transformer;
     var view = this.view;
 
@@ -205,7 +214,10 @@ Controller.Prototype = function() {
       this.selection.set(sel);
     }
 
-    sel = sel || new Selection(doc, this.selection);
+    if (!sel) {
+      var container = new Container(doc, this.view);
+      sel = new Selection(container, this.selection);
+    }
     this.transformer.paste(doc, this.clipboard.getContent(), sel);
 
     doc.save();
@@ -223,7 +235,8 @@ Controller.Prototype = function() {
       _delete.call(this, doc);
     }
 
-    var sel = new Selection(doc, this.selection);
+    var container = new Container(doc, this.view);
+    var sel = new Selection(container, this.selection);
     var cursor = sel.cursor;
 
     if (cursor.node.type === "constructor") {
@@ -251,7 +264,8 @@ Controller.Prototype = function() {
 
   this.insertNode = function(type, data) {
     var doc = this.startSimulation();
-    var sel = new Selection(doc, this.selection);
+    var container = new Container(doc, this.view);
+    var sel = new Selection(container, this.selection);
 
     // Remove selected text and get a cursor
     if (!sel.isCollapsed()) this.transformer.deleteSelection(doc, sel);
