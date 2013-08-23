@@ -377,6 +377,63 @@ Controller.Prototype = function() {
       }
     }
   };
+
+  // NEW API:
+
+  // Joins two succeeding nodes
+  // --------
+  //
+
+  this.join = function(id1, id2) {
+    // TODO: check if node2 is successor of node1
+
+    // TODO: use a simulation
+    var doc = this.__document;
+
+    var node1 = doc.get(id1);
+    var node2 = doc.get(id2);
+
+    var parentId1 = this.container.getParent(id1);
+    var parentId2 = this.container.getParent(id2);
+    var parent1 = (parentId1) ? doc.get(parentId1) : null;
+    var parent2 = (parentId2) ? doc.get(parentId2) : null;
+
+    // Note: assuming that mutable composites allow joins (e.g., lists), others do not (e.g., figures)
+    if (!node1.canJoin(node2) || (parent1 && !parent1.isMutable())) {
+      return false;
+    }
+
+    node1.join(doc, node2);
+    this._deleteNode(doc, node2.id);
+
+    // Join composites if this is allowed
+    if (parent1 && parent2 && parent1.id !== parent2.id && parent1.canJoin(parent2)) {
+      var pos = parent1.getNodes().indexOf(id1) + 1;
+      var children = parent2.getNodes();
+      this._deleteNode(doc, parent2.id);
+      for (var i = 0; i < children.length; i++) {
+        parent1.insertChild(doc, pos+i, children[i]);
+      }
+    }
+
+    return true;
+  };
+
+  // Deletes a node with given id and also takes care of removing it from its parent.
+  // --------
+  //
+
+  this._deleteNode = function(doc, nodeId) {
+    var parentId = this.container.getParent(nodeId);
+    var parent = (parentId) ? doc.get(parentId) : null;
+    if (!parentId) {
+      doc.hide(this.view, nodeId);
+      doc.delete(nodeId);
+    } else if (parent.isMutable()) {
+      parent.deleteChild(doc, nodeId);
+    }
+  };
+
 };
 
 // Inherit the prototype of Substance.Document which extends util.Events
@@ -392,8 +449,9 @@ Object.defineProperties(Controller.prototype, {
   },
   nodeTypes: {
     get: function() {
-      return this.__document.nodeTypes
-    }
+      return this.__document.nodeTypes;
+    },
+    set: function() { throw "immutable property"; }
   },
   title: {
     get: function() {

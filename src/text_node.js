@@ -80,6 +80,17 @@ Text.Prototype = function() {
     }
   };
 
+  this.canJoin = function(other) {
+    return (other instanceof Text);
+  };
+
+  this.join = function(doc, other) {
+    var pos = this.properties.content.length;
+    var text = other.content;
+
+    doc.update([this.id, "content"], [pos, text]);
+  };
+
 };
 
 Text.Prototype.prototype = Node.prototype;

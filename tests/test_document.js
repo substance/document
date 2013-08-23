@@ -28,17 +28,17 @@ Heading.Prototype = function() {
 Heading.Prototype.prototype = Document.Text.prototype;
 Heading.prototype = new Heading.Prototype();
 
-var Image = function(node, doc) {
+var ImageNode = function(node, doc) {
   Document.Node.call(this, node, doc);
 };
-Image.Prototype = function() {
+ImageNode.Prototype = function() {
   this.mergeableWith = [];
   this.preventEmpty = true;
   this.allowedAnnotations = ["strong", "idea"];
 };
-Image.Prototype.prototype = Document.Node.prototype;
-Image.prototype = new Image.Prototype();
-Document.Node.defineProperties(Image.prototype, ["url"]);
+ImageNode.Prototype.prototype = Document.Node.prototype;
+ImageNode.prototype = new ImageNode.Prototype();
+Document.Node.defineProperties(ImageNode.prototype, ["url"]);
 
 var List = function(node, doc) {
   Document.Composite.call(this, node, doc);
@@ -46,6 +46,20 @@ var List = function(node, doc) {
 List.Prototype = function() {
   this.getNodes = function() {
     return _.clone(this.properties.items);
+  };
+  this.isMutable = function() {
+    return true;
+  };
+  this.insertChild = function(doc, pos, nodeId) {
+    doc.update([this.id, "items"], ["+", pos, nodeId]);
+  };
+  this.deleteChild = function(doc, nodeId) {
+    var pos = this.items.indexOf(nodeId);
+    doc.update([this.id, "items"], ["-", pos, nodeId]);
+    doc.delete(nodeId);
+  };
+  this.canJoin = function(other) {
+    return (other.type === "list");
   };
 };
 List.Prototype.prototype = Document.Composite.prototype;
@@ -138,7 +152,7 @@ _.extend(Schema.types, {
 var nodeTypes = {
   "paragraph": Paragraph,
   "heading": Heading,
-  "image": Image,
+  "image": ImageNode,
   "list": List,
   "figure": Figure
 };

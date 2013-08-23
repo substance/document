@@ -1,16 +1,19 @@
 "use strict";
 
-require("./container_test");
+//require("./container_test");
 
 // Document Tests
 // ---------------
 
 //require("./document_test");
 
+require("./document_manipulation_test");
+
 // Selection Tests
 // ---------------
 
 require("./selection_test");
+
 
 // Writer Tests
 // ---------------

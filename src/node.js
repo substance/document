@@ -75,6 +75,14 @@ Node.Prototype = function() {
     throw new Error("Node.deleteOperation() is abstract.");
   };
 
+  this.canJoin = function(other) {
+    return false;
+  };
+
+  this.join = function(other) {
+    throw new Error("Node.join() is abstract.");
+  };
+
 };
 
 Node.prototype = new Node.Prototype();
