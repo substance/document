@@ -20,6 +20,7 @@ var DocumentManipulationTest = function () {
     this.doc = new TestDocument({seed: data});
     this.controller = new DocumentController(this.doc);
     this.container = this.controller.container;
+    this.manipulator = new DocumentController.ManipulationSession(this.doc, this.controller.selection);
     return data;
   };
 
@@ -28,7 +29,7 @@ var DocumentManipulationTest = function () {
     "Join two paragraphs", function() {
       var fixture = this.fixture("two_paragraphs");
 
-      var success = this.controller.join("p1", "p2");
+      var success = this.manipulator.join("p1", "p2");
       assert.isTrue(success);
 
       var p1 = this.doc.get("p1");
@@ -42,7 +43,7 @@ var DocumentManipulationTest = function () {
     "Reject join of incompatible nodes", function() {
       this.fixture("paragraph_and_image");
 
-      var success = this.controller.join("p1", "i1");
+      var success = this.manipulator.join("p1", "i1");
 
       assert.isFalse(success);
       assert.isArrayEqual(["p1", "i1"], this.container.getNodes("idsOnly"));
@@ -51,7 +52,7 @@ var DocumentManipulationTest = function () {
     "Nested nodes: join two list items", function() {
       var fixture = this.fixture("list");
 
-      var success = this.controller.join("p1", "p2");
+      var success = this.manipulator.join("p1", "p2");
       assert.isTrue(success);
 
       var p1 = this.doc.get("p1");
@@ -67,7 +68,7 @@ var DocumentManipulationTest = function () {
     "Embedded Nested Nodes: join paragraph with list item", function() {
       var fixture = this.fixture("embedded_list");
 
-      var success = this.controller.join("p1", "p2");
+      var success = this.manipulator.join("p1", "p2");
       assert.isTrue(success);
 
       var p1 = this.doc.get("p1");
@@ -82,7 +83,7 @@ var DocumentManipulationTest = function () {
     "Embedded Nested Nodes: join last list item with paragraph", function() {
       var fixture = this.fixture("embedded_list");
 
-      var success = this.controller.join("p4", "p5");
+      var success = this.manipulator.join("p4", "p5");
       assert.isTrue(success);
 
       var p4 = this.doc.get("p4");
@@ -96,7 +97,7 @@ var DocumentManipulationTest = function () {
     "Embedded Nested Nodes: can not join with a figure caption", function() {
       this.fixture("embedded_figure");
 
-      var success = this.controller.join("p2", "p3");
+      var success = this.manipulator.join("p2", "p3");
       assert.isFalse(success);
 
       assert.isArrayEqual(["p1", "f1", "p3"], this.container.treeView);
@@ -105,7 +106,7 @@ var DocumentManipulationTest = function () {
     "Join two lists", function() {
       var fixture = this.fixture("two_lists");
 
-      var success = this.controller.join("p2", "p3");
+      var success = this.manipulator.join("p2", "p3");
       assert.isTrue(success);
 
       var l1 = this.doc.get("l1");
@@ -121,7 +122,7 @@ var DocumentManipulationTest = function () {
     "Joins in multiply nested nodes: nested lists", function() {
       var fixture = this.fixture("nested_lists");
 
-      var success = this.controller.join("p1", "p2");
+      var success = this.manipulator.join("p1", "p2");
       assert.isTrue(success);
 
       var l1 = this.doc.get("l1");

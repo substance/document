@@ -6,7 +6,6 @@ Document.Container = require('./src/container');
 Document.Cursor = require('./src/cursor');
 Document.Selection = require('./src/selection');
 Document.Controller = require('./src/controller');
-Document.Transformer = require('./src/transformer');
 
 Document.Node = require('./src/node');
 Document.Text = require('./src/text_node');

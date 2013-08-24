@@ -34,10 +34,6 @@ var Controller = function(document, options) {
   this.chronicle = document.chronicle;
   this.annotator = new Annotator(document);
 
-  // Document.Transformer
-  // Contains higher level operations to transform (change) a document
-  //this.transformer = new Transformer(this.view);
-
   this.selection = new Selection(this.container);
   this.clipboard = new Clipboard();
 
@@ -83,122 +79,33 @@ Controller.Prototype = function() {
     return this.annotator.getAnnotations(options);
   };
 
-  var _delete = function(doc, direction) {
-      /*
-
-    var container = new Container(doc, this.view);
-    var sel = new Selection(container, this.selection);
-    var transformer = this.transformer;
-    var view = this.view;
-
-    // Remove character (backspace behavior)
-    // --------
-    //
-
-    function removeChar(direction) {
-      sel.expand(direction, 'char');
-      transformer.deleteSelection(doc, sel);
-      sel.collapse("left");
-    }
-
-    // Attempt merge
-    // --------
-    //
-
-    function attemptMerge(direction, select) {
-      var node = sel.getRanges()[0].node;
-      var sourceNode;
-      var targetNode;
-      var insertionPos;
-
-      if (direction === "left") {
-        sourceNode = node;
-        targetNode = sel.getPredecessor();
-        if (!targetNode) return;
-        insertionPos = targetNode.content.length;
-      } else {
-        sourceNode = sel.getSuccessor();
-        if (!sourceNode) return;
-        targetNode = node;
-      }
-
-      var merged = transformer.mergeNodes(doc, sourceNode, targetNode);
-
-      if (merged) {
-        // Consider this API instead?
-        // sel.setCursor([targetNode.id, insertionPos]);
-        if (direction === "left") {
-          sel.set([doc.getPosition(view, targetNode.id), insertionPos]);
-        }
-      } else if(select) {
-        sel.selectNode(targetNode.id);
-      }
-    }
-
-    // Regular deletion
-    // --------
-    //
-
-    function deleteSelection() {
-      transformer.deleteSelection(doc, sel);
-      sel.collapse("left");
-    }
-
-    if (sel.isCollapsed()) {
-      var cursor = sel.cursor;
-      if (cursor.isLeftBound() && direction === "left") {
-        attemptMerge('left', true);
-      } else if (cursor.isRightBound() && direction =="right") {
-        attemptMerge('right', true);
-      } else {
-        removeChar(direction);
-      }
-    } else {
-      var shouldMerge = sel.hasMultipleNodes();
-      deleteSelection(direction);
-      if (shouldMerge) attemptMerge("right", false);
-    }
-
-    return sel;
-    */
-  };
-
   // Delete current selection
   // --------
   //
 
   this.delete = function(direction) {
-  /*
 
-    var doc = this.startSimulation();
-
-    var sel = _delete.call(this, doc, direction);
-
-    // commit changes
-    doc.save();
-
-    // important to set this at last, as doc.save() will trigger implicit selection
-    // changes
-    this.selection.set(sel);
-  */
-
-    var doc = this.__document;
-    var sel = this.selection;
-    var container = this.container;
+    var session = this.startManipulation();
+    var doc = session.doc;
+    var sel = session.sel;
+    var container = sel.container;
 
     if (sel.isNull()) return;
 
-    var range = sel.range();
-    var startId = this.container.listView[range.start[0]];
-    var endId = this.container.listView[range.end[0]];
+    if (sel.isCollapsed()) {
+      sel.expand(direction, "char");
+    }
 
-    this._deleteSelection(doc, sel);
+    session.deleteSelection();
+    session.save();
 
     if (container.getLength() === 0) {
       this.selection.clear();
     } else {
-      this.selection.collapse("left");
+      sel.collapse("left");
+      this.selection.set(sel);
     }
+
   };
 
   // Copy current selection
@@ -206,11 +113,7 @@ Controller.Prototype = function() {
   //
 
   this.copy = function() {
-    /*
-    // Delegate
-    var content = this.transformer.copy(this.__document, this.selection);
-    this.clipboard.setContent(content);
-    */
+    console.log("I am sorry. Currently disabled.");
   };
 
 
@@ -229,24 +132,7 @@ Controller.Prototype = function() {
   //
 
   this.paste = function() {
-    /*
-    var doc = this.startSimulation();
-
-    var sel;
-
-    if (!this.selection.isCollapsed()) {
-      sel = _delete.call(this, doc);
-      this.selection.set(sel);
-    }
-
-    if (!sel) {
-      var container = new Container(doc, this.view);
-      sel = new Selection(container, this.selection);
-    }
-    this.transformer.paste(doc, this.clipboard.getContent(), sel);
-
-    doc.save();
-    */
+    console.log("I am sorry. Currently disabled.");
   };
 
   // Split
@@ -254,35 +140,7 @@ Controller.Prototype = function() {
   //
 
   this.modifyNode = function(type, data) {
-
-    /*
-    var doc = this.startSimulation();
-
-    if (!this.selection.isCollapsed()) {
-      _delete.call(this, doc);
-    }
-
-    var container = new Container(doc, this.view);
-    var sel = new Selection(container, this.selection);
-    var cursor = sel.cursor;
-
-    if (cursor.node.type === "constructor") {
-      var charPos = cursor.charPos;
-      var targetType = cursor.node.content[charPos].type;
-
-      console.log('targetType', targetType);
-      if (targetType) {
-        this.transformer.morphNode(doc, sel, targetType, data);
-      }
-    } else {
-
-      this.transformer.insertNode(doc, sel, type, data);
-    }
-
-    // Commit
-    doc.save();
-    this.selection.set(sel);
-    */
+    console.log("I am sorry. Currently disabled.");
   };
 
 
@@ -291,20 +149,7 @@ Controller.Prototype = function() {
   //
 
   this.insertNode = function(type, data) {
-    /*
-    var doc = this.startSimulation();
-    var container = new Container(doc, this.view);
-    var sel = new Selection(container, this.selection);
-
-    // Remove selected text and get a cursor
-    if (!sel.isCollapsed()) this.transformer.deleteSelection(doc, sel);
-
-    this.transformer.insertNode(doc, sel, type, data);
-
-    // Commit
-    doc.save();
-    this.selection.set(sel);
-    */
+    console.log("I am sorry. Currently disabled.");
   };
 
   // Creates an annotation based on the current position
@@ -316,10 +161,11 @@ Controller.Prototype = function() {
   };
 
 
-  this.startSimulation = function() {
+  this.startManipulation = function() {
     var doc = this.__document.startSimulation();
     new Annotator(doc, {withTransformation: true});
-    return doc;
+    var sel = new Selection(new Container(doc, this.view), this.selection);
+    return new Controller.ManipulationSession(doc, sel);
   };
 
   // Inserts text at the current position
@@ -332,23 +178,24 @@ Controller.Prototype = function() {
       return;
     }
 
-    var doc = this.startSimulation();
+    var session = this.startManipulation();
+    var doc = session.doc;
+    var sel = session.sel;
 
-    if (!this.selection.isCollapsed()) {
-      _delete.call(this, doc, "right");
+    if (!sel.isCollapsed()) {
+      session.deleteSelection();
     }
 
-    var node = this.selection.getNodes()[0];
-    var nodePos = this.selection.start[0];
-    var charPos = this.selection.start[1];
+    var node = sel.getNodes()[0];
+    var nodePos = sel.start[0];
+    var charPos = sel.start[1];
 
     // TODO: future. This only works for text nodes....
 
     var update = node.insertOperation(charPos, text);
     if (update) doc.apply(update);
 
-    doc.save();
-
+    session.save();
     this.selection.set([nodePos, charPos+text.length]);
   };
 
@@ -408,7 +255,57 @@ Controller.Prototype = function() {
     }
   };
 
-  // NEW API:
+};
+
+// Inherit the prototype of Substance.Document which extends util.Events
+Controller.prototype = _.extend(new Controller.Prototype(), util.Events.Listener);
+
+// Property accessors for convenient access of primary properties
+Object.defineProperties(Controller.prototype, {
+  id: {
+    get: function() {
+      return this.__document.id;
+    },
+    set: function() { throw "immutable property"; }
+  },
+  nodeTypes: {
+    get: function() {
+      return this.__document.nodeTypes;
+    },
+    set: function() { throw "immutable property"; }
+  },
+  title: {
+    get: function() {
+      return this.__document.get('document').title;
+    },
+    set: function() { throw "immutable property"; }
+  },
+  updated_at: {
+    get: function() {
+      return this.__document.get('document').updated_at;
+    },
+    set: function() { throw "immutable property"; }
+  },
+  creator: {
+    get: function() {
+      return this.__document.get('document').creator;
+    },
+    set: function() { throw "immutable property"; }
+  }
+});
+
+var ManipulationSession = function(doc, sel) {
+  this.doc = doc;
+  this.sel = sel;
+  this.container = sel.container;
+  this.view = this.container.__view;
+};
+
+ManipulationSession.Prototype = function() {
+
+  this.save = function() {
+    this.doc.save();
+  };
 
   // Joins two succeeding nodes
   // --------
@@ -417,14 +314,14 @@ Controller.Prototype = function() {
   this.join = function(id1, id2) {
     // TODO: check if node2 is successor of node1
 
-    // TODO: use a simulation
-    var doc = this.__document;
+    var doc = this.doc;
+    var container = this.container;
 
     var node1 = doc.get(id1);
     var node2 = doc.get(id2);
 
-    var parentId1 = this.container.getParent(id1);
-    var parentId2 = this.container.getParent(id2);
+    var parentId1 = container.getParent(id1);
+    var parentId2 = container.getParent(id2);
     var parent1 = (parentId1) ? doc.get(parentId1) : null;
     var parent2 = (parentId2) ? doc.get(parentId2) : null;
 
@@ -434,7 +331,7 @@ Controller.Prototype = function() {
     }
 
     node1.join(doc, node2);
-    this._deleteNode(doc, node2.id);
+    this.deleteNode(node2.id);
 
     // Join composites if this is allowed
     // Note: this is experimental...
@@ -448,7 +345,7 @@ Controller.Prototype = function() {
 
       // only join if we are at the end of the first composite
       if (pos === children1.length) {
-        this._deleteNode(doc, parent2.id);
+        this.deleteNode(parent2.id);
         for (var i = 0; i < children2.length; i++) {
           parent1.insertChild(doc, pos+i, children2[i]);
         }
@@ -462,7 +359,8 @@ Controller.Prototype = function() {
   // --------
   //
 
-  this._deleteNode = function(doc, nodeId) {
+  this.deleteNode = function(nodeId) {
+    var doc = this.doc;
     var parentId = this.container.getParent(nodeId);
     var parent = (parentId) ? doc.get(parentId) : null;
 
@@ -473,18 +371,18 @@ Controller.Prototype = function() {
     else {
       parent.deleteChild(doc, nodeId);
       if (parent.getLength() === 0) {
-        this._deleteNode(doc, parent.id);
+        this.deleteNode(parent.id);
       }
     }
   };
 
-  this._deleteSelection = function(doc, sel) {
+  this.deleteSelection = function() {
 
     var self = this;
+    var doc = this.doc;
+    var sel = this.sel;
     var container = sel.container;
-    var s = sel.range();
     var ranges = sel.getRanges();
-
     var tryJoin = (ranges.length > 1 && !ranges[0].isFull() && !_.last(ranges).isFull());
 
     // Note: this implementation is unfortunately not so easy...
@@ -508,13 +406,12 @@ Controller.Prototype = function() {
     //
     function deleteComposite(composite) {
       var queue = _.clone(composite.getNodes());
+      self.deleteNode(composite.id);
       while(queue.length > 0) {
         var id = queue.shift();
-        var child = doc.get(id);
         doc.delete(id);
         visited[id] = true;
       }
-      self._deleteNode(doc, composite.id);
       visited[composite.id] = true;
     }
 
@@ -564,7 +461,7 @@ Controller.Prototype = function() {
         // otherwise, or if the parent was not fully selected
         // delete the node regularly
         if (!visited[parentId]) {
-          this._deleteNode(doc, node.id);
+          this.deleteNode(node.id);
         }
       }
       // for partial deletions ask the node for an (incremental) operation
@@ -579,44 +476,10 @@ Controller.Prototype = function() {
       this.join(ranges[0].node.id, ranges[ranges.length-1].node.id);
     }
   };
-
 };
 
-// Inherit the prototype of Substance.Document which extends util.Events
-Controller.prototype = _.extend(new Controller.Prototype(), util.Events.Listener);
+ManipulationSession.prototype = new ManipulationSession.Prototype();
 
-// Property accessors for convenient access of primary properties
-Object.defineProperties(Controller.prototype, {
-  id: {
-    get: function() {
-      return this.__document.id;
-    },
-    set: function() { throw "immutable property"; }
-  },
-  nodeTypes: {
-    get: function() {
-      return this.__document.nodeTypes;
-    },
-    set: function() { throw "immutable property"; }
-  },
-  title: {
-    get: function() {
-      return this.__document.get('document').title;
-    },
-    set: function() { throw "immutable property"; }
-  },
-  updated_at: {
-    get: function() {
-      return this.__document.get('document').updated_at;
-    },
-    set: function() { throw "immutable property"; }
-  },
-  creator: {
-    get: function() {
-      return this.__document.get('document').creator;
-    },
-    set: function() { throw "immutable property"; }
-  }
-});
+Controller.ManipulationSession = ManipulationSession;
 
 module.exports = Controller;

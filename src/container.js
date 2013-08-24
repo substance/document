@@ -11,7 +11,6 @@ var Container = function(document, view) {
   this.treeView = document.nodes[view].nodes;
   this.listView = [];
 
-  this.__view = view;
   this.__parents = {};
   this.__composites = {};
 

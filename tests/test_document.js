@@ -198,7 +198,13 @@ var TestDocument = function(options) {
   this.nodeTypes = nodeTypes;
 };
 
-TestDocument.Prototype = function() {};
+TestDocument.Prototype = function() {
+  this.fromSnapshot = function(data, options) {
+    options = options || {};
+    options.seed = data;
+    return new TestDocument(options);
+  };
+};
 TestDocument.Prototype.prototype = Document.prototype;
 TestDocument.prototype = new TestDocument.Prototype();
 

@@ -153,7 +153,7 @@ Cursor.Prototype = function() {
     if (this.isLeftBound()) {
       if (this.nodePos > 0) {
         this.nodePos -= 1;
-        this.charPos = this.node.content.length;
+        this.charPos = this.node.getLength();
       }
     } else {
       this.charPos -= 1;
