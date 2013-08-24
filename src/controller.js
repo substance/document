@@ -86,7 +86,7 @@ Controller.Prototype = function() {
   this.delete = function(direction) {
 
     var session = this.startManipulation();
-    var doc = session.doc;
+    // var doc = session.doc;
     var sel = session.sel;
     var container = sel.container;
 
@@ -213,21 +213,31 @@ Controller.Prototype = function() {
   };
 
   this.undo = function() {
-    this.chronicle.rewind();
+    var op = this.chronicle.rewind();
+    this.updateSelection(op);
   };
 
   this.redo = function() {
-    this.chronicle.forward();
+    var op = this.chronicle.forward();
+    this.updateSelection(op);
   };
 
   this.updateSelection = function(op) {
+    if (!op) return;
 
-    if (op.type === "update" || op.type === "set") {
+    var view = this.view;
+    var doc = this.__document;
+    var container = this.container;
+
+    // TODO: define when and how to react on operations
+    function getUpdatedPostion(op) {
+      if (op.type !== "update" && op.type !== "set") return;
+
       var nodePos = -1;
       var charPos = -1;
 
-      // handle Show/Hide of nodes
-      if (op.path[0] === this.view && op.path[1] === "nodes") {
+      // handle changes to the view of nodes
+      if (op.path[0] === view && op.path[1] === "nodes") {
         var lastChange = Operator.Helpers.last(op.diff);
         if (lastChange.isMove()) {
           nodePos = lastChange.target;
@@ -239,19 +249,37 @@ Controller.Prototype = function() {
 
       // delegate node updates to the Node implementation
       else {
-        var node = this.__document.get(op.path[0]);
-
+        var node = doc.get(op.path[0]);
         // TODO: fixme. This does not work with deletions.
         if (!node) return;
-        nodePos = this.getPosition(node.id);
+
+        nodePos = container.getPosition(node.id);
         if (node.getUpdatedCharPos !== undefined) {
           charPos = node.getUpdatedCharPos(op);
         }
       }
 
-      if (nodePos >= 0 && charPos >= 0) {
-        this.selection.set([nodePos, charPos]);
+      return [nodePos, charPos];
+    }
+
+    var pos = null;
+    var tmp;
+    if (op.type === "compound") {
+      Operator.Helpers.each(op, function(_op) {
+        tmp = getUpdatedPostion(_op);
+        if (tmp && tmp[0] >= 0 && tmp[1] >= 0) {
+          pos = tmp;
+        }
+      });
+    } else {
+      tmp = getUpdatedPostion(op);
+      if (tmp && tmp[0] >= 0 && tmp[1] >= 0) {
+        pos = tmp;
       }
+    }
+
+    if (pos) {
+      this.selection.set(pos);
     }
   };
 
