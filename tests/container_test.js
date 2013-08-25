@@ -4,6 +4,7 @@ var registerTest = Test.registerTest;
 var TestDocument = require('./test_document');
 var Document = require("../index");
 var Container = require("../src/container");
+var Chronicle = require("substance-chronicle");
 
 var DOC = {
   "nodes": {
@@ -91,7 +92,7 @@ var DOC = {
 var ContainerTest = function () {
 
   this.setup = function() {
-    this.doc = new TestDocument({seed: DOC});
+    this.doc = new TestDocument({seed: DOC, chronicle: Chronicle.create({mode: Chronicle.HYSTERICAL})});
     this.container = this.doc.get("content");
   };
 
