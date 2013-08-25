@@ -326,7 +326,7 @@ var ManipulationSession = function(doc, sel) {
   this.doc = doc;
   this.sel = sel;
   this.container = sel.container;
-  this.view = this.container.__view;
+  this.viewId = this.container.view.id;
 };
 
 ManipulationSession.Prototype = function() {
@@ -393,7 +393,7 @@ ManipulationSession.Prototype = function() {
     var parent = (parentId) ? doc.get(parentId) : null;
 
     if (!parentId) {
-      doc.hide(this.view, nodeId);
+      doc.hide(this.viewId, nodeId);
       doc.delete(nodeId);
     }
     else {
