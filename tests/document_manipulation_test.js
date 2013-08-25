@@ -334,6 +334,38 @@ var DocumentManipulationTest = function () {
       assert.isArrayEqual(["p3"], l2.items);
     },
 
+    "Delete in nested lists: from parent into child list", function() {
+      this.fixture("nested_lists");
+
+      this.controller.selection.set({start: [2, 6], end: [3, 0]});
+      this.controller.delete();
+
+      var p3 = this.doc.get("p3");
+      var l1 = this.doc.get("l1");
+      var l2 = this.doc.get("l2");
+
+      assert.isUndefined(this.doc.get("p4"));
+      assert.isDefined(this.doc.get("l1"));
+      assert.isDefined(this.doc.get("l2"));
+      assert.isEqual("Item 3Item 4", p3.content);
+      assert.isArrayEqual(["p1", "l2"], l1.items);
+      assert.isArrayEqual(["p2", "p3"], l2.items);
+    },
+
+    "Delete a nested list", function() {
+      this.fixture("nested_lists_2");
+
+      this.controller.selection.set({start: [0, 6], end: [1, 0]});
+      this.controller.delete();
+
+      var p1 = this.doc.get("p1");
+      var l1 = this.doc.get("l1");
+
+      assert.isDefined(this.doc.get("l1"));
+      assert.isUndefined(this.doc.get("l2"));
+      assert.isEqual("Item 1Item 2", p1.content);
+      assert.isArrayEqual(["p1"], l1.items);
+    },
   ];
 
 };
@@ -598,6 +630,36 @@ FIXTURES["nested_lists"] = {
       id: "l1",
       type: "list",
       items: ["p1", "l2", "p4"]
+    },
+    "content": {
+      "id": "content",
+      "type": "view",
+      "nodes": ["l1"]
+    }
+  }
+};
+
+FIXTURES["nested_lists_2"] = {
+  nodes: {
+    "p1": {
+      id: "p1",
+      type: "paragraph",
+      content: "Item 1"
+    },
+    "p2": {
+      id: "p2",
+      type: "paragraph",
+      content: "Item 2"
+    },
+    "l2": {
+      id: "l2",
+      type: "list",
+      items: ["p2"]
+    },
+    "l1": {
+      id: "l1",
+      type: "list",
+      items: ["p1", "l2"]
     },
     "content": {
       "id": "content",

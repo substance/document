@@ -351,7 +351,6 @@ ManipulationSession.Prototype = function() {
     var parentId1 = container.getParent(id1);
     var parentId2 = container.getParent(id2);
     var parent1 = (parentId1) ? doc.get(parentId1) : null;
-    var parent2 = (parentId2) ? doc.get(parentId2) : null;
 
     // Note: assuming that mutable composites allow joins (e.g., lists), others do not (e.g., figures)
     if (!node1.canJoin(node2) || (parent1 && !parent1.isMutable())) {
@@ -360,6 +359,9 @@ ManipulationSession.Prototype = function() {
 
     node1.join(doc, node2);
     this.deleteNode(node2.id);
+
+    // Note: the previous call might have eliminated the second composite node
+    var parent2 = (parentId2) ? doc.get(parentId2) : null;
 
     // Join composites if this is allowed
     // Note: this is experimental...
