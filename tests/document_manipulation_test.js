@@ -7,6 +7,7 @@ var assert = Test.assert;
 var registerTest = Test.registerTest;
 var TestDocument = require("./test_document");
 var DocumentController = require("../src/controller");
+var Chronicle = require("substance-chronicle");
 
 var FIXTURES = {};
 
@@ -17,7 +18,7 @@ var DocumentManipulationTest = function () {
 
   this.fixture = function(name) {
     var data = FIXTURES[name];
-    this.doc = new TestDocument({seed: data});
+    this.doc = new TestDocument({seed: data, chronicle: Chronicle.create({mode: Chronicle.HYSTERICAL })});
     this.controller = new DocumentController(this.doc);
     this.container = this.controller.container;
     this.manipulator = new DocumentController.ManipulationSession(this.doc, this.controller.selection);
