@@ -364,8 +364,11 @@ ManipulationSession.Prototype = function() {
     // Join composites if this is allowed
     // Note: this is experimental...
     //  currently, this is only used with two succeeding lists
+    // .. and not if we join an element of the parent into the child...
+    // ... wooo hacky...
     if (parent1 && parent2 &&
-      parent1.id !== parent2.id && parent1.canJoin(parent2)) {
+      parent1.id !== parent2.id && parent1.canJoin(parent2) &&
+      container.getParent(parentId1) !== parentId2) {
 
       var children1 = parent1.getNodes();
       var children2 = parent2.getNodes();
