@@ -19,30 +19,7 @@ var Container = function(document, view) {
 
 Container.Prototype = function() {
 
-  this.rebuild = function() {
-
-    // clear the list view
-    this.treeView.splice(0, this.treeView.length);
-    this.listView.splice(0, this.listView.length);
-
-    this.treeView = _.clone(this.view.nodes);
-    for (var i = 0; i < this.view.length; i++) {
-      this.treeView.push(this.view[i]);
-    };
-
-    this.__parents = {};
-    this.__composites = {};
-    this.each(function(node, parent) {
-      this.listView.push(node.id);
-      if (this.__parents[node.id]) {
-        throw new Error("Nodes must be unique in one view.");
-      }
-      this.__parents[node.id] = parent;
-      this.__composites[parent] = parent;
-    }, this);
-  };
-
-  this.each = function(iterator, context) {
+  var _each = function(iterator, context) {
     var queue = [];
     var i;
 
@@ -65,10 +42,37 @@ Container.Prototype = function() {
             parent: node.id,
           });
         }
-      } else {
-        iterator.call(context, node, item.parent);
       }
+      iterator.call(context, node, item.parent);
     }
+  };
+
+  this.rebuild = function() {
+
+    // clear the list view
+    this.treeView.splice(0, this.treeView.length);
+    this.listView.splice(0, this.listView.length);
+
+    this.treeView = _.clone(this.view.nodes);
+    for (var i = 0; i < this.view.length; i++) {
+      this.treeView.push(this.view[i]);
+    };
+
+    this.__parents = {};
+    this.__composites = {};
+    _each.call(this, function(node, parent) {
+      if (node instanceof Composite) {
+        this.__parents[node.id] = parent;
+        this.__composites[parent] = parent;
+      } else {
+        this.listView.push(node.id);
+        if (this.__parents[node.id]) {
+          throw new Error("Nodes must be unique in one view.");
+        }
+        this.__parents[node.id] = parent;
+        this.__composites[parent] = parent;
+      }
+    }, this);
   };
 
   this.getTopLevelNodes = function() {
