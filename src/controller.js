@@ -498,7 +498,9 @@ ManipulationSession.Prototype = function() {
       // for partial deletions ask the node for an (incremental) operation
       else {
         var op = r.node.deleteOperation(r.start, r.end);
-        if (op) doc.apply(op);
+        if (op && !op.isNOP()) {
+          doc.apply(op);
+        }
       }
     }
 
