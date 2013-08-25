@@ -78,11 +78,18 @@ Document.Prototype = function() {
     // and replace the instance stored in the graph
     var NodeType = this.nodeTypes[node.type];
     if (NodeType && !(node instanceof NodeType)) {
-      node = new NodeType(node, {
-        get: this.get.bind(this),
-        on: this.on.bind(this),
-        off: this.off.bind(this)
-      });
+
+      // Exposing the full doc for simplicity
+      // We need to make sure doc nodes don't do something bad on the document
+
+      node = new NodeType(node, this);
+
+      // node = new NodeType(node, {
+      //   get: this.get.bind(this),
+      //   on: this.on.bind(this),
+      //   off: this.off.bind(this)
+      // });
+
       this.nodes[node.id] = node;
     }
 
