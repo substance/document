@@ -68,11 +68,11 @@ Document.Prototype = function() {
 
     // book-keeping of Container instances
     Operator.Helpers.each(op, function(_op) {
-      if (this.containers[_op.path[0]] !== undefined && _op.path[1] === "nodes") {
-        var container = this.containers[_op.path[0]];
-        // rebuilding the list view on each change.
-        // maybe this could be done more efficient...
-        container.rebuild();
+      // TODO: this can probably be optimized...
+      if (_op.type === "set" || _op.type === "update") {
+        _.each(this.containers, function(container) {
+          container.update(_op);
+        }, this);
       }
     }, this);
 

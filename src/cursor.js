@@ -209,7 +209,8 @@ Cursor.Prototype = function() {
       if (nodePos < 0 || nodePos >= n) {
         throw new CursorError("Invalid node position: " + nodePos);
       }
-      var l = this.container.getNodeFromPosition(nodePos).getLength();
+      var node = this.container.getNodeFromPosition(nodePos);
+      var l = node.getLength();
       if (charPos < 0 || charPos > l) {
         throw new CursorError("Invalid char position: " + charPos);
       }

@@ -14,8 +14,6 @@ var Container = function(document, view) {
   this.__parents = {};
   this.__composites = {};
 
-  //this.listenTo(document, "property:updated", this.onUpdate);
-  //this.listenTo(document, "property:set", this.onUpdate);
   this.rebuild();
 };
 
@@ -112,7 +110,8 @@ Container.Prototype = function() {
     return this.__parents[nodeId];
   };
 
-  this.onUpdate = function(path) {
+  this.update = function(op) {
+    var path = op.path;
     var needRebuild = (path[0] === this.view.id ||  this.__composites[path[0]] !== undefined);
     if (needRebuild) this.rebuild();
   };
