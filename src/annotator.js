@@ -503,7 +503,9 @@ Annotator.createIndex = function(doc) {
       types: ["annotation"],
       property: "path"
     };
-    doc.indexes["annotations"] = new Data.Graph.Index(doc, options);
+    var index = doc.addIndex("annotations", options);
+    index.ENABLE_LOGGING = true;
+    doc.indexes["annotations"] = index;
   }
   return doc.indexes["annotations"];
 };
