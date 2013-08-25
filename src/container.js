@@ -5,26 +5,33 @@ var util = require("substance-util");
 var Composite = require("./composite");
 
 var Container = function(document, view) {
-  this.__view = view;
-  this.__document = document;
+  this.document = document;
+  this.view = view;
 
-  this.treeView = document.nodes[view].nodes;
+  this.treeView = [];
   this.listView = [];
 
   this.__parents = {};
   this.__composites = {};
 
-  this.listenTo(document, "property:updated", this.onUpdate);
-  this.listenTo(document, "property:set", this.onUpdate);
+  //this.listenTo(document, "property:updated", this.onUpdate);
+  //this.listenTo(document, "property:set", this.onUpdate);
   this.rebuild();
 };
 
 Container.Prototype = function() {
 
   this.rebuild = function() {
+
     // clear the list view
-    this.treeView = this.__document.nodes[this.__view].nodes;
+    this.treeView.splice(0, this.treeView.length);
     this.listView.splice(0, this.listView.length);
+
+    this.treeView = _.clone(this.view.nodes);
+    for (var i = 0; i < this.view.length; i++) {
+      this.treeView.push(this.view[i]);
+    };
+
     this.__parents = {};
     this.__composites = {};
     this.each(function(node, parent) {
@@ -51,7 +58,7 @@ Container.Prototype = function() {
     var item, node;
     while(queue.length > 0) {
       item = queue.shift();
-      node = this.__document.get(item.id);
+      node = this.document.get(item.id);
       if (node instanceof Composite) {
         var children = node.getNodes();
         for (i = children.length - 1; i >= 0; i--) {
@@ -68,7 +75,7 @@ Container.Prototype = function() {
 
   this.getTopLevelNodes = function() {
     return _.map(this.treeView, function(id) {
-      return this.__document.get(id);
+      return this.document.get(id);
     }, this);
   };
 
@@ -80,7 +87,7 @@ Container.Prototype = function() {
     else {
       var result = [];
       for (var i = 0; i < nodeIds.length; i++) {
-        result.push(this.__document.get(nodeIds[i]));
+        result.push(this.document.get(nodeIds[i]));
       }
       return result;
     }
@@ -95,7 +102,7 @@ Container.Prototype = function() {
     var nodeIds = this.listView;
     var id = nodeIds[pos];
     if (id !== undefined) {
-      return this.__document.get(id);
+      return this.document.get(id);
     } else {
       return null;
     }
@@ -106,7 +113,7 @@ Container.Prototype = function() {
   };
 
   this.onUpdate = function(path) {
-    var needRebuild = (path[0] === this.__view ||  this.__composites[path[0]] !== undefined);
+    var needRebuild = (path[0] === this.view.id ||  this.__composites[path[0]] !== undefined);
     if (needRebuild) this.rebuild();
   };
 
@@ -153,7 +160,7 @@ Container.Prototype = function() {
 
   this.firstChild = function(node) {
     if (node instanceof Composite) {
-      var first = this.__document.get(node.getNodes()[0]);
+      var first = this.document.get(node.getNodes()[0]);
       return this.firstChild(first);
     } else {
       return node;
@@ -162,7 +169,7 @@ Container.Prototype = function() {
 
   this.lastChild = function(node) {
     if (node instanceof Composite) {
-      var last = this.__document.get(_.last(node.getNodes()));
+      var last = this.document.get(_.last(node.getNodes()));
       return this.lastChild(last);
     } else {
       return node;
@@ -172,5 +179,18 @@ Container.Prototype = function() {
 };
 
 Container.prototype = _.extend(new Container.Prototype(), util.Events.Listener);
+
+Object.defineProperties(Container.prototype, {
+  "id": {
+    get: function() { return this.view.id; }
+  },
+  "type": {
+    get: function() { return this.view.type; }
+  },
+  "nodes": {
+    get: function() { return this.view.nodes; },
+    set: function(val) { this.view.nodes = val; }
+  }
+});
 
 module.exports = Container;

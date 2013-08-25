@@ -92,7 +92,7 @@ var ContainerTest = function () {
 
   this.setup = function() {
     this.doc = new TestDocument({seed: DOC});
-    this.container = new Container(this.doc, "content");
+    this.container = this.doc.get("content");
   };
 
   this.actions = [

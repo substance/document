@@ -29,11 +29,11 @@ var Controller = function(document, options) {
   this.view = options.view || 'content';
 
   this.__document = document;
-  this.container = new Container(document, this.view);
 
   this.chronicle = document.chronicle;
   this.annotator = new Annotator(document);
 
+  this.container = document.get(this.view);
   this.selection = new Selection(this.container);
   this.clipboard = new Clipboard();
 
@@ -164,7 +164,7 @@ Controller.Prototype = function() {
   this.startManipulation = function() {
     var doc = this.__document.startSimulation();
     new Annotator(doc, {withTransformation: true});
-    var sel = new Selection(new Container(doc, this.view), this.selection);
+    var sel = new Selection(doc.get(this.view), this.selection);
     return new Controller.ManipulationSession(doc, sel);
   };
 

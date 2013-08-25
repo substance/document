@@ -16,6 +16,7 @@ var errors = util.errors;
 var Data = require("substance-data");
 var Operator = require("substance-operator");
 var Chronicle = require("substance-chronicle");
+var Container = require("./container");
 
 // Module
 // ========
@@ -30,6 +31,8 @@ var DocumentError = errors.define("DocumentError");
 
 var Document = function(options) {
   Data.Graph.call(this, options.schema, options);
+
+  this.containers = {};
 };
 
 // Default Document Schema
@@ -60,6 +63,23 @@ Document.Prototype = function() {
 
   var __super__ = util.prototype(this);
 
+  this.__apply__ = function(op) {
+    var result = __super__.__apply__.call(this, op, "silent");
+
+    // book-keeping of Container instances
+    Operator.Helpers.each(op, function(_op) {
+      if (this.containers[_op.path[0]] !== undefined && _op.path[1] === "nodes") {
+        var container = this.containers[_op.path[0]];
+        // rebuilding the list view on each change.
+        // maybe this could be done more efficient...
+        container.rebuild();
+      }
+    }, this);
+
+    return result;
+  };
+
+
   this.create = function(node) {
     __super__.create.call(this, node);
     return this.get(node.id);
@@ -74,19 +94,31 @@ Document.Prototype = function() {
 
     if (!node) return node;
 
-    // wrap the node into a rich object
-    // and replace the instance stored in the graph
-    var NodeType = this.nodeTypes[node.type];
-    if (NodeType && !(node instanceof NodeType)) {
-      node = new NodeType(node, {
-        get: this.get.bind(this),
-        on: this.on.bind(this),
-        off: this.off.bind(this)
-      });
-      this.nodes[node.id] = node;
+    // Note: we are replacing some node types into rich instances.
+
+    // Wrap all views in Container instances
+    if (node.type === "view") {
+      if (!this.containers[node.id]) {
+        this.containers[node.id] = new Container(this, node);
+      }
+      return this.containers[node.id];
     }
 
-    return node;
+    // Wrap all nodes in an appropriate Node instance
+    else {
+
+      var NodeType = this.nodeTypes[node.type];
+      if (NodeType && !(node instanceof NodeType)) {
+        node = new NodeType(node, {
+          get: this.get.bind(this),
+          on: this.on.bind(this),
+          off: this.off.bind(this)
+        });
+        this.nodes[node.id] = node;
+      }
+
+      return node;
+    }
   };
 
   // Serialize to JSON
