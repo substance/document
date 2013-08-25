@@ -41,6 +41,10 @@ Composite.Prototype = function() {
     throw new Error("This composite is immutable.");
   };
 
+  this.getUpdatedCharPos = function() {
+    return 0;
+  };
+
 };
 
 Composite.Prototype.prototype = DocumentNode.prototype;
