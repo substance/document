@@ -180,9 +180,7 @@ Controller.Prototype = function() {
         var parent = doc.get(parentId);
         if (parent.isBreakable()) {
           var children = parent.getNodes();
-          var newNode = parent.break(doc, node.id, charPos);
-          var pos = container.before(newNode);
-          sel.set(pos);
+          newNode = parent.break(doc, node.id, charPos);
         } else {
           console.log("Node type '"+parent.type+"' is not splittable.");
         }
@@ -190,8 +188,12 @@ Controller.Prototype = function() {
         newNode = node.break(doc, charPos);
         var insertPos = container.treeView.indexOf(node.id)+1;
         doc.show(this.view, newNode.id, insertPos);
-        sel.set([insertPos,0]);
       }
+    }
+
+    if (newNode) {
+      var pos = container.before(newNode);
+      sel.set(pos);
     }
 
     session.save();
