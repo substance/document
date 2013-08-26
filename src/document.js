@@ -33,6 +33,8 @@ var Document = function(options) {
   Data.Graph.call(this, options.schema, options);
 
   this.containers = {};
+
+  this.__facette = new Document.Facette(this);
 };
 
 // Default Document Schema
@@ -109,11 +111,7 @@ Document.Prototype = function() {
 
       var NodeType = this.nodeTypes[node.type];
       if (NodeType && !(node instanceof NodeType)) {
-        node = new NodeType(node, {
-          get: this.get.bind(this),
-          on: this.on.bind(this),
-          off: this.off.bind(this)
-        });
+        node = new NodeType(node, this.__facette);
         this.nodes[node.id] = node;
       }
 
@@ -266,12 +264,13 @@ Document.Prototype = function() {
     var self = this;
     var simulation = this.fromSnapshot(this.toJSON());
     var ops = [];
+    simulation.ops = ops;
 
     var __apply__ = simulation.apply;
 
     simulation.apply = function(op) {
-      op = __apply__.call(simulation, op);
       ops.push(op);
+      op = __apply__.call(simulation, op);
       return op;
     };
 
@@ -314,6 +313,24 @@ Document.fromSnapshot = function(data, options) {
   options = options || {};
   options.seed = data;
   return new Document(options);
+};
+
+Document.Facette = function(doc) {
+
+  this.get = doc.get.bind(doc);
+
+  this.getIndex = function(name) {
+    return doc.indexes[name];
+  };
+
+  this.getSchema = function() {
+    return doc.schema;
+  };
+
+  this.on = doc.on.bind(doc);
+
+  this.off = doc.off.bind(doc);
+
 };
 
 Document.DocumentError = DocumentError;
