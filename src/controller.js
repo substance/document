@@ -552,7 +552,15 @@ ManipulationSession.Prototype = function() {
         // otherwise, or if the parent was not fully selected
         // delete the node regularly
         if (!visited[parentId]) {
-          this.deleteNode(node.id);
+          // TODO: need to check if the node is allowed to be empty
+          if (r.node.getLength() === 0) {
+            this.deleteNode(node.id);
+          } else {
+            var op = r.node.deleteOperation(r.start, r.end);
+            if (op && !op.isNOP()) {
+              doc.apply(op);
+            }
+          }
         }
       }
       // for partial deletions ask the node for an (incremental) operation
