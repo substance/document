@@ -26,7 +26,7 @@ var DocumentManipulationTest = function () {
   };
 
   this.actions = [
-
+/*
     "Join two paragraphs", function() {
       var fixture = this.fixture("two_paragraphs");
 
@@ -366,6 +366,46 @@ var DocumentManipulationTest = function () {
       assert.isUndefined(this.doc.get("l2"));
       assert.isEqual("Item 1Item 2", p1.content);
       assert.isArrayEqual(["p1"], l1.items);
+    },
+
+    */
+
+    "Break a paragraph", function() {
+      this.fixture("two_paragraphs");
+
+      this.controller.selection.set([0, 3]);
+      this.controller.breakNode();
+
+      var nodes = this.container.getNodes();
+
+      assert.isEqual("Hel", nodes[0].content);
+      assert.isEqual("lo", nodes[1].content);
+      assert.isEqual("World", nodes[2].content);
+    },
+
+    "Figures are not breakable", function() {
+      this.fixture("figure");
+
+      this.controller.selection.set([1, 3]);
+      this.controller.breakNode();
+
+      var nodeIds = this.container.getNodes("idsOnly");
+
+      assert.isArrayEqual(["i1", "p1"], nodeIds);
+    },
+
+    "Breaking a list creates a new list item", function() {
+      this.fixture("list");
+
+      this.controller.selection.set([1, 1]);
+      this.controller.breakNode();
+
+      var nodes = this.container.getNodes();
+
+      assert.isEqual("Tic", nodes[0].content);
+      assert.isEqual("T", nodes[1].content);
+      assert.isEqual("ac", nodes[2].content);
+      assert.isEqual("Toe", nodes[3].content);
     },
   ];
 

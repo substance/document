@@ -83,6 +83,14 @@ Node.Prototype = function() {
     throw new Error("Node.join() is abstract.");
   };
 
+  this.isBreakable = function() {
+    return false;
+  };
+
+  this.break = function(doc, pos) {
+    throw new Error("Node.split() is abstract.");
+  };
+
   this.getAnnotations = function() {
     return this.document.getIndex("annotations").get(this.properties.id);
   };

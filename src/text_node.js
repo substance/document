@@ -95,7 +95,25 @@ Text.Prototype = function() {
       doc.set([anno.id, "path"], [this.properties.id, "content"]);
       doc.set([anno.id, "range"], [anno.range[0]+pos, anno.range[1]+pos]);
     }, this);
+  };
 
+  this.isBreakable = function() {
+    return true;
+  };
+
+  this.break = function(doc, pos) {
+    var tail = this.properties.content.substring(pos);
+
+    // 1. Create a new node containing the tail content
+    var newNode = this.toJSON();
+    newNode.id = doc.uuid(this.properties.type);
+    newNode.content = tail;
+
+    // 2. Trim this node's content;
+    doc.update([this.properties.id, "content"], TextOperation.Delete(pos, tail))
+
+    // return the new node
+    return newNode;
   };
 
 };

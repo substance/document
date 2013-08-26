@@ -70,6 +70,19 @@ List.Prototype = function() {
   this.canJoin = function(other) {
     return (other.type === "list");
   };
+  this.isBreakable = function() {
+    return true;
+  };
+  this.break = function(doc, childId, charPos) {
+    var childPos = this.properties.items.indexOf(childId);
+    if (childPos < 0) {
+      throw new Error("Unknown child " + childId);
+    }
+    var child = doc.get(childId);
+    var newNode = child.break(doc, charPos);
+    doc.create(newNode);
+    doc.update([this.id, "items"], ["+", childPos+1, newNode.id]);
+  };
 };
 List.Prototype.prototype = Document.Composite.prototype;
 List.prototype = new List.Prototype();

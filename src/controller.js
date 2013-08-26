@@ -147,17 +147,63 @@ Controller.Prototype = function() {
   // --------
   //
 
+  // TODO: pick a better name
   this.modifyNode = function(type, data) {
-    console.log("I am sorry. Currently disabled.");
+    this.breakNode();
   };
 
+  this.breakNode = function() {
+    if (this.selection.isNull()) {
+      console.log("Can not write, as no position has been selected.");
+      return;
+    }
+
+    var session = this.startManipulation();
+    var doc = session.doc;
+    var sel = session.sel;
+    var container = sel.container;
+
+    if (!sel.isCollapsed()) {
+      session.deleteSelection();
+    }
+
+    var node = sel.getNodes()[0];
+    var nodePos = sel.start[0];
+    var charPos = sel.start[1];
+
+    if (node.isBreakable()) {
+      var parentId = container.getParent(node.id);
+
+      var newNode;
+
+      if (parentId) {
+        var parent = doc.get(parentId);
+        if (parent.isBreakable()) {
+          // TODO: it is rather ugly to deal with nested...
+          var children = parent.getNodes();
+          parent.break(doc, node.id, charPos);
+        } else {
+          console.log("Node type '"+parent.type+"' is not splittable.");
+        }
+      } else {
+        newNode = node.break(doc, charPos);
+        doc.create(newNode);
+        var insertPos = container.treeView.indexOf(node.id)+1;
+        doc.show(this.view, newNode.id, insertPos);
+        sel.set([insertPos,0]);
+      }
+    }
+
+    session.save();
+    this.selection.set(sel);
+  };
 
   // Based on current selection, insert new node
   // --------
   //
 
   this.insertNode = function(type, data) {
-    console.log("I am sorry. Currently disabled.");
+    console.log("I am sorry. Currently disabled.", type, data);
   };
 
   // Creates an annotation based on the current position
@@ -252,7 +298,7 @@ Controller.Prototype = function() {
       var node = doc.get(op.path[0]);
 
       if (!node) {
-        console.log("Hmmm... this.should not happen, though.")
+        console.log("Hmmm... this.should not happen, though.");
         return;
       }
 
