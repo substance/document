@@ -301,6 +301,9 @@ Document.Prototype = function() {
     return Document.fromSnapshot(data, options);
   };
 
+  this.uuid = function(type) {
+    return type + "_" + util.uuid();
+  };
 };
 
 Document.Prototype.prototype = Data.Graph.prototype;
