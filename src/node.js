@@ -83,6 +83,9 @@ Node.Prototype = function() {
     throw new Error("Node.join() is abstract.");
   };
 
+  this.getAnnotations = function() {
+    return this.document.getIndex("annotations").get(this.properties.id);
+  };
 };
 
 Node.prototype = new Node.Prototype();
