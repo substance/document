@@ -106,6 +106,11 @@ Text.Prototype = function() {
 
     // 1. Create a new node containing the tail content
     var newNode = this.toJSON();
+    // letting the textish node override the type of the new node
+    // e.g., a 'heading' breaks into a 'paragraph'
+    if (this.constructor.properties["splitInto"]) {
+      newNode.type = this.constructor.properties["splitInto"];
+    }
     newNode.id = doc.uuid(this.properties.type);
     newNode.content = tail;
     doc.create(newNode);
