@@ -221,6 +221,16 @@ Controller.Prototype = function() {
   };
 
   var _updateSelection = function(op) {
+
+    // TODO: this needs a different approach.
+    // With compounds, the atomic operation do not directly represent a natural behaviour
+    // I.e., the last operation applied does not represent the position which is
+    // desired for updating the cursor
+    // Probably, we need to handle that behavior rather manually knowing
+    // about possible compound types...
+    // Maybe we could use the `alias` field of compound operations to leave helpful information...
+    // However, we post-pone this task as it is rather cosmetic
+
     if (!op) return;
 
     var view = this.view;
@@ -246,16 +256,12 @@ Controller.Prototype = function() {
         return;
       }
 
-      var nodePos;
-      var charPos;
+      var nodePos = -1;
+      var charPos = -1;
 
       if (node instanceof Composite) {
-        var changed = node.getChangePosition(op);
-        var children = node.getNodes();
-        var child = doc.get(children[changed]);
-        // TODO: should treat insertions and deletions differently?
-        return container.before(child);
-      } else {
+        // TODO: there is no good concept yet
+      } else if (node.getChangePosition) {
         nodePos = container.getPosition(node.id);
         charPos = node.getChangePosition(op);
       }
@@ -266,6 +272,8 @@ Controller.Prototype = function() {
     }
 
 
+    // TODO: actually, this is not yet an appropriate approach to update the cursor position
+    // for compounds.
     Operator.Helpers.each(op, function(_op) {
       var pos = getUpdatedPostion(_op);
       if (pos) {
@@ -363,7 +371,6 @@ ManipulationSession.Prototype = function() {
 
     node1.join(doc, node2);
     this.deleteNode(node2.id);
-
 
     // Note: the previous call might have eliminated the second composite node
     var parent2 = (parentId2) ? doc.get(parentId2) : null;
