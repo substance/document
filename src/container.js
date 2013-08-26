@@ -56,7 +56,7 @@ Container.Prototype = function() {
     this.treeView = _.clone(this.view.nodes);
     for (var i = 0; i < this.view.length; i++) {
       this.treeView.push(this.view[i]);
-    };
+    }
 
     this.__parents = {};
     this.__composites = {};
@@ -177,6 +177,27 @@ Container.Prototype = function() {
     } else {
       return node;
     }
+  };
+
+  // Provides a document position which addresses begin of a given node
+  // --------
+  //
+
+  this.before = function(node) {
+    var child = this.firstChild(node);
+    var nodePos = this.getPosition(child.id);
+    return [nodePos, 0];
+  };
+
+  // Provides a document position which addresses the end of a given node
+  // --------
+  //
+
+  this.after = function(node) {
+    var child = this.lastChild(node);
+    var nodePos = this.getPosition(child.id);
+    var charPos = child.getLength();
+    return [nodePos, charPos];
   };
 
 };
