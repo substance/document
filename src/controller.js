@@ -102,8 +102,16 @@ Controller.Prototype = function() {
     if (container.getLength() === 0) {
       this.selection.clear();
     } else {
-      sel.collapse("left");
-      this.selection.set(sel);
+      // HACK: if the selection is in an invalid state
+      // select the previous char (happens when last node is deleted)
+      var N = container.listView.length;
+      if (sel.cursor.nodePos >= N) {
+        var l = container.getNodeFromPosition(N-1).getLength();
+        this.selection.set([N-1, l]);
+      } else {
+        sel.collapse("left");
+        this.selection.set(sel);
+      }
     }
 
   };
@@ -344,6 +352,7 @@ ManipulationSession.Prototype = function() {
 
     var doc = this.doc;
     var container = this.container;
+    var sel = this.sel;
 
     var node1 = doc.get(id1);
     var node2 = doc.get(id2);
@@ -359,6 +368,7 @@ ManipulationSession.Prototype = function() {
 
     node1.join(doc, node2);
     this.deleteNode(node2.id);
+
 
     // Note: the previous call might have eliminated the second composite node
     var parent2 = (parentId2) ? doc.get(parentId2) : null;
