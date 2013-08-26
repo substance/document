@@ -6,7 +6,7 @@ var Operator = require('substance-operator');
 var Selection = require("./selection");
 var Annotator = require("./annotator");
 var Clipboard = require("./clipboard");
-var Container = require('./container');
+var Composite = require('./composite');
 
 // Document.Controller
 // -----------------
@@ -220,75 +220,71 @@ Controller.Prototype = function() {
     return this.__document.off.apply(this.__document, arguments);
   };
 
-  this.undo = function() {
-    var op = this.chronicle.rewind();
-    this.updateSelection(op);
-  };
-
-  this.redo = function() {
-    var op = this.chronicle.forward();
-    this.updateSelection(op);
-  };
-
-  this.updateSelection = function(op) {
+  var _updateSelection = function(op) {
     if (!op) return;
 
     var view = this.view;
     var doc = this.__document;
     var container = this.container;
 
-    // TODO: define when and how to react on operations
     function getUpdatedPostion(op) {
+
+      // We need the last update which is relevant to positioning...
+      // 1. Update of the content of leaf nodes: ask node for an updated position
+      // 2. Update of a reference in a composite node:
+      // TODO: fixme. This does not work with deletions.
+
+      // changes to views or containers are always updates or sets
+      // as they are properties
       if (op.type !== "update" && op.type !== "set") return;
 
-      var nodePos = -1;
-      var charPos = -1;
-
       // handle changes to the view of nodes
-      if (op.path[0] === view && op.path[1] === "nodes") {
-        var lastChange = Operator.Helpers.last(op.diff);
-        if (lastChange.isMove()) {
-          nodePos = lastChange.target;
-        } else {
-          nodePos = lastChange.pos;
-        }
-        charPos = 0;
+      var node = doc.get(op.path[0]);
+
+      if (!node) {
+        console.log("Hmmm... this.should not happen, though.")
+        return;
       }
 
-      // delegate node updates to the Node implementation
-      else {
-        var node = doc.get(op.path[0]);
-        // TODO: fixme. This does not work with deletions.
-        if (!node) return;
+      var nodePos;
+      var charPos;
 
+      if (node instanceof Composite) {
+        var changed = node.getChangePosition(op);
+        var children = node.getNodes();
+        var child = doc.get(children[changed]);
+        // TODO: should treat insertions and deletions differently?
+        return container.before(child);
+      } else {
         nodePos = container.getPosition(node.id);
-        if (node.getUpdatedCharPos !== undefined) {
-          charPos = node.getUpdatedCharPos(op);
-        }
+        charPos = node.getChangePosition(op);
       }
 
-      return [nodePos, charPos];
-    }
-
-    var pos = null;
-    var tmp;
-    if (op.type === "compound") {
-      Operator.Helpers.each(op, function(_op) {
-        tmp = getUpdatedPostion(_op);
-        if (tmp && tmp[0] >= 0 && tmp[1] >= 0) {
-          pos = tmp;
-        }
-      });
-    } else {
-      tmp = getUpdatedPostion(op);
-      if (tmp && tmp[0] >= 0 && tmp[1] >= 0) {
-        pos = tmp;
+      if (nodePos >= 0 && charPos >= 0) {
+        return [nodePos, charPos];
       }
     }
 
-    if (pos) {
-      this.selection.set(pos);
-    }
+
+    Operator.Helpers.each(op, function(_op) {
+      var pos = getUpdatedPostion(_op);
+      if (pos) {
+        this.selection.set(pos);
+        // breaking the iteration
+        return false;
+      }
+    }, this, "reverse");
+
+  };
+
+  this.undo = function() {
+    var op = this.chronicle.rewind();
+    _updateSelection.call(this, op);
+  };
+
+  this.redo = function() {
+    var op = this.chronicle.forward();
+    _updateSelection.call(this, op);
   };
 
 };
@@ -352,7 +348,6 @@ ManipulationSession.Prototype = function() {
 
     var doc = this.doc;
     var container = this.container;
-    var sel = this.sel;
 
     var node1 = doc.get(id1);
     var node2 = doc.get(id2);

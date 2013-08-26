@@ -17,7 +17,7 @@ var Text = function(node, document) {
 
 Text.Prototype = function() {
 
-  this.getUpdatedCharPos = function(op) {
+  this.getChangePosition = function(op) {
     if (op.path[1] === "content") {
       var lastChange = Operator.Helpers.last(op.diff);
       if (lastChange.isInsert()) {

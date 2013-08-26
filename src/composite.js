@@ -41,7 +41,11 @@ Composite.Prototype = function() {
     throw new Error("This composite is immutable.");
   };
 
-  this.getUpdatedCharPos = function() {
+  // Provides the index of the affected node.
+  // --------
+  //
+
+  this.getChangePosition = function(op) {
     return 0;
   };
 

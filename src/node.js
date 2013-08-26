@@ -50,11 +50,11 @@ Node.Prototype = function() {
     throw new Error("Node.getLength() is abstract.");
   };
 
-  // Provides how a cursor would change by the a operation
+  // Provides how a cursor would change by an operation
   // --------
   //
 
-  this.getUpdatedCharPos = function(op) {
+  this.getChangePosition = function(op) {
     throw new Error("Node.getCharPosition() is abstract.");
   };
 
