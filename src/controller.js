@@ -558,9 +558,19 @@ ManipulationSession.Prototype = function() {
           if (r.node.getLength() === 0) {
             this.deleteNode(node.id);
           } else {
+            // FIXME: annotations have to be removed first otherwise
+            // the operations are in wrong order and the inverted operation
+            // creates annotations before the content is available.
+            // This should be done in the text node...
+            // We should extract that from the Annotator into helper functions
+            // ... and probably get rid of the Annotator soon...
             var op = r.node.deleteOperation(r.start, r.end);
             if (op && !op.isNOP()) {
               doc.apply(op);
+            }
+            // HACK: delete fully selected nodes after the first range
+            if (i > 0) {
+              this.deleteNode(node.id);
             }
           }
         }
