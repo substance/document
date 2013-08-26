@@ -89,6 +89,13 @@ Text.Prototype = function() {
     var text = other.content;
 
     doc.update([this.id, "content"], [pos, text]);
+    var annotations = doc.indexes["annotations"].get(other.id);
+
+    _.each(annotations, function(anno) {
+      doc.set([anno.id, "path"], [this.properties.id, "content"]);
+      doc.set([anno.id, "range"], [anno.range[0]+pos, anno.range[1]+pos]);
+    }, this);
+
   };
 
 };
