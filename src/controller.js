@@ -179,9 +179,10 @@ Controller.Prototype = function() {
       if (parentId) {
         var parent = doc.get(parentId);
         if (parent.isBreakable()) {
-          // TODO: it is rather ugly to deal with nested...
           var children = parent.getNodes();
-          parent.break(doc, node.id, charPos);
+          var newNode = parent.break(doc, node.id, charPos);
+          var pos = container.before(newNode);
+          sel.set(pos);
         } else {
           console.log("Node type '"+parent.type+"' is not splittable.");
         }

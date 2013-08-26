@@ -80,8 +80,8 @@ List.Prototype = function() {
     }
     var child = doc.get(childId);
     var newNode = child.break(doc, charPos);
-    doc.create(newNode);
     doc.update([this.id, "items"], ["+", childPos+1, newNode.id]);
+    return newNode;
   };
 };
 List.Prototype.prototype = Document.Composite.prototype;
