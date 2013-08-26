@@ -187,7 +187,6 @@ Controller.Prototype = function() {
         }
       } else {
         newNode = node.break(doc, charPos);
-        doc.create(newNode);
         var insertPos = container.treeView.indexOf(node.id)+1;
         doc.show(this.view, newNode.id, insertPos);
         sel.set([insertPos,0]);

@@ -108,8 +108,18 @@ Text.Prototype = function() {
     var newNode = this.toJSON();
     newNode.id = doc.uuid(this.properties.type);
     newNode.content = tail;
+    doc.create(newNode);
 
-    // 2. Trim this node's content;
+    // 2. Move all annotations
+    var annotations = doc.indexes["annotations"].get(this.properties.id);
+    _.each(annotations, function(annotation) {
+      if (annotation.range[0] >= pos) {
+        doc.set([annotation.id, "path"], [newNode.id, "content"]);
+        doc.set([annotation.id, "range"], [annotation.range[0]-pos, annotation.range[1]-pos]);
+      }
+    });
+
+    // 3. Trim this node's content;
     doc.update([this.properties.id, "content"], TextOperation.Delete(pos, tail))
 
     // return the new node
