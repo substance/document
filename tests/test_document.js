@@ -4,15 +4,12 @@ var _ = require("underscore");
 var util = require("substance-util");
 var Document = require("../index");
 
+// setting a default splitInto property:
+
 var Paragraph = function(node, doc) {
   Document.Text.call(this, node, doc);
 };
-Paragraph.Prototype = function() {
-  this.mergeableWith = ["paragraph", "heading"];
-  this.preventEmpty = false;
-  this.splitInto = 'paragraph';
-  this.allowedAnnotations = ["strong", "idea"];
-};
+Paragraph.Prototype = function() {};
 Paragraph.Prototype.prototype = Document.Text.prototype;
 Paragraph.prototype = new Paragraph.Prototype();
 
@@ -20,11 +17,8 @@ var Heading = function(node, doc) {
   Document.Text.call(this, node, doc);
 };
 Heading.Prototype = function() {
-  this.mergeableWith = ["paragraph", "heading"];
-  this.preventEmpty = false;
-  this.splitInto = 'paragraph';
-  this.allowedAnnotations = ["strong", "idea"];
-};
+  this.splitInto = "paragraph";
+}
 Heading.Prototype.prototype = Document.Text.prototype;
 Heading.prototype = new Heading.Prototype();
 
@@ -32,9 +26,6 @@ var ImageNode = function(node, doc) {
   Document.Node.call(this, node, doc);
 };
 ImageNode.Prototype = function() {
-  this.mergeableWith = [];
-  this.preventEmpty = true;
-  this.allowedAnnotations = ["strong", "idea"];
   this.getLength = function() {
     return 1;
   };

@@ -75,17 +75,33 @@ Node.Prototype = function() {
     throw new Error("Node.deleteOperation() is abstract.");
   };
 
+  // Note: this API is rather experimental
+  // It is used to dynamically control the behavior for modifications
+  // e.g., via an editor
+
+  // Can this node be joined with another one?
+  // --------
+
   this.canJoin = function(other) {
     return false;
   };
+
+  // Appends the content of another node
+  // --------
 
   this.join = function(other) {
     throw new Error("Node.join() is abstract.");
   };
 
+  // Can a 'hard-break' be applied to this node?
+  // --------
+
   this.isBreakable = function() {
     return false;
   };
+
+  // Breaks this node at a given position
+  // --------
 
   this.break = function(doc, pos) {
     throw new Error("Node.split() is abstract.");
