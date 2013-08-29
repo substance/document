@@ -26,6 +26,14 @@ Composite.Prototype = function() {
     return false;
   };
 
+  this.insertOperation = function(/*charPos, text*/) {
+    return null;
+  };
+
+  this.deleteOperation = function(/*startChar, endChar*/) {
+    return null;
+  };
+
   // Inserts reference(s) at the given position
   // --------
   //

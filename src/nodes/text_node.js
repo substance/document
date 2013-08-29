@@ -5,14 +5,14 @@ var Operator = require('substance-operator');
 var SRegExp = require("substance-regexp");
 var ObjectOperation = Operator.ObjectOperation;
 var TextOperation = Operator.TextOperation;
-var Node = require('../../node');
+var DocumentNode = require('../node');
 
 // Substance.Text
 // -----------------
 //
 
 var Text = function(node, document) {
-  Node.call(this, node, document);
+  DocumentNode.call(this, node, document);
 };
 
 Text.Prototype = function() {
@@ -131,10 +131,10 @@ Text.Prototype = function() {
 
 };
 
-Text.Prototype.prototype = Node.prototype;
+Text.Prototype.prototype = DocumentNode.prototype;
 Text.prototype = new Text.Prototype();
 Text.prototype.constructor = Text;
 
-Node.defineProperties(Text.prototype, ["content"]);
+DocumentNode.defineProperties(Text.prototype, ["content"]);
 
 module.exports = Text;

@@ -1,5 +1,7 @@
 "use strict";
 
+var _ = require("underscore");
+
 var Document = require('./src/document');
 Document.Annotator = require('./src/annotator');
 Document.Container = require('./src/container');
@@ -14,6 +16,6 @@ Document.Composite = require('./src/composite');
 Document.Writer = require('./src/controller');
 
 var nodes = require('./src/nodes');
-Document.Text = nodes.Text;
+_.extend(Document, nodes);
 
 module.exports = Document;
