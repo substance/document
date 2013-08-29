@@ -5,7 +5,7 @@ var Operator = require('substance-operator');
 var SRegExp = require("substance-regexp");
 var ObjectOperation = Operator.ObjectOperation;
 var TextOperation = Operator.TextOperation;
-var Node = require('./node');
+var Node = require('../../node');
 
 // Substance.Text
 // -----------------
