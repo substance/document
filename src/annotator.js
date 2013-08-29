@@ -555,6 +555,9 @@ var _levels = {
   strong: 2,
   emphasis: 2,
   code: 2,
+  subscript: 2,
+  superscript: 2,
+  underline: 2,
   cross_reference: 1,
   figure_reference: 1,
   citation_reference: 1

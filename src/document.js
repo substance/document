@@ -96,8 +96,6 @@ Document.Prototype = function() {
 
     if (!node) return node;
 
-    // Note: we are replacing some node types into rich instances.
-
     // Wrap all views in Container instances
     if (node.type === "view") {
       if (!this.containers[node.id]) {
