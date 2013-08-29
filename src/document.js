@@ -33,8 +33,6 @@ var Document = function(options) {
   Data.Graph.call(this, options.schema, options);
 
   this.containers = {};
-
-  this.__facette = new Document.Facette(this);
 };
 
 // Default Document Schema
@@ -62,7 +60,6 @@ Document.schema = {
 
 
 Document.Prototype = function() {
-
   var __super__ = util.prototype(this);
 
   this.__apply__ = function(op) {
@@ -79,6 +76,15 @@ Document.Prototype = function() {
     }, this);
 
     return result;
+  };
+
+
+  this.getIndex = function(name) {
+    return this.indexes[name];
+  };
+
+  this.getSchema = function() {
+    return this.schema;
   };
 
 
@@ -109,7 +115,7 @@ Document.Prototype = function() {
 
       var NodeType = this.nodeTypes[node.type];
       if (NodeType && !(node instanceof NodeType)) {
-        node = new NodeType(node, this.__facette);
+        node = new NodeType(node, this);
         this.nodes[node.id] = node;
       }
 
@@ -316,23 +322,6 @@ Document.fromSnapshot = function(data, options) {
   return new Document(options);
 };
 
-Document.Facette = function(doc) {
-
-  this.get = doc.get.bind(doc);
-
-  this.getIndex = function(name) {
-    return doc.indexes[name];
-  };
-
-  this.getSchema = function() {
-    return doc.schema;
-  };
-
-  this.on = doc.on.bind(doc);
-
-  this.off = doc.off.bind(doc);
-
-};
 
 Document.DocumentError = DocumentError;
 

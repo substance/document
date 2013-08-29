@@ -4,6 +4,42 @@ var Composite = function(node, doc) {
   DocumentNode.call(this, node, doc);
 };
 
+
+// Type definition
+// -----------------
+//
+
+Composite.type = {
+  "id": "composite",
+  "parent": "content",
+  "properties": {
+  }
+};
+
+
+// This is used for the auto-generated docs
+// -----------------
+//
+
+Composite.description = {
+  "name": "Composite",
+  "remarks": [
+    "A file reference to an external resource.",
+  ],
+  "properties": {
+  }
+};
+
+// Example File
+// -----------------
+//
+
+Composite.example = {
+  "no_example": "yet"
+};
+
+
+
 Composite.Prototype = function() {
 
   this.getLength = function() {
