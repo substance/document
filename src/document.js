@@ -174,9 +174,7 @@ Document.Prototype = function() {
   //
 
   this.show = function(viewId, nodes, target) {
-    if (arguments.length !== 3) {
-      throw new DocumentError("Invalid arguments: expecting (viewId, nodes, target)");
-    }
+    if (target === undefined) target = -1;
 
     var view = this.get(viewId);
     if (!view) {
