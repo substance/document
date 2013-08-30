@@ -714,4 +714,4 @@ _.each(FIXTURES, function(fixture) {
   util.freeze(fixture);
 });
 
-registerTest(['Document', 'Manipulation'], new DocumentManipulationTest());
+registerTest(['Substance.Document', 'Manipulation'], new DocumentManipulationTest());

@@ -150,4 +150,4 @@ var ContainerTest = function () {
   ];
 };
 
-registerTest(['Document', 'Container'], new ContainerTest());
+registerTest(['Substance.Document', 'Container'], new ContainerTest());

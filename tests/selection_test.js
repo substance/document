@@ -359,4 +359,4 @@ SelectionTest.Prototype = function() {
 SelectionTest.prototype = new SelectionTest.Prototype();
 
 
-registerTest(['Document', 'Selection'], new SelectionTest());
+registerTest(['Substance.Document', 'Selection'], new SelectionTest());
