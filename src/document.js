@@ -347,9 +347,6 @@ Document.Prototype = function() {
 Document.Prototype.prototype = Data.Graph.prototype;
 Document.prototype = new Document.Prototype();
 
-// Add event support
-_.extend(Document.prototype, util.Events);
-
 Document.fromSnapshot = function(data, options) {
   options = options || {};
   options.seed = data;
