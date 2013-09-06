@@ -178,11 +178,11 @@ _.extend(Schema.types, {
 });
 
 var nodeTypes = {
-  "paragraph": Paragraph,
-  "heading": Heading,
-  "image": ImageNode,
-  "list": List,
-  "figure": Figure
+  "paragraph": { Model: Paragraph },
+  "heading": { Model: Heading },
+  "image": { Model: ImageNode },
+  "list": { Model: List },
+  "figure": { Model: Figure }
 };
 
 var TestDocument = function(options) {
