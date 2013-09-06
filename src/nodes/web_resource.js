@@ -28,7 +28,7 @@ WebResource.description = {
 
 WebResource.example = {
   "type": "webresource",
-  "id": "webresource3",
+  "id": "webresource_3",
   "url": "http://elife.elifesciences.org/content/elife/1/e00311/F3.medium.gif"
 };
 
