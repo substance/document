@@ -112,8 +112,8 @@ Document.Prototype = function() {
 
     // Wrap all nodes in an appropriate Node instance
     else {
-
-      var NodeType = this.nodeTypes[node.type];
+      var nodeSpec = this.nodeTypes[node.type];
+      var NodeType = (nodeSpec !== undefined) ? nodeSpec.Model : null;
       if (NodeType && !(node instanceof NodeType)) {
         node = new NodeType(node, this);
         this.nodes[node.id] = node;
