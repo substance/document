@@ -13,6 +13,7 @@ Codeblock.type = {
   "id": "codeblock",
   "parent": "content",
   "properties": {
+    "source_id": "string",
     "content": "string"
   }
 };

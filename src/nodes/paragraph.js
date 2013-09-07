@@ -10,6 +10,7 @@ Paragraph.type = {
   "id": "paragraph",
   "parent": "content",
   "properties": {
+    "source_id": "Paragraph source id",
     "content": "string"
   }
 };

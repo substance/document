@@ -11,6 +11,7 @@ List.type = {
   "id": "list",
   "parent": "content",
   "properties": {
+    "source_id": "string",
     "items": ["array", "paragraph"],
     "ordered": "boolean"
   }
