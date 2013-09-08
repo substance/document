@@ -15,6 +15,7 @@ ImageNode.type = {
   "id": "image",
   "parent": "webresource",
   "properties": {
+    "source_id": "string"
   }
 };
 

@@ -10,6 +10,7 @@ WebResource.type = {
   "id": "webresource",
   "parent": "content",
   "properties": {
+    "source_id": "string",
     "url": "string"
   }
 };
