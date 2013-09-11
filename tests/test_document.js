@@ -3,23 +3,24 @@
 var _ = require("underscore");
 var util = require("substance-util");
 var Document = require("../index");
+var TextNode = Document.TextNode;
 
 // setting a default splitInto property:
 
 var Paragraph = function(node, doc) {
-  Document.Text.call(this, node, doc);
+  TextNode.call(this, node, doc);
 };
 Paragraph.Prototype = function() {};
-Paragraph.Prototype.prototype = Document.Text.prototype;
+Paragraph.Prototype.prototype = TextNode.prototype;
 Paragraph.prototype = new Paragraph.Prototype();
 
 var Heading = function(node, doc) {
-  Document.Text.call(this, node, doc);
+  TextNode.call(this, node, doc);
 };
 Heading.Prototype = function() {
   this.splitInto = "paragraph";
 }
-Heading.Prototype.prototype = Document.Text.prototype;
+Heading.Prototype.prototype = TextNode.prototype;
 Heading.prototype = new Heading.Prototype();
 
 var ImageNode = function(node, doc) {
