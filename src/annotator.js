@@ -560,6 +560,7 @@ var _levels = {
   underline: 2,
   cross_reference: 1,
   figure_reference: 1,
+  person_reference: 1,
   citation_reference: 1
 };
 
