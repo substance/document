@@ -6,7 +6,7 @@ var Operator = require('substance-operator');
 var Selection = require("./selection");
 var Annotator = require("./annotator");
 var Clipboard = require("./clipboard");
-var Transformer = require('./transformer');
+var Composite = require('./composite');
 
 // Document.Controller
 // -----------------
@@ -33,14 +33,15 @@ var Controller = function(document, options) {
   this.chronicle = document.chronicle;
   this.annotator = new Annotator(document);
 
-  // Document.Transformer
-  // Contains higher level operations to transform (change) a document
-  this.transformer = new Transformer(document);
-
-  this.selection = new Selection(this.__document, null);
+  this.container = document.get(this.view);
+  this.selection = new Selection(this.container);
   this.clipboard = new Clipboard();
 
-  this.listenTo(document, 'operation:applied', this.updateSelection);
+  // TODO: this needs serious re-thinking...
+  // On the one hand, we wan be able to set the cursor after undo or redo.
+  // OTOH, we do not want to update the selection on each micro operation.
+  // Probably, the best would be to do that explicitely in all cases (also undo/redo)...
+  // this.listenTo(document, 'operation:applied', this.updateSelection);
 };
 
 Controller.Prototype = function() {
@@ -49,20 +50,23 @@ Controller.Prototype = function() {
   // --------
 
   this.getNodes = function(idsOnly) {
-    if (idsOnly) return this.__document.get([this.view, "nodes"]);
-    else return this.__document.query([this.view, "nodes"]);
+    return this.container.getNodes(idsOnly);
+  };
+
+  this.getContainer = function() {
+    return this.container;
   };
 
   // Given a node id, get position in the document
   // --------
   //
 
-  this.getPosition = function(id) {
-    return this.__document.getPosition(this.view, id);
+  this.getPosition = function(id, flat) {
+    return this.container.getPosition(id, flat);
   };
 
   this.getNodeFromPosition = function(nodePos) {
-    return this.__document.getNodeFromPosition(this.view, nodePos);
+    return this.container.getNodeFromPosition(nodePos);
   };
 
   // See Annotator
@@ -75,98 +79,41 @@ Controller.Prototype = function() {
     return this.annotator.getAnnotations(options);
   };
 
-  var _delete = function(doc, direction) {
-
-    var sel = new Selection(doc, this.selection);
-    var transformer = this.transformer;
-    var view = this.view;
-
-    // Remove character (backspace behavior)
-    // --------
-    //
-
-    function removeChar(direction) {
-      sel.expand(direction, 'char');
-      transformer.deleteSelection(doc, sel);
-      sel.collapse("left");
-    }
-
-    // Attempt merge
-    // --------
-    //
-
-    function attemptMerge(direction, select) {
-      var node = sel.getRanges()[0].node;
-      var sourceNode;
-      var targetNode;
-      var insertionPos;
-
-      if (direction === "left") {
-        sourceNode = node;
-        targetNode = sel.getPredecessor();
-        if (!targetNode) return;
-        insertionPos = targetNode.content.length;
-      } else {
-        sourceNode = sel.getSuccessor();
-        if (!sourceNode) return;
-        targetNode = node;
-      }
-
-      var merged = transformer.mergeNodes(doc, sourceNode, targetNode);
-
-      if (merged) {
-        // Consider this API instead?
-        // sel.setCursor([targetNode.id, insertionPos]);
-        if (direction === "left") {
-          sel.set([doc.getPosition(view, targetNode.id), insertionPos]);
-        }
-      } else if(select) {
-        sel.selectNode(targetNode.id);
-      }
-    }
-
-    // Regular deletion
-    // --------
-    //
-
-    function deleteSelection() {
-      transformer.deleteSelection(doc, sel);
-      sel.collapse("left");
-    }
-
-    if (sel.isCollapsed()) {
-      var cursor = sel.cursor;
-      if (cursor.isLeftBound() && direction === "left") {
-        attemptMerge('left', true);
-      } else if (cursor.isRightBound() && direction =="right") {
-        attemptMerge('right', true);
-      } else {
-        removeChar(direction);
-      }
-    } else {
-      var shouldMerge = sel.hasMultipleNodes();
-      deleteSelection(direction);
-      if (shouldMerge) attemptMerge("right", false);
-    }
-
-    return sel;
-  };
-
   // Delete current selection
   // --------
   //
 
   this.delete = function(direction) {
-    var doc = this.startSimulation();
 
-    var sel = _delete.call(this, doc, direction);
+    var session = this.startManipulation();
+    // var doc = session.doc;
+    var sel = session.sel;
+    var container = sel.container;
 
-    // commit changes
-    doc.save();
+    if (sel.isNull()) return;
 
-    // important to set this at last, as doc.save() will trigger implicit selection
-    // changes
-    this.selection.set(sel);
+    if (sel.isCollapsed()) {
+      sel.expand(direction, "char");
+    }
+
+    session.deleteSelection();
+    session.save();
+
+    if (container.getLength() === 0) {
+      this.selection.clear();
+    } else {
+      // HACK: if the selection is in an invalid state
+      // select the previous char (happens when last node is deleted)
+      var N = container.listView.length;
+      if (sel.cursor.nodePos >= N) {
+        var l = container.getNodeFromPosition(N-1).getLength();
+        this.selection.set([N-1, l]);
+      } else {
+        sel.collapse("left");
+        this.selection.set(sel);
+      }
+    }
+
   };
 
   // Copy current selection
@@ -174,9 +121,7 @@ Controller.Prototype = function() {
   //
 
   this.copy = function() {
-    // Delegate
-    var content = this.transformer.copy(this.__document, this.selection);
-    this.clipboard.setContent(content);
+    console.log("I am sorry. Currently disabled.");
   };
 
 
@@ -195,71 +140,72 @@ Controller.Prototype = function() {
   //
 
   this.paste = function() {
-    var doc = this.startSimulation();
-
-    var sel;
-
-    if (!this.selection.isCollapsed()) {
-      sel = _delete.call(this, doc);
-      this.selection.set(sel);
-    }
-
-    sel = sel || new Selection(doc, this.selection);
-    this.transformer.paste(doc, this.clipboard.getContent(), sel);
-
-    doc.save();
+    console.log("I am sorry. Currently disabled.");
   };
 
   // Split
   // --------
   //
 
+  // TODO: pick a better name
   this.modifyNode = function(type, data) {
-
-    var doc = this.startSimulation();
-
-    if (!this.selection.isCollapsed()) {
-      _delete.call(this, doc);
-    }
-
-    var sel = new Selection(doc, this.selection);
-    var cursor = sel.cursor;
-
-    if (cursor.node.type === "constructor") {
-      var charPos = cursor.charPos;
-      var targetType = cursor.node.content[charPos].type;
-
-      console.log('targetType', targetType);
-      if (targetType) {
-        this.transformer.morphNode(doc, sel, targetType, data);
-      }
-    } else {
-
-      this.transformer.insertNode(doc, sel, type, data);
-    }
-
-    // Commit
-    doc.save();
-    this.selection.set(sel);
+    this.breakNode();
   };
 
+  this.breakNode = function() {
+    if (this.selection.isNull()) {
+      console.log("Can not write, as no position has been selected.");
+      return;
+    }
+
+    var session = this.startManipulation();
+    var doc = session.doc;
+    var sel = session.sel;
+    var container = sel.container;
+
+    if (!sel.isCollapsed()) {
+      session.deleteSelection();
+    }
+
+    var node = sel.getNodes()[0];
+    var nodePos = sel.start[0];
+    var charPos = sel.start[1];
+
+    if (node.isBreakable()) {
+      var parentId = container.getParent(node.id);
+
+      var newNode;
+
+      if (parentId) {
+        var parent = doc.get(parentId);
+        if (parent.isBreakable()) {
+          var children = parent.getNodes();
+          newNode = parent.break(doc, node.id, charPos);
+        } else {
+          console.log("Node type '"+parent.type+"' is not splittable.");
+        }
+      } else {
+        newNode = node.break(doc, charPos);
+        var insertPos = container.treeView.indexOf(node.id)+1;
+        doc.show(this.view, newNode.id, insertPos);
+      }
+    }
+
+    if (newNode) {
+      var pos = container.before(newNode);
+      sel.set(pos);
+    }
+
+    session.save();
+    this.selection.set(sel);
+  };
 
   // Based on current selection, insert new node
   // --------
   //
 
   this.insertNode = function(type, data) {
-    var doc = this.startSimulation();
-    var sel = new Selection(doc, this.selection);
-
-    // Remove selected text and get a cursor
-    if (!sel.isCollapsed()) this.transformer.deleteSelection(doc, sel);
-
-    this.transformer.insertNode(doc, sel, type, data);
-
-    // Commit
-    doc.save();
-    this.selection.set(sel);
+    console.log("I am sorry. Currently disabled.", type, data);
   };
 
   // Creates an annotation based on the current position
@@ -271,10 +217,11 @@ Controller.Prototype = function() {
   };
 
 
-  this.startSimulation = function() {
+  this.startManipulation = function() {
     var doc = this.__document.startSimulation();
     new Annotator(doc, {withTransformation: true});
-    return doc;
+    var sel = new Selection(doc.get(this.view), this.selection);
+    return new Controller.ManipulationSession(doc, sel);
   };
 
   // Inserts text at the current position
@@ -287,23 +234,24 @@ Controller.Prototype = function() {
       return;
     }
 
-    var doc = this.startSimulation();
+    var session = this.startManipulation();
+    var doc = session.doc;
+    var sel = session.sel;
 
-    if (!this.selection.isCollapsed()) {
-      _delete.call(this, doc, "right");
+    if (!sel.isCollapsed()) {
+      session.deleteSelection();
     }
 
-    var node = this.selection.getNodes()[0];
-    var nodePos = this.selection.start[0];
-    var charPos = this.selection.start[1];
+    var node = sel.getNodes()[0];
+    var nodePos = sel.start[0];
+    var charPos = sel.start[1];
 
     // TODO: future. This only works for text nodes....
 
     var update = node.insertOperation(charPos, text);
     if (update) doc.apply(update);
 
-    doc.save();
-
+    session.save();
     this.selection.set([nodePos, charPos+text.length]);
   };
 
@@ -320,48 +268,81 @@ Controller.Prototype = function() {
     return this.__document.off.apply(this.__document, arguments);
   };
 
-  this.undo = function() {
-    this.chronicle.rewind();
-  };
+  var _updateSelection = function(op) {
 
-  this.redo = function() {
-    this.chronicle.forward();
-  };
+    // TODO: this needs a different approach.
+    // With compounds, the atomic operation do not directly represent a natural behaviour
+    // I.e., the last operation applied does not represent the position which is
+    // desired for updating the cursor
+    // Probably, we need to handle that behavior rather manually knowing
+    // about possible compound types...
+    // Maybe we could use the `alias` field of compound operations to leave helpful information...
+    // However, we post-pone this task as it is rather cosmetic
 
-  this.updateSelection = function(op) {
+    if (!op) return;
 
-    if (op.type === "update" || op.type === "set") {
+    var view = this.view;
+    var doc = this.__document;
+    var container = this.container;
+
+    function getUpdatedPostion(op) {
+
+      // We need the last update which is relevant to positioning...
+      // 1. Update of the content of leaf nodes: ask node for an updated position
+      // 2. Update of a reference in a composite node:
+      // TODO: fixme. This does not work with deletions.
+
+      // changes to views or containers are always updates or sets
+      // as they are properties
+      if (op.type !== "update" && op.type !== "set") return;
+
+      // handle changes to the view of nodes
+      var node = doc.get(op.path[0]);
+
+      if (!node) {
+        console.log("Hmmm... this.should not happen, though.");
+        return;
+      }
+
       var nodePos = -1;
       var charPos = -1;
 
-      // handle Show/Hide of nodes
-      if (op.path[0] === this.view && op.path[1] === "nodes") {
-        var lastChange = Operator.Helpers.last(op.diff);
-        if (lastChange.isMove()) {
-          nodePos = lastChange.target;
-        } else {
-          nodePos = lastChange.pos;
-        }
-        charPos = 0;
-      }
-
-      // delegate node updates to the Node implementation
-      else {
-        var node = this.__document.get(op.path[0]);
-
-        // TODO: fixme. This does not work with deletions.
-        if (!node) return;
-        nodePos = this.getPosition(node.id);
-        if (node.getUpdatedCharPos !== undefined) {
-          charPos = node.getUpdatedCharPos(op);
-        }
+      if (node instanceof Composite) {
+        // TODO: there is no good concept yet
+      } else if (node.getChangePosition) {
+        nodePos = container.getPosition(node.id);
+        charPos = node.getChangePosition(op);
       }
 
       if (nodePos >= 0 && charPos >= 0) {
-        this.selection.set([nodePos, charPos]);
+        return [nodePos, charPos];
       }
     }
+
+
+    // TODO: actually, this is not yet an appropriate approach to update the cursor position
+    // for compounds.
+    Operator.Helpers.each(op, function(_op) {
+      var pos = getUpdatedPostion(_op);
+      if (pos) {
+        this.selection.set(pos);
+        // breaking the iteration
+        return false;
+      }
+    }, this, "reverse");
+
   };
+
+  this.undo = function() {
+    var op = this.chronicle.rewind();
+    _updateSelection.call(this, op);
+  };
+
+  this.redo = function() {
+    var op = this.chronicle.forward();
+    _updateSelection.call(this, op);
+  };
+
 };
 
 // Inherit the prototype of Substance.Document which extends util.Events
@@ -377,8 +358,9 @@ Object.defineProperties(Controller.prototype, {
   },
   nodeTypes: {
     get: function() {
-      return this.__document.nodeTypes  
-    }
+      return this.__document.nodeTypes;
+    },
+    set: function() { throw "immutable property"; }
   },
   title: {
     get: function() {
@@ -399,5 +381,218 @@ Object.defineProperties(Controller.prototype, {
     set: function() { throw "immutable property"; }
   }
 });
+
+var ManipulationSession = function(doc, sel) {
+  this.doc = doc;
+  this.sel = sel;
+  this.container = sel.container;
+  this.viewId = this.container.view.id;
+};
+
+ManipulationSession.Prototype = function() {
+
+  this.save = function() {
+    this.doc.save();
+  };
+
+  // Joins two succeeding nodes
+  // --------
+  //
+
+  this.join = function(id1, id2) {
+    // TODO: check if node2 is successor of node1
+
+    var doc = this.doc;
+    var container = this.container;
+
+    var node1 = doc.get(id1);
+    var node2 = doc.get(id2);
+
+    var parentId1 = container.getParent(id1);
+    var parentId2 = container.getParent(id2);
+    var parent1 = (parentId1) ? doc.get(parentId1) : null;
+
+    // Note: assuming that mutable composites allow joins (e.g., lists), others do not (e.g., figures)
+    if (!node1.canJoin(node2) || (parent1 && !parent1.isMutable())) {
+      return false;
+    }
+
+    node1.join(doc, node2);
+    this.deleteNode(node2.id);
+
+    // Note: the previous call might have eliminated the second composite node
+    var parent2 = (parentId2) ? doc.get(parentId2) : null;
+
+    // Join composites if this is allowed
+    // Note: this is experimental...
+    //  currently, this is only used with two succeeding lists
+    // .. and not if we join an element of the parent into the child...
+    // ... wooo hacky...
+    if (parent1 && parent2 &&
+      parent1.id !== parent2.id && parent1.canJoin(parent2) &&
+      container.getParent(parentId1) !== parentId2) {
+
+      var children1 = parent1.getNodes();
+      var children2 = parent2.getNodes();
+      var pos = children1.indexOf(id1) + 1;
+
+      // only join if we are at the end of the first composite
+      if (pos === children1.length) {
+        this.deleteNode(parent2.id);
+        for (var i = 0; i < children2.length; i++) {
+          parent1.insertChild(doc, pos+i, children2[i]);
+        }
+      }
+    }
+
+    return true;
+  };
+
+  // Deletes a node with given id and also takes care of removing it from its parent.
+  // --------
+  //
+
+  this.deleteNode = function(nodeId) {
+    var doc = this.doc;
+    var parentId = this.container.getParent(nodeId);
+    var parent = (parentId) ? doc.get(parentId) : null;
+
+    if (!parentId) {
+      doc.hide(this.viewId, nodeId);
+      doc.delete(nodeId);
+    }
+    else {
+      parent.deleteChild(doc, nodeId);
+      if (parent.getLength() === 0) {
+        this.deleteNode(parent.id);
+      }
+    }
+  };
+
+  this.deleteSelection = function() {
+
+    var self = this;
+    var doc = this.doc;
+    var sel = this.sel;
+    var container = sel.container;
+    var ranges = sel.getRanges();
+    var tryJoin = (ranges.length > 1 && !ranges[0].isFull() && !_.last(ranges).isFull());
+
+    // Note: this implementation is unfortunately not so easy...
+    // Have chosen a recursion approach to achieve an efficient
+    // opportunistic top-down deletion algorithm.
+    // It is top-down by that it starts deletion from the top-most
+    // node that is fully selected.
+    // For efficiency, using a 'visited' map to keep track which nodes have been processed already.
+
+    var i = 0;
+    var rangeMap = {};
+    for (i = 0; i < ranges.length; i++) {
+      rangeMap[ranges[i].node.id] = ranges[i];
+    }
+
+    var visited = {};
+
+    // Deletes all children nodes and then removes the given composite itself.
+    //
+    // Note: this gets only called for the top-most composite which are fully selected.
+    //
+    function deleteComposite(composite) {
+      var queue = _.clone(composite.getNodes());
+      self.deleteNode(composite.id);
+      while(queue.length > 0) {
+        var id = queue.shift();
+        doc.delete(id);
+        visited[id] = true;
+      }
+      visited[composite.id] = true;
+    }
+
+    // Recursive call that finds the top-most fully selected composite
+    //
+
+    function processComposite(node) {
+      if (visited[node.id] === undefined) {
+
+        var first = container.firstChild(node);
+        var firstRange = rangeMap[first.id];
+        var last = container.lastChild(node);
+        var lastRange = rangeMap[last.id];
+
+        // If the first and the last range is full then this node is selected fully
+        // In that case we check the parent recursively
+        // and eventually delete nodes
+
+        if (firstRange && lastRange && firstRange.isFull() && lastRange.isFull()) {
+          var parentId = container.getParent(node.id);
+          if (parentId) {
+            processComposite(doc.get(parentId));
+          }
+          if (!visited[parentId]) {
+            deleteComposite(node);
+          }
+        } else {
+          visited[node.id] = false;
+        }
+      }
+      return visited[node.id];
+    }
+
+
+    for (i = 0; i < ranges.length; i++) {
+      var r = ranges[i];
+      var node = r.node;
+      if (visited[node.id]) continue;
+
+      if (r.isFull()) {
+        // If there is a parent composite node,
+        // do the top-down deletion
+        var parentId = container.getParent(node.id);
+        if (parentId) {
+          processComposite(doc.get(parentId));
+        }
+        // otherwise, or if the parent was not fully selected
+        // delete the node regularly
+        if (!visited[parentId]) {
+          // TODO: need to check if the node is allowed to be empty
+          if (r.node.getLength() === 0) {
+            this.deleteNode(node.id);
+          } else {
+            // FIXME: annotations have to be removed first otherwise
+            // the operations are in wrong order and the inverted operation
+            // creates annotations before the content is available.
+            // This should be done in the text node...
+            // We should extract that from the Annotator into helper functions
+            // ... and probably get rid of the Annotator soon...
+            var op = r.node.deleteOperation(r.start, r.end);
+            if (op && !op.isNOP()) {
+              doc.apply(op);
+            }
+            // HACK: delete fully selected nodes after the first range
+            if (i > 0) {
+              this.deleteNode(node.id);
+            }
+          }
+        }
+      }
+      // for partial deletions ask the node for an (incremental) operation
+      else {
+        var op = r.node.deleteOperation(r.start, r.end);
+        if (op && !op.isNOP()) {
+          doc.apply(op);
+        }
+      }
+    }
+
+    // TODO: Maybe we want to return whether the join has been rejected or not
+    if (tryJoin) {
+      this.join(ranges[0].node.id, ranges[ranges.length-1].node.id);
+    }
+  };
+};
+
+ManipulationSession.prototype = new ManipulationSession.Prototype();
+
+Controller.ManipulationSession = ManipulationSession;
 
 module.exports = Controller;

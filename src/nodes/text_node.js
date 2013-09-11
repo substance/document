@@ -5,19 +5,19 @@ var Operator = require('substance-operator');
 var SRegExp = require("substance-regexp");
 var ObjectOperation = Operator.ObjectOperation;
 var TextOperation = Operator.TextOperation;
-var Node = require('./node');
+var DocumentNode = require('../node');
 
 // Substance.Text
 // -----------------
 //
 
 var Text = function(node, document) {
-  Node.call(this, node, document);
+  DocumentNode.call(this, node, document);
 };
 
 Text.Prototype = function() {
 
-  this.getUpdatedCharPos = function(op) {
+  this.getChangePosition = function(op) {
     if (op.path[1] === "content") {
       var lastChange = Operator.Helpers.last(op.diff);
       if (lastChange.isInsert()) {
@@ -80,21 +80,61 @@ Text.Prototype = function() {
     }
   };
 
+  this.canJoin = function(other) {
+    return (other instanceof Text);
+  };
+
+  this.join = function(doc, other) {
+    var pos = this.properties.content.length;
+    var text = other.content;
+
+    doc.update([this.id, "content"], [pos, text]);
+    var annotations = doc.indexes["annotations"].get(other.id);
+
+    _.each(annotations, function(anno) {
+      doc.set([anno.id, "path"], [this.properties.id, "content"]);
+      doc.set([anno.id, "range"], [anno.range[0]+pos, anno.range[1]+pos]);
+    }, this);
+  };
+
+  this.isBreakable = function() {
+    return true;
+  };
+
+  this.break = function(doc, pos) {
+    var tail = this.properties.content.substring(pos);
+
+    // 1. Create a new node containing the tail content
+    var newNode = this.toJSON();
+    // letting the textish node override the type of the new node
+    // e.g., a 'heading' breaks into a 'paragraph'
+    newNode.type = this.splitInto ? this.splitInto : this.properties.type;
+    newNode.id = doc.uuid(this.properties.type);
+    newNode.content = tail;
+    doc.create(newNode);
+
+    // 2. Move all annotations
+    var annotations = doc.indexes["annotations"].get(this.properties.id);
+    _.each(annotations, function(annotation) {
+      if (annotation.range[0] >= pos) {
+        doc.set([annotation.id, "path"], [newNode.id, "content"]);
+        doc.set([annotation.id, "range"], [annotation.range[0]-pos, annotation.range[1]-pos]);
+      }
+    });
+
+    // 3. Trim this node's content;
+    doc.update([this.properties.id, "content"], TextOperation.Delete(pos, tail))
+
+    // return the new node
+    return newNode;
+  };
+
 };
 
-Text.Prototype.prototype = Node.prototype;
+Text.Prototype.prototype = DocumentNode.prototype;
 Text.prototype = new Text.Prototype();
 Text.prototype.constructor = Text;
 
-Object.defineProperties(Text.prototype, {
-  content: {
-    get: function () {
-      return this.properties.content;
-    },
-    set: function (content) {
-      this.properties.content = content;
-    }
-  }
-});
+DocumentNode.defineProperties(Text.prototype, ["content"]);
 
 module.exports = Text;

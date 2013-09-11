@@ -16,6 +16,7 @@ var errors = util.errors;
 var Data = require("substance-data");
 var Operator = require("substance-operator");
 var Chronicle = require("substance-chronicle");
+var Container = require("./container");
 
 // Module
 // ========
@@ -30,6 +31,8 @@ var DocumentError = errors.define("DocumentError");
 
 var Document = function(options) {
   Data.Graph.call(this, options.schema, options);
+
+  this.containers = {};
 };
 
 // Default Document Schema
@@ -57,8 +60,33 @@ Document.schema = {
 
 
 Document.Prototype = function() {
-
   var __super__ = util.prototype(this);
+
+  this.__apply__ = function(op) {
+    var result = __super__.__apply__.call(this, op, "silent");
+
+    // book-keeping of Container instances
+    Operator.Helpers.each(op, function(_op) {
+      // TODO: this can probably be optimized...
+      if (_op.type === "set" || _op.type === "update") {
+        _.each(this.containers, function(container) {
+          container.update(_op);
+        }, this);
+      }
+    }, this);
+
+    return result;
+  };
+
+
+  this.getIndex = function(name) {
+    return this.indexes[name];
+  };
+
+  this.getSchema = function() {
+    return this.schema;
+  };
+
 
   this.create = function(node) {
     __super__.create.call(this, node);
@@ -74,91 +102,25 @@ Document.Prototype = function() {
 
     if (!node) return node;
 
-    // wrap the node into a rich object
-    // and replace the instance stored in the graph
-    var NodeType = this.nodeTypes[node.type];
-    if (NodeType && !(node instanceof NodeType)) {
-
-      // Exposing the full doc for simplicity
-      // We need to make sure doc nodes don't do something bad on the document
-
-      node = new NodeType(node, this);
-
-      // node = new NodeType(node, {
-      //   get: this.get.bind(this),
-      //   on: this.on.bind(this),
-      //   off: this.off.bind(this)
-      // });
-
-      this.nodes[node.id] = node;
+    // Wrap all views in Container instances
+    if (node.type === "view") {
+      if (!this.containers[node.id]) {
+        this.containers[node.id] = new Container(this, node);
+      }
+      return this.containers[node.id];
     }
 
-    return node;
-  };
+    // Wrap all nodes in an appropriate Node instance
+    else {
+      var nodeSpec = this.nodeTypes[node.type];
+      var NodeType = (nodeSpec !== undefined) ? nodeSpec.Model : null;
+      if (NodeType && !(node instanceof NodeType)) {
+        node = new NodeType(node, this);
+        this.nodes[node.id] = node;
+      }
 
-  // Get node position for a given view and node id
-  // --------
-  //
-
-  this.getPosition = function(view, id) {
-    return this.get(view).nodes.indexOf(id);
-  };
-
-  // Get predecessor node for a given view and node id
-  // --------
-  //
-
-  this.getPredecessor = function(view, id) {
-    var pos = this.getPosition(view, id);
-    if (pos === 0) return null;
-    return this.getNodeFromPosition(view, pos-1);
-  };
-
-  // Get successor node for a given view and node id
-  // --------
-  //
-
-  this.getSuccessor = function(view, id) {
-    var pos = this.getPosition(view, id);
-    if (pos === view.length - 1) return null;
-    return this.getNodeFromPosition(view, pos+1);
-  };
-
-
-  // Returns true if given view and node pos has a successor
-  // --------
-  //
-
-  this.hasSuccessor = function(view, nodePos) {
-    view = this.get(view).nodes;
-    return nodePos < view.length - 1;
-  };
-
-  // Returns true if given view and node pos has a predecessor
-  // --------
-  //
-
-  this.hasPredecessor = function(view, nodePos) {
-    return nodePos > 0;
-  };
-
-  // Get successor node for a given view and node id
-  // --------
-  //
-
-  this.getSuccessor = function(view, id) {
-    var pos = this.getPosition(view, id);
-    // if (pos === view.length - 1) return null;
-    return this.getNodeFromPosition(view, pos+1);
-  };
-
-  // Get node object from a given view and position
-  // --------
-  //
-
-  this.getNodeFromPosition = function(view, pos) {
-    var nodeId = this.get(view).nodes[pos];
-    return nodeId ? this.get(nodeId) : null;
+      return node;
+    }
   };
 
   // Serialize to JSON
@@ -212,9 +174,7 @@ Document.Prototype = function() {
   //
 
   this.show = function(viewId, nodes, target) {
-    if (arguments.length !== 3) {
-      throw new DocumentError("Invalid arguments: expecting (viewId, nodes, target)");
-    }
+    if (target === undefined) target = -1;
 
     var view = this.get(viewId);
     if (!view) {
@@ -306,12 +266,13 @@ Document.Prototype = function() {
     var self = this;
     var simulation = this.fromSnapshot(this.toJSON());
     var ops = [];
+    simulation.ops = ops;
 
     var __apply__ = simulation.apply;
 
     simulation.apply = function(op) {
-      op = __apply__.call(simulation, op);
       ops.push(op);
+      op = __apply__.call(simulation, op);
       return op;
     };
 
@@ -342,6 +303,9 @@ Document.Prototype = function() {
     return Document.fromSnapshot(data, options);
   };
 
+  this.uuid = function(type) {
+    return type + "_" + util.uuid();
+  };
 };
 
 Document.Prototype.prototype = Data.Graph.prototype;
@@ -352,6 +316,7 @@ Document.fromSnapshot = function(data, options) {
   options.seed = data;
   return new Document(options);
 };
+
 
 Document.DocumentError = DocumentError;
 

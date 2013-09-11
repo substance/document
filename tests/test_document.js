@@ -4,15 +4,12 @@ var _ = require("underscore");
 var util = require("substance-util");
 var Document = require("../index");
 
+// setting a default splitInto property:
+
 var Paragraph = function(node, doc) {
   Document.Text.call(this, node, doc);
 };
-Paragraph.Prototype = function() {
-  this.mergeableWith = ["paragraph", "heading"];
-  this.preventEmpty = false;
-  this.splitInto = 'paragraph';
-  this.allowedAnnotations = ["strong", "idea"];
-};
+Paragraph.Prototype = function() {};
 Paragraph.Prototype.prototype = Document.Text.prototype;
 Paragraph.prototype = new Paragraph.Prototype();
 
@@ -20,22 +17,97 @@ var Heading = function(node, doc) {
   Document.Text.call(this, node, doc);
 };
 Heading.Prototype = function() {
-  this.mergeableWith = ["paragraph", "heading"];
-  this.preventEmpty = false;
-  this.splitInto = 'paragraph';
-  this.allowedAnnotations = ["strong", "idea"];
-};
+  this.splitInto = "paragraph";
+}
 Heading.Prototype.prototype = Document.Text.prototype;
 Heading.prototype = new Heading.Prototype();
 
+var ImageNode = function(node, doc) {
+  Document.Node.call(this, node, doc);
+};
+ImageNode.Prototype = function() {
+  this.getLength = function() {
+    return 1;
+  };
+  this.deleteOperation = function() {
+    return null;
+  };
+};
+ImageNode.Prototype.prototype = Document.Node.prototype;
+ImageNode.prototype = new ImageNode.Prototype();
+Document.Node.defineProperties(ImageNode.prototype, ["url"]);
+
+var List = function(node, doc) {
+  Document.Composite.call(this, node, doc);
+};
+List.Prototype = function() {
+  this.getLength = function() {
+    return this.properties.items.length;
+  };
+  this.getNodes = function() {
+    return _.clone(this.properties.items);
+  };
+  this.isMutable = function() {
+    return true;
+  };
+  this.insertChild = function(doc, pos, nodeId) {
+    doc.update([this.id, "items"], ["+", pos, nodeId]);
+  };
+  this.deleteChild = function(doc, nodeId) {
+    var pos = this.items.indexOf(nodeId);
+    doc.update([this.id, "items"], ["-", pos, nodeId]);
+    doc.delete(nodeId);
+  };
+  this.canJoin = function(other) {
+    return (other.type === "list");
+  };
+  this.isBreakable = function() {
+    return true;
+  };
+  this.break = function(doc, childId, charPos) {
+    var childPos = this.properties.items.indexOf(childId);
+    if (childPos < 0) {
+      throw new Error("Unknown child " + childId);
+    }
+    var child = doc.get(childId);
+    var newNode = child.break(doc, charPos);
+    doc.update([this.id, "items"], ["+", childPos+1, newNode.id]);
+    return newNode;
+  };
+};
+List.Prototype.prototype = Document.Composite.prototype;
+List.prototype = new List.Prototype();
+Document.Node.defineProperties(List.prototype, ["items"]);
+
+var Figure = function(node, doc) {
+  Document.Composite.call(this, node, doc);
+};
+Figure.Prototype = function() {
+  this.getLength = function() {
+    return 2;
+  };
+  this.getNodes = function() {
+    var result = [];
+    // TODO: we should allow an empty image (e.g., for boot strapping)
+    if (this.properties.image) result.push(this.properties.image);
+    if (this.properties.caption) result.push(this.properties.caption);
+    return result;
+  };
+  this.deleteChild = function(doc, nodeId) {
+    if (nodeId === this.image) {
+      doc.set([this.id, "image"], null);
+      doc.delete(nodeId);
+    } else if (nodeId === this.caption) {
+      doc.set([this.caption, "content"], "");
+    }
+  }
+};
+Figure.Prototype.prototype = Document.Composite.prototype;
+Figure.prototype = new Figure.Prototype();
+Document.Node.defineProperties(Figure.prototype, ["image", "caption"]);
+
 var Schema = util.clone(Document.schema);
 _.extend(Schema.types, {
-  "annotation": {
-    "properties": {
-      "path": ["array", "string"], // -> e.g. ["text_1", "content"]
-      "range": "object"
-    }
-  },
   "document": {
     "properties": {
       "views": ["array", "view"],
@@ -47,21 +119,50 @@ _.extend(Schema.types, {
   },
   "node": {
     "parent": "content",
+    "properties": {}
+  },
+  "composite": {
+    "parent": "node",
     "properties": {
-      "content": ["array", "object"]
+      "nodes": ["array", "node"]
     }
   },
   "paragraph": {
-    "parent": "content",
+    "parent": "node",
     "properties": {
       "content": "string"
     }
   },
   "heading": {
-    "parent": "content",
+    "parent": "node",
     "properties": {
       "content": "string",
       "level": "number"
+    }
+  },
+  "image": {
+    "parent": "node",
+    "properties": {
+      "url": "string"
+    }
+  },
+  "list": {
+    "parent": "composite",
+    "properties": {
+      "items": ["array", "paragraph"]
+    }
+  },
+  "figure": {
+    "parent": "composite",
+    "properties": {
+      "image": "image",
+      "caption": "paragraph"
+    }
+  },
+  "annotation": {
+    "properties": {
+      "path": ["array", "string"], // -> e.g. ["text_1", "content"]
+      "range": "object"
     }
   },
   "strong": {
@@ -77,9 +178,11 @@ _.extend(Schema.types, {
 });
 
 var nodeTypes = {
-  node: Document.Node,
-  paragraph: Paragraph,
-  heading: Heading
+  "paragraph": { Model: Paragraph },
+  "heading": { Model: Heading },
+  "image": { Model: ImageNode },
+  "list": { Model: List },
+  "figure": { Model: Figure }
 };
 
 var TestDocument = function(options) {
@@ -99,7 +202,13 @@ var TestDocument = function(options) {
   this.nodeTypes = nodeTypes;
 };
 
-TestDocument.Prototype = function() {};
+TestDocument.Prototype = function() {
+  this.fromSnapshot = function(data, options) {
+    options = options || {};
+    options.seed = data;
+    return new TestDocument(options);
+  };
+};
 TestDocument.Prototype.prototype = Document.prototype;
 TestDocument.prototype = new TestDocument.Prototype();
 

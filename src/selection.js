@@ -37,7 +37,7 @@ var SelectionError = errors.define("SelectionError");
 //
 //
 // Create a selection operating on that document.
-//     var sel = new Substance.Document.Selection(doc);
+//     var sel = new Substance.Document.Selection(container);
 //
 //     sel.set({
 //       start: [0, 4],
@@ -56,11 +56,11 @@ var SelectionError = errors.define("SelectionError");
 //     P2: | o p q r s t u
 //
 
-var Selection = function(document, selection) {
-  this.document = document;
+var Selection = function(container, selection) {
+  this.container = container;
 
   this.start = null;
-  this.__cursor = new Cursor(document, null, null);
+  this.__cursor = new Cursor(container, null, null);
 
   if (selection) this.set(selection);
 };
@@ -72,12 +72,12 @@ Selection.Prototype = function() {
   //
 
   this.__node = function(pos) {
-    return this.document.getNodeFromPosition('content', pos);
+    return this.container.getNodeFromPosition(pos);
   };
 
 
   this.copy = function() {
-    var copy = new Selection(this.document);
+    var copy = new Selection(this.container);
     if (!this.isNull()) copy.set(this);
     return copy;
   };
@@ -106,11 +106,11 @@ Selection.Prototype = function() {
     var start = this.start;
 
     // being hysterical about the integrity of selections
-    var n = this.document.get("content").nodes.length;
+    var n = this.container.getLength();
     if (start[0] < 0 || start[0] >= n) {
       throw new SelectionError("Invalid node position: " + start[0]);
     }
-    var l = this.__node(start[0]).length;
+    var l = this.__node(start[0]).getLength();
     if (start[1] < 0 || start[1] > l) {
       throw new SelectionError("Invalid char position: " + start[1]);
     }
@@ -177,19 +177,14 @@ Selection.Prototype = function() {
   //
 
   this.selectNode = function(nodeId) {
-    var node = this.document.get(nodeId);
-    if (!node) {
-      throw new SelectionError("Illegal node id: " + nodeId);
-    }
-
-    var nodePos = this.document.getPosition('content', nodeId);
+    var nodePos = this.container.getPosition(nodeId);
     if (nodePos < 0) {
       throw new SelectionError("Node is not visible: " + nodeId);
     }
-
+    var node = this.container.getNodeFromPosition(nodePos);
     this.set({
       start: [nodePos, 0],
-      end: [nodePos, node.length]
+      end: [nodePos, node.getLength()]
     });
   };
 
@@ -227,8 +222,8 @@ Selection.Prototype = function() {
 
   // TODO: is this really necessary? ~> document.hasSuccessor
   this.hasSuccessor = function(nodePos) {
-    var view = this.document.get('content').nodes;
-    return nodePos < view.length-1;
+    var l = this.container.getLength();
+    return nodePos < l-1;
   };
 
 
@@ -319,13 +314,11 @@ Selection.Prototype = function() {
   //
 
   this.getNodes = function() {
-    var view = this.document.get('content').nodes;
+    var allNodes = this.container.getNodes();
     if (this.isNull()) return [];
     var range = this.range();
 
-    return _.map(view.slice(range.start[0], range.end[0]+1), function(n) {
-      return this.document.get(n);
-    }, this);
+    return allNodes.slice(range.start[0], range.end[0]+1);
   };
 
   // Derives Range objects for the selection
@@ -353,7 +346,7 @@ Selection.Prototype = function() {
 
       if (!_.isNumber(endChar)) {
         var node = this.__node(i);
-        endChar = node.length;
+        endChar = node.getLength();
       }
       ranges.push(new Selection.Range(this, i, startChar, endChar));
     }
@@ -425,35 +418,6 @@ Selection.Prototype = function() {
     return !this.isNull() && (this.startNode() !== this.endNode());
   };
 
-  // For a given document return the selected text
-  // --------
-
-  this.getText = function() {
-    var text = "";
-
-    if (this.isNull()) return text;
-
-    // start node
-    var nodes = this.getNodes();
-    var sel = this.range();
-
-    if (nodes.length === 1) {
-      return nodes[0].content.slice(sel.start[1], sel.end[1]);
-    }
-
-    _.each(nodes, function(n, index) {
-      if (n.content) {
-        if (index === 0) {
-          text += nodes[0].content.slice(sel.start[1]);
-        } else if (index === nodes.length-1) {
-          text += nodes[index].content.slice(0, sel.end[1]);
-        } else {
-          text += n.content;
-        }
-      }
-    }, this);
-    return text;
-  };
 };
 
 Selection.Prototype.prototype = util.Events;
@@ -534,7 +498,7 @@ Range.Prototype = function() {
   //
 
   this.isRightBound = function() {
-    return this.end === this.node.length;
+    return this.end === this.node.getLength();
   };
 
   // Returns true if the range includes the first character of a node

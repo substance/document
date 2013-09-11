@@ -50,11 +50,11 @@ Node.Prototype = function() {
     throw new Error("Node.getLength() is abstract.");
   };
 
-  // Provides how a cursor would change by the a operation
+  // Provides how a cursor would change by an operation
   // --------
   //
 
-  this.getUpdatedCharPos = function(op) {
+  this.getChangePosition = function(op) {
     throw new Error("Node.getCharPosition() is abstract.");
   };
 
@@ -75,28 +75,63 @@ Node.Prototype = function() {
     throw new Error("Node.deleteOperation() is abstract.");
   };
 
+  // Note: this API is rather experimental
+  // It is used to dynamically control the behavior for modifications
+  // e.g., via an editor
+
+  // Can this node be joined with another one?
+  // --------
+
+  this.canJoin = function(other) {
+    return false;
+  };
+
+  // Appends the content of another node
+  // --------
+
+  this.join = function(other) {
+    throw new Error("Node.join() is abstract.");
+  };
+
+  // Can a 'hard-break' be applied to this node?
+  // --------
+
+  this.isBreakable = function() {
+    return false;
+  };
+
+  // Breaks this node at a given position
+  // --------
+
+  this.break = function(doc, pos) {
+    throw new Error("Node.split() is abstract.");
+  };
+
+  this.getAnnotations = function() {
+    return this.document.getIndex("annotations").get(this.properties.id);
+  };
 };
 
 Node.prototype = new Node.Prototype();
 Node.prototype.constructor = Node;
 
-Object.defineProperties(Node.prototype, {
-  id: {
-    get: function () {
-      return this.properties.id;
+Node.defineProperties = function(NodePrototype, properties, readonly) {
+  _.each(properties, function(name) {
+    var spec = {
+      get: function() {
+        return this.properties[name];
+      }
     }
-  },
-  type: {
-    get: function () {
-      return this.properties.type;
+    if (!readonly) {
+      spec["set"] = function(val) {
+        this.properties[name] = val;
+        return this;
+      }
     }
-  },
-  length: {
-    enumerable: false,
-    get: function () {
-      return this.getLength();
-    }
-  }
-});
+    Object.defineProperty(NodePrototype, name, spec);
+  });
+};
+
+Node.defineProperties(Node.prototype, ["id", "type"]);
 
 module.exports = Node;

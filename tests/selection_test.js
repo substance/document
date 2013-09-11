@@ -8,6 +8,7 @@ var assert = Test.assert;
 var registerTest = Test.registerTest;
 var TestDocument = require('./test_document');
 var Document = require("../index");
+var Container = Document.Container;
 var Selection = Document.Selection;
 
 // Test
@@ -22,8 +23,9 @@ var SelectionTest = function() {
 
   this.fixture = function() {
     var seed = require("./fixture.json");
-    this.doc = new TestDocument({seed: seed});    
-    this.sel = new Selection(this.doc);
+    this.doc = new TestDocument({seed: seed});
+    this.container = this.doc.get("content");
+    this.sel = new Selection(this.container);
   };
 
   this.actions = [
@@ -58,7 +60,7 @@ var SelectionTest = function() {
         this.sel.set({start: [0,0], end: [2000,3]});
       }, this);
 
-      // Note: char positions are checked by Cursor and this behavior should be tested there. 
+      // Note: char positions are checked by Cursor and this behavior should be tested there.
     },
 
     "setCursor() should collapse the selection", function() {
@@ -81,7 +83,7 @@ var SelectionTest = function() {
     },
 
     "range() should return null for invalid selections", function() {
-      var sel = new Selection(this.doc);
+      var sel = new Selection(this.container);
       assert.isNull(sel.range());
     },
 
@@ -154,7 +156,7 @@ var SelectionTest = function() {
     },
 
     "hasMultipleNodes()", function() {
-      var sel = new Selection(this.doc);
+      var sel = new Selection(this.container);
       // null selection should return false
       assert.isFalse(sel.hasMultipleNodes());
 
@@ -193,7 +195,7 @@ var SelectionTest = function() {
 
     "move('right', 'char') at end of node should move to next", function() {
       var sel = this.sel;
-      var node = this.doc.getNodeFromPosition("content", 0);
+      var node = this.container.getNodeFromPosition(0);
       var l = node.content.length;
       sel.setCursor([0,l]);
       sel.move('right', 'char');
@@ -203,7 +205,7 @@ var SelectionTest = function() {
     "move('right', 'char') at end of document should do nothing", function() {
       var sel = this.sel;
       var nodePos = 5;
-      var node = this.doc.getNodeFromPosition("content", nodePos);
+      var node = this.container.getNodeFromPosition(nodePos);
       var l = node.content.length;
       var pos = [nodePos,l];
       sel.setCursor(pos);
@@ -221,7 +223,7 @@ var SelectionTest = function() {
 
     "move('left', 'char') at begin of node should move to previous", function() {
       var sel = this.sel;
-      var node = this.doc.getNodeFromPosition("content", 0);
+      var node = this.container.getNodeFromPosition(0);
       var l = node.content.length;
       sel.setCursor([1,0]);
       sel.move('left', 'char');
@@ -302,7 +304,7 @@ var SelectionTest = function() {
       // "The quick brown fox jumps over the lazy dog."
       var sel = this.sel;
       sel.set({
-        start: [1,6],  // after 'u' in 'quick' 
+        start: [1,6],  // after 'u' in 'quick'
         end: [1,9] // after 'k' in 'quick'
       });
       sel.expand('left', 'word');
@@ -313,7 +315,7 @@ var SelectionTest = function() {
     "getNodes()", function() {
       var sel = this.sel;
       sel.set({
-        start: [1,0], 
+        start: [1,0],
         end: [3,6]
       });
       var expected = [this.doc.get("p1"), this.doc.get("p2"), this.doc.get("h2")];
@@ -325,7 +327,7 @@ var SelectionTest = function() {
     "getRanges()", function() {
       var sel = this.sel;
       sel.set({
-        start: [1,1], 
+        start: [1,1],
         end: [3,6]
       });
       var ranges = sel.getRanges();
@@ -337,7 +339,7 @@ var SelectionTest = function() {
     "Range.isPartial()/isFull()", function() {
       var sel = this.sel;
       sel.set({
-        start: [1,1], 
+        start: [1,1],
         end: [3,2]
       });
       var ranges = sel.getRanges();
@@ -357,4 +359,4 @@ SelectionTest.Prototype = function() {
 SelectionTest.prototype = new SelectionTest.Prototype();
 
 
-registerTest(['Document', 'Selection'], new SelectionTest());
+registerTest(['Substance.Document', 'Selection'], new SelectionTest());

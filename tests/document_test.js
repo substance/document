@@ -191,4 +191,4 @@ var DocumentTest = function () {
   ];
 };
 
-registerTest(['Document', 'Document Manipulation'], new DocumentTest());
+registerTest(['Substance.Document', 'Document Manipulation'], new DocumentTest());
