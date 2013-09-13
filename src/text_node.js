@@ -15,6 +15,43 @@ var Text = function(node, document) {
   DocumentNode.call(this, node, document);
 };
 
+
+Text.type = {
+  "id": "text",
+  "parent": "content",
+  "properties": {
+    "source_id": "Text element source id",
+    "content": "string"
+  }
+};
+
+
+// This is used for the auto-generated docs
+// -----------------
+//
+
+Text.description = {
+  "name": "Text",
+  "remarks": [
+    "A simple text fragement that can be annotated. Usually text nodes are combined in a paragraph.",
+  ],
+  "properties": {
+    "content": "Content",
+  }
+};
+
+
+// Example Paragraph
+// -----------------
+//
+
+Text.example = {
+  "type": "paragraph",
+  "id": "paragraph_1",
+  "content": "Lorem ipsum dolor sit amet, adipiscing elit.",
+};
+
+
 Text.Prototype = function() {
 
   this.getChangePosition = function(op) {
