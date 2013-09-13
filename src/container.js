@@ -114,6 +114,18 @@ Container.Prototype = function() {
     return this.__parents[nodeId];
   };
 
+  // Get top level parent of given nodeId
+  this.getRoot = function(nodeId) {
+    var parent = nodeId;
+
+    // Always use top level element for referenceing the node
+    while (parent) {
+      nodeId = parent;
+      parent = this.getParent(nodeId);
+    }
+    return nodeId;
+  };
+
   this.update = function(op) {
     var path = op.path;
     var needRebuild = (path[0] === this.view.id ||  this.__composites[path[0]] !== undefined);
