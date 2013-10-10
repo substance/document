@@ -210,56 +210,6 @@ Document.Prototype = function() {
   // --------
   //
 
-// Deactivated this as it does not work and breaks everything
-/*
-  this.startSimulation = function() {
-
-    var parent = this;
-
-    var doc = _.extend({}, this);
-    doc._events = [];
-    doc.objectAdapter = new Data.Graph.ObjectAdapter(doc);
-
-    // remember the original state
-    var initialState = this.chronicle.getState();
-
-    // create a temporary chronicle index
-    doc.chronicle = _.extend({}, this.chronicle);
-    doc.chronicle.manage(new Data.Graph.ChronicleAdapter(doc));
-    doc.chronicle.index = new Chronicle.TmpIndex(this.chronicle.index);
-
-    // inject a recording apply method
-    var ops = [];
-    var __apply__ = this.apply;
-    doc.apply = function(op) {
-      op = __apply__.call(this, op);
-      ops.push(op);
-      return op;
-    };
-
-    doc.save = function() {
-      var _ops = [];
-      for (var i = 0; i < ops.length; i++) {
-        if (ops[i].type !== "compound") {
-          _ops.push(ops[i]);
-        } else {
-          _ops = _ops.concat(ops[i].ops);
-        }
-      }
-      var compound = Operator.ObjectOperation.Compound(_ops);
-      this.chronicle.reset(initialState);
-
-      parent.apply(compound);
-    };
-
-    return doc;
-  };
-*/
-
-  // Start simulation, which conforms to a transaction (think databases)
-  // --------
-  //
-
   this.startSimulation = function() {
     // TODO: this should be implemented in a more cleaner and efficient way.
     // Though, for now and sake of simplicity done by creating a copy
@@ -293,7 +243,6 @@ Document.Prototype = function() {
 
       var compound = Operator.ObjectOperation.Compound(_ops);
       self.apply(compound);
-      // console.log("Saved simulated ops", self);
     };
 
     return simulation;
