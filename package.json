@@ -3,13 +3,9 @@
   "description": "A document representation and transformation toolkit.",
   "url": "http://github.com/substance/document",
   "keywords": [
-    "document",
-    "substance",
-    "server",
-    "client",
-    "browser",
-    "realtime",
-    "git"
+    "document manipulation",
+    "editing",
+    "selection"
   ],
   "author": "Michael Aufreiter",
   "contributors": [
