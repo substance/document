@@ -480,6 +480,10 @@ Annotator.Prototype = function() {
       }
     }
   };
+
+  this.dispose = function() {
+    this.stopListening();
+  };
 };
 
 Annotator.Prototype.prototype = util.Events;

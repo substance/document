@@ -343,6 +343,11 @@ Controller.Prototype = function() {
     _updateSelection.call(this, op);
   };
 
+  this.dispose = function() {
+    // Note: always make sure to deactivate any listeners on the document.
+    this.annotator.dispose();
+  };
+
 };
 
 // Inherit the prototype of Substance.Document which extends util.Events
