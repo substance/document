@@ -5,9 +5,7 @@
 
 var _ = require("underscore");
 var util = require("substance-util");
-var Data = require("substance-data");
 var Document = require("./document");
-var Selection = require("./selection");
 var DocumentError = Document.DocumentError;
 var Operator = require("substance-operator");
 
@@ -18,35 +16,38 @@ var Operator = require("substance-operator");
 // --------
 //
 
-var Annotator = function(doc, options) {
+var Annotator;
+
+function _getBehavior(doc) {
+  // Note: this is rather experimental
+  // It is important to inverse the control over the annotation behavior,
+  // i.e., which annotations exist and how they should be handled
+  // This approach makes use of the static context of a Document implementation (e.g., Substance.Article)
+  // For this to work you need to have:
+  // - the `constructor` property set on the class
+  // - a static property `annotationBehavior` specifying the behavior
+  //   according to `Annotator.defaultBehavior`
+  if (doc.constructor && doc.constructor.annotationBehavior) {
+    return doc.constructor.annotationBehavior;
+  } else {
+    console.error("No Annotation behavior specified. Using default behavior.");
+    return Annotator.defaultBehavior;
+  }
+}
+
+Annotator = function(doc, options) {
   options = options || {};
 
   this.document = doc;
+  this.behavior = _getBehavior(doc);
 
   // register for co-transformations to keep annotations up2date.
   this.document.on("operation:applied", this.handleOperation, this);
 
   // defines groups of annotations that will be mutually exclusive
-  this.group = {
-    "emphasis": "style",
-    "strong": "style",
-    "link": "style",
-    "question": "marker",
-    "idea": "marker",
-    "error": "marker"
-  };
-
-
-  this.expansion = {
-    "emphasis": {
-      left: Annotator.isOnNodeStart,
-    },
-    "strong": {
-      left: Annotator.isOnNodeStart,
-    }
-  };
-
-  this.splittable = ["emphasis", "strong"];
+  this.group = this.behavior.group;
+  this.expansion = this.behavior.expansion;
+  this.split = this.behavior.split;
 
   this._index = Annotator.createIndex(doc);
 
@@ -430,7 +431,7 @@ Annotator.Prototype = function() {
   // that a new annotation of the same type is created for the cut fragment.
 
   this.isSplittable = function(type) {
-    return this.splittable.indexOf(type) >= 0;
+    return this.split.indexOf(type) >= 0;
   };
 
   // Creates an annotation for the current selection of given type
@@ -551,28 +552,19 @@ Annotator.createIndex = function(doc) {
 //
 //   Removes 'idea1' from stack and creates a new 'bold1'
 //
-var _levels = {
-  idea: 1,
-  question: 1,
-  error: 1,
-  link: 1,
-  strong: 2,
-  emphasis: 2,
-  code: 2,
-  subscript: 2,
-  superscript: 2,
-  underline: 2,
-  cross_reference: 1,
-  figure_reference: 1,
-  person_reference: 1,
-  citation_reference: 1
-};
 
 var ENTER = 1;
 var EXIT = -1;
 
 var Fragmenter = function(options) {
-  this.levels = options.levels || _levels;
+  options = options || {};
+  if (options.levels) {
+    this.levels = options.levels;
+  } else {
+    // Note: you should fix it if you see this
+    console.error("No annotation levels given. Using default configuration.");
+    this.levels = Annotator.defaultBehavior.levels;
+  }
 };
 
 Fragmenter.Prototype = function() {
@@ -687,6 +679,44 @@ Fragmenter.Prototype = function() {
 Fragmenter.prototype = new Fragmenter.Prototype();
 
 Annotator.Fragmenter = Fragmenter;
+
+// TODO:
+Annotator.defaultBehavior = {
+  groups: {
+    "emphasis": "style",
+    "strong": "style",
+    "link": "style",
+    "question": "marker",
+    "idea": "marker",
+    "error": "marker"
+  },
+  expansion: {
+    "emphasis": {
+      left: Annotator.isOnNodeStart,
+    },
+    "strong": {
+      left: Annotator.isOnNodeStart,
+    }
+  },
+  split: ["emphasis", "strong"],
+  levels: {
+    idea: 1,
+    question: 1,
+    error: 1,
+    comment: 1,
+    link: 1,
+    strong: 2,
+    emphasis: 2,
+    code: 2,
+    subscript: 2,
+    superscript: 2,
+    underline: 2,
+    cross_reference: 1,
+    figure_reference: 1,
+    person_reference: 1,
+    citation_reference: 1
+  }
+};
 
 // Export
 // ========
