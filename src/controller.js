@@ -37,8 +37,8 @@ var Controller = function(document, options) {
   this.selection = new Selection(this.container);
   this.clipboard = new Clipboard();
 
-  // TODO: this needs serious re-thinking...
-  // On the one hand, we wan be able to set the cursor after undo or redo.
+  // TODO: this needs serious re-thinking... Deactivated for now as it causes problems
+  // On the one hand, we want be able to set the cursor after undo or redo.
   // OTOH, we do not want to update the selection on each micro operation.
   // Probably, the best would be to do that explicitely in all cases (also undo/redo)...
   // this.listenTo(document, 'operation:applied', this.updateSelection);
@@ -334,11 +334,15 @@ Controller.Prototype = function() {
   };
 
   this.undo = function() {
+    if (!this.chronicle) return;
+
     var op = this.chronicle.rewind();
     _updateSelection.call(this, op);
   };
 
   this.redo = function() {
+    if (!this.chronicle) return;
+
     var op = this.chronicle.forward();
     _updateSelection.call(this, op);
   };
