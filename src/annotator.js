@@ -442,7 +442,8 @@ Annotator.Prototype = function() {
   // - toggle delete one or more annotations
   // - truncate one or more annotations
   //
-  // TODO: make aware of views (currently "content" is hard-coded)
+  // TODO: this implementation totally depends on that the annotated text is stored
+  // in the "content" property of the node
 
   this.annotate = function(selection, type, data) {
     var sel = selection.range();
