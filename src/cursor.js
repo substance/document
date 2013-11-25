@@ -1,3 +1,5 @@
+"use strict";
+
 var _ = require("underscore");
 var SRegExp = require("substance-regexp");
 var util = require("substance-util");

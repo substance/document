@@ -1,3 +1,5 @@
+"use strict";
+
 var DocumentNode = require("./node");
 
 var Composite = function(node, doc) {

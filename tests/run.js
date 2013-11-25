@@ -1,3 +1,5 @@
+"use strict";
+
 var Test = require("substance-test");
 
 require("./index");
