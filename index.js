@@ -7,7 +7,7 @@ Document.Annotator = require('./src/annotator');
 Document.Container = require('./src/container');
 Document.Cursor = require('./src/cursor');
 Document.Selection = require('./src/selection');
-Document.Controller = require('./src/controller');
+Document.Controller = require('./src/document_controller');
 
 Document.Node = require('./src/node');
 Document.Composite = require('./src/composite');
@@ -18,6 +18,6 @@ Document.Composite = require('./src/composite');
 Document.TextNode = require('./src/text_node');
 
 // Compatibility
-Document.Writer = require('./src/controller');
+Document.Writer = require('./src/document_controller');
 
 module.exports = Document;

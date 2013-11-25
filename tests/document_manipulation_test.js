@@ -6,7 +6,7 @@ var Test = require('substance-test');
 var assert = Test.assert;
 var registerTest = Test.registerTest;
 var TestDocument = require("./test_document");
-var DocumentController = require("../src/controller");
+var DocumentController = require("../src/document_controller");
 var Chronicle = require("substance-chronicle");
 
 var FIXTURES = {};

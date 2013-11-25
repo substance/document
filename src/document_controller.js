@@ -8,7 +8,7 @@ var Annotator = require("./annotator");
 var Clipboard = require("./clipboard");
 var Composite = require('./composite');
 
-// Document.Controller
+// Document.DocumentController
 // -----------------
 //
 // Provides means for editing and viewing a Substance.Document. It introduces
@@ -21,10 +21,14 @@ var Composite = require('./composite');
 // Example usage:
 //
 //     var doc = new Substance.Document();
-//     var editor = new Substance.Document.Controller(doc);
+//     var editor = new Substance.Document.DocumentController(doc);
 //     var editor.insert("Hello World");
 
-var Controller = function(document, options) {
+// TODO: this would deserve some refactoring. In general there are two kind of APIs here:
+//  1. document manipulation (general) as a facette on Data.Graph
+//  2. Editing facilities: delete, copy'n'paste etc.
+
+var DocumentController = function(document, options) {
   options = options || {};
   this.view = options.view || 'content';
 
@@ -44,7 +48,7 @@ var Controller = function(document, options) {
   // this.listenTo(document, 'operation:applied', this.updateSelection);
 };
 
-Controller.Prototype = function() {
+DocumentController.Prototype = function() {
 
   // Document Facette
   // --------
@@ -221,7 +225,7 @@ Controller.Prototype = function() {
     var doc = this.__document.startSimulation();
     new Annotator(doc, {withTransformation: true});
     var sel = new Selection(doc.get(this.view), this.selection);
-    return new Controller.ManipulationSession(doc, sel);
+    return new DocumentController.ManipulationSession(doc, sel);
   };
 
   // Inserts text at the current position
@@ -352,13 +356,23 @@ Controller.Prototype = function() {
     this.annotator.dispose();
   };
 
+  // HACK: it is not desired to have the comments managed along with the editorially document updates
+  // We need an approach with multiple Chronicles instead.
+  this.createComment = function(comment) {
+    var id = util.uuid();
+    comment.id = id;
+    comment.type = "comment";
+    var op = Operator.ObjectOperation.Create([comment.id], comment);
+    return this.__document.__apply__(op);
+  };
+
 };
 
 // Inherit the prototype of Substance.Document which extends util.Events
-Controller.prototype = _.extend(new Controller.Prototype(), util.Events.Listener);
+DocumentController.prototype = _.extend(new DocumentController.Prototype(), util.Events.Listener);
 
 // Property accessors for convenient access of primary properties
-Object.defineProperties(Controller.prototype, {
+Object.defineProperties(DocumentController.prototype, {
   id: {
     get: function() {
       return this.__document.id;
@@ -602,6 +616,6 @@ ManipulationSession.Prototype = function() {
 
 ManipulationSession.prototype = new ManipulationSession.Prototype();
 
-Controller.ManipulationSession = ManipulationSession;
+DocumentController.ManipulationSession = ManipulationSession;
 
-module.exports = Controller;
+module.exports = DocumentController;
