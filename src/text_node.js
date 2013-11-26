@@ -20,7 +20,7 @@ Text.type = {
   "id": "text",
   "parent": "content",
   "properties": {
-    "source_id": "Text element source id",
+    "source_id": "string",
     "content": "string"
   }
 };
@@ -36,7 +36,8 @@ Text.description = {
     "A simple text fragement that can be annotated. Usually text nodes are combined in a paragraph.",
   ],
   "properties": {
-    "content": "Content",
+    "source_id": "Text element source id",
+    "content": "Content"
   }
 };
 
