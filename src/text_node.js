@@ -1,8 +1,8 @@
 "use strict";
 
 var _ = require("underscore");
-var Operator = require('substance-operator');
 var SRegExp = require("substance-regexp");
+var Operator = require('substance-operator');
 var ObjectOperation = Operator.ObjectOperation;
 var TextOperation = Operator.TextOperation;
 var DocumentNode = require("./node");
