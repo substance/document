@@ -5,7 +5,6 @@ var util = require("substance-util");
 var Operator = require('substance-operator');
 var Selection = require("./selection");
 var Annotator = require("./annotator");
-var Clipboard = require("./clipboard");
 var Composite = require('./composite');
 
 // Document.DocumentController
@@ -117,7 +116,7 @@ DocumentController.Prototype = function() {
 
     if (!op) return;
 
-    var view = this.view;
+    // var view = this.view;
     var doc = this.__document;
     var container = this.container;
 
