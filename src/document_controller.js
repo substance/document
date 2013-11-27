@@ -37,6 +37,15 @@ var DocumentController = function(document, options) {
   this.container = document.get(this.view);
   this.selection = new Selection(this.container);
   this.annotator = new Annotator(document);
+
+  // HACK: we will introduce a DocumentSession which is the combination
+  // of Document, Container, Selection and Annotator
+  this.session = {
+    "document": this.__document,
+    "selection": this.selection,
+    "container": this.container,
+    "annotator": this.annotator
+  };
 };
 
 DocumentController.Prototype = function() {
