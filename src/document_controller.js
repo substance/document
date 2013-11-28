@@ -5,7 +5,6 @@ var util = require("substance-util");
 var Operator = require('substance-operator');
 var Selection = require("./selection");
 var Annotator = require("./annotator");
-var Composite = require('./composite');
 
 // Document.DocumentController
 // -----------------
@@ -142,7 +141,7 @@ DocumentController.Prototype = function() {
       var nodePos = -1;
       var charPos = -1;
 
-      if (node instanceof Composite) {
+      if (node.isComposite()) {
         // TODO: there is no good concept yet
       } else if (node.getChangePosition) {
         nodePos = container.getPosition(node.id);

@@ -15,7 +15,8 @@
     "substance-operator": "",
     "substance-chronicle": "",
     "substance-data": "",
-    "substance-regexp": ""
+    "substance-regexp": "",
+    "substance-nodes": ""
   },
   "devDependencies": {
     "mocha": "",

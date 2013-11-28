@@ -2,7 +2,6 @@
 
 var _ = require("underscore");
 var util = require("substance-util");
-var Composite = require("./composite");
 
 var Container = function(document, view) {
   this.document = document;
@@ -34,7 +33,7 @@ Container.Prototype = function() {
     while(queue.length > 0) {
       item = queue.shift();
       node = this.document.get(item.id);
-      if (node instanceof Composite) {
+      if (node.isComposite()) {
         var children = node.getNodes();
         for (i = children.length - 1; i >= 0; i--) {
           queue.unshift({
@@ -61,7 +60,7 @@ Container.Prototype = function() {
     this.__parents = {};
     this.__composites = {};
     _each.call(this, function(node, parent) {
-      if (node instanceof Composite) {
+      if (node.isComposite()) {
         this.__parents[node.id] = parent;
         this.__composites[parent] = parent;
       } else {
@@ -174,7 +173,7 @@ Container.Prototype = function() {
   };
 
   this.firstChild = function(node) {
-    if (node instanceof Composite) {
+    if (node.isComposite()) {
       var first = this.document.get(node.getNodes()[0]);
       return this.firstChild(first);
     } else {
@@ -183,7 +182,7 @@ Container.Prototype = function() {
   };
 
   this.lastChild = function(node) {
-    if (node instanceof Composite) {
+    if (node.isComposite()) {
       var last = this.document.get(_.last(node.getNodes()));
       return this.lastChild(last);
     } else {
