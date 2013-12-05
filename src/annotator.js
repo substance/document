@@ -561,6 +561,7 @@ var _levels = {
   cross_reference: 1,
   figure_reference: 1,
   person_reference: 1,
+  contributor_reference: 1,
   citation_reference: 1
 };
 
