@@ -23,7 +23,7 @@
     "substance-chronicle": "git+https://github.com/substance/chronicle.git#0.3.x",
     "substance-data": "git+https://github.com/michael/data.git#0.9.x",
     "substance-regexp": "git+https://github.com/substance/regexp.git#0.2.x",
-    "substance-nodes": "git+https://github.com/substance/nodes.git#0.2.x"
+    "substance-nodes": "git+https://github.com/substance/nodes.git#refactor"
   },
   "devDependencies": {
     "mocha": "1.12.x",
