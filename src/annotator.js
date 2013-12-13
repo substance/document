@@ -44,7 +44,7 @@ Annotator = function(doc, options) {
   this.document.on("operation:applied", this.handleOperation, this);
 
   // defines groups of annotations that will be mutually exclusive
-  this.group = this.behavior.group;
+  this.groups = this.behavior.groups;
   this.expansion = this.behavior.expansion;
   this.split = this.behavior.split;
 
@@ -419,7 +419,7 @@ Annotator.Prototype = function() {
   //
 
   this.isExclusive = function(type1, type2) {
-    return this.group[type1] === this.group[type2];
+    return this.groups[type1] === this.groups[type2];
   };
 
   // Tell if an annotation can be split or should be truncated only.
