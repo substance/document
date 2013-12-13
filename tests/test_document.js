@@ -39,6 +39,7 @@ function _options(options) {
   if (options.seed === undefined) {
     options.seed = TestDocument.Seed;
   }
+  return options;
 }
 TestDocument = function(options) {
   Document.call(this, _options(options));

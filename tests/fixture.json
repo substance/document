@@ -8,12 +8,12 @@
     },
     "p1": {
       "id": "p1",
-      "type": "paragraph",
+      "type": "text",
       "content": "The quick brown fox jumps over the lazy dog."
     },
     "p2": {
       "id": "p2",
-      "type": "paragraph",
+      "type": "text",
       "content": "  Pack my box with five dozen liquor jugs."
     },
     "h2": {
@@ -24,12 +24,12 @@
     },
     "p3": {
       "id": "p3",
-      "type": "paragraph",
+      "type": "text",
       "content": "Fix problem quickly with galvanized jets."
     },
     "p4": {
       "id": "p4",
-      "type": "paragraph",
+      "type": "text",
       "content": "Heavy boxes perform quick waltzes and jigs."
     },
     "content": {
