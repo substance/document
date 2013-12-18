@@ -355,7 +355,7 @@ Annotator.Prototype = function() {
     var overlap = (aEnd >= sStart);
 
     // Note: it is allowed to give only omit the end part
-    if (sEnd) {
+    if (_.isNumber(sEnd)) {
       overlap &= (aStart <= sEnd);
     }
 
