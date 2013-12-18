@@ -7,9 +7,7 @@ var Test = require('substance-test');
 var assert = Test.assert;
 var registerTest = Test.registerTest;
 var TestDocument = require('./test_document');
-var Document = require("../index");
-var Container = Document.Container;
-var Selection = Document.Selection;
+var Selection = require("../src/selection");
 
 // Test
 // ========
