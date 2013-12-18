@@ -190,7 +190,7 @@ Selection.Prototype = function() {
   //
 
   this.getPredecessor = function() {
-    // NOTE: this can not be fixed as now the container can have elements that are not nodes
+    // NOTE: this can not be fixed as now the container can have components that are not nodes
     throw new Error("Not supported anymore");
   };
 
@@ -310,11 +310,12 @@ Selection.Prototype = function() {
   //
 
   this.getNodes = function() {
-    var allNodes = this.container.getNodes();
-    if (this.isNull()) return [];
-    var range = this.range();
+    throw new Error("This method has been removed, as it is not valid anymore after the Container refactor.");
+    // var allNodes = this.container.getNodes();
+    // if (this.isNull()) return [];
+    // var range = this.range();
 
-    return allNodes.slice(range.start[0], range.end[0]+1);
+    // return allNodes.slice(range.start[0], range.end[0]+1);
   };
 
   // Derives Range objects for the selection
@@ -443,7 +444,7 @@ var Range = function(selection, nodePos, start, end) {
   this.start = start;
   this.end = end;
 
-  this.element = selection.container.getElement(nodePos);
+  this.component = selection.container.getComponent(nodePos);
 };
 
 Range.Prototype = function() {

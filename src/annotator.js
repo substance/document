@@ -365,24 +365,28 @@ Annotator.Prototype = function() {
   var _filterByRange = function(range) {
 
     var result = [];
-    var element = range.element;
+    var component = range.component;
 
-    if (element.type === "node") {
-      var node = element.node;
-      var annotations = this._index.get(node.id);
-
-      _.each(annotations, function(a) {
-        if (__isOverlap(a, range)) {
-          result.push(a);
-        }
-      });
+    var annotations;
+    if (component.type === "node") {
+      var node = component.node;
+      annotations = this._index.get(node.id);
     }
-    else if (element.type === "property") {
-      throw new Error("Not yet implemented")
+    else if (component.type === "property") {
+      annotations = this._index.get(component.propertyPath);
+    }
+    else if (component.type === "custom") {
+      annotations = this._index.get(component.path);
     }
     else {
-      throw new Error("Not yet implemented")
+      console.error("FIXME");
     }
+
+    _.each(annotations, function(a) {
+      if (__isOverlap(a, range)) {
+        result.push(a);
+      }
+    });
 
     return result;
   };
@@ -392,6 +396,8 @@ Annotator.Prototype = function() {
     var annotations = this._index.get(nodeId);
   };
 
+  // TODO: we could do a minor optimization, as it happens that the same query is performed multiple times
+  // -- which is ok as those are different peers.
   this.getAnnotations = function(sel) {
     if (!(sel instanceof Document.Selection)) {
       throw new Error("API has changed: now getAnnotations() takes only a selection.");
@@ -409,7 +415,6 @@ Annotator.Prototype = function() {
     }
 
     console.log("Annotator.getAnnotations():", sel, annotations);
-
     return annotations;
   };
 
