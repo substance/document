@@ -71,11 +71,6 @@ Selection.Prototype = function() {
   // --------
   //
 
-  this.__node = function(pos) {
-    return this.container.getNodeFromPosition(pos);
-  };
-
-
   this.copy = function() {
     var copy = new Selection(this.container);
     if (!this.isNull()) copy.set(this);
@@ -110,7 +105,7 @@ Selection.Prototype = function() {
     if (start[0] < 0 || start[0] >= n) {
       throw new SelectionError("Invalid node position: " + start[0]);
     }
-    var l = this.__node(start[0]).getLength();
+    var l = this.container.getLength(start[0]);
     if (start[1] < 0 || start[1] > l) {
       throw new SelectionError("Invalid char position: " + start[1]);
     }
@@ -181,10 +176,12 @@ Selection.Prototype = function() {
     if (nodePos < 0) {
       throw new SelectionError("Node is not visible: " + nodeId);
     }
-    var node = this.container.getNodeFromPosition(nodePos);
+    // FIXME: see above
+    // var node = this.container.getNodeFromPosition(nodePos);
+    var l = this.container.getLength(nodePos);
     this.set({
       start: [nodePos, 0],
-      end: [nodePos, node.getLength()]
+      end: [nodePos, l]
     });
   };
 
@@ -193,9 +190,8 @@ Selection.Prototype = function() {
   //
 
   this.getPredecessor = function() {
-    var nodePos = this.isReverse() ? this.__cursor.nodePos: this.start[0];
-    if (nodePos === 0) return null;
-    return this.__node(nodePos-1);
+    // NOTE: this can not be fixed as now the container can have elements that are not nodes
+    throw new Error("Not supported anymore");
   };
 
   // Get successor node of a given node pos
@@ -203,8 +199,8 @@ Selection.Prototype = function() {
   //
 
   this.getSuccessor = function() {
-    var nodePos = this.isReverse() ? this.start[0] : this.__cursor.nodePos;
-    return this.__node(nodePos+1);
+    // Can not be fixed.
+    throw new Error("Not supported anymore");
   };
 
   // Check if the given position has a successor
@@ -345,8 +341,7 @@ Selection.Prototype = function() {
       }
 
       if (!_.isNumber(endChar)) {
-        var node = this.__node(i);
-        endChar = node.getLength();
+        endChar = this.container.getLength(i);
       }
       ranges.push(new Selection.Range(this, i, startChar, endChar));
     }
@@ -385,7 +380,6 @@ Selection.Prototype = function() {
   this.endChar = function() {
     return this.isReverse() ? this.start[1] : this.__cursor.charPos;
   };
-
 
   // No selection
   // --------
@@ -446,9 +440,10 @@ var Range = function(selection, nodePos, start, end) {
   // The node pos within the document which can range
   // between selection.startNode() and selection.endNode()
   this.nodePos = nodePos;
-  this.node = selection.__node(nodePos);
   this.start = start;
   this.end = end;
+
+  this.element = selection.container.getElement(nodePos);
 };
 
 Range.Prototype = function() {
@@ -545,6 +540,17 @@ Range.Prototype = function() {
 };
 
 Range.prototype = new Range.Prototype();
+
+Object.defineProperties(Range.prototype, {
+  node: {
+    get: function() {
+      throw new Error("Not supported anymore");
+    },
+    set: function() {
+      throw new Error("Not supported anymore");
+    }
+  }
+});
 
 Selection.Range = Range;
 Selection.SelectionError = SelectionError;

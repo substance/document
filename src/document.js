@@ -16,13 +16,11 @@ var errors = util.errors;
 var Data = require("substance-data");
 var Operator = require("substance-operator");
 var Chronicle = require("substance-chronicle");
-var Container = require("./container");
 
 // Module
 // ========
 
 var DocumentError = errors.define("DocumentError");
-
 
 // Document
 // --------
@@ -31,8 +29,6 @@ var DocumentError = errors.define("DocumentError");
 
 var Document = function(options) {
   Data.Graph.call(this, options.schema, options);
-
-  this.containers = {};
 };
 
 // Default Document Schema
@@ -62,23 +58,6 @@ Document.schema = {
 Document.Prototype = function() {
   var __super__ = util.prototype(this);
 
-  this.__apply__ = function(op) {
-    var result = __super__.__apply__.call(this, op, "silent");
-
-    // book-keeping of Container instances
-    Operator.Helpers.each(op, function(_op) {
-      // TODO: this can probably be optimized...
-      if (_op.type === "set" || _op.type === "update") {
-        _.each(this.containers, function(container) {
-          container.update(_op);
-        }, this);
-      }
-    }, this);
-
-    return result;
-  };
-
-
   this.getIndex = function(name) {
     return this.indexes[name];
   };
@@ -102,25 +81,15 @@ Document.Prototype = function() {
 
     if (!node) return node;
 
-    // Wrap all views in Container instances
-    if (node.type === "view") {
-      if (!this.containers[node.id]) {
-        this.containers[node.id] = new Container(this, node);
-      }
-      return this.containers[node.id];
-    }
-
     // Wrap all nodes in an appropriate Node instance
-    else {
-      var nodeSpec = this.nodeTypes[node.type];
-      var NodeType = (nodeSpec !== undefined) ? nodeSpec.Model : null;
-      if (NodeType && !(node instanceof NodeType)) {
-        node = new NodeType(node, this);
-        this.nodes[node.id] = node;
-      }
-
-      return node;
+    var nodeSpec = this.nodeTypes[node.type];
+    var NodeType = (nodeSpec !== undefined) ? nodeSpec.Model : null;
+    if (NodeType && !(node instanceof NodeType)) {
+      node = new NodeType(node, this);
+      this.nodes[node.id] = node;
     }
+
+    return node;
   };
 
   // Serialize to JSON
@@ -167,6 +136,16 @@ Document.Prototype = function() {
     var op = Operator.ObjectOperation.Update([viewId, "nodes"], Operator.ArrayOperation.Compound(ops));
 
     return this.apply(op);
+  };
+
+  // HACK: it is not desired to have the comments managed along with the editorially document updates
+  // We need an approach with multiple Chronicles instead.
+  this.comment = function(comment) {
+    var id = util.uuid();
+    comment.id = id;
+    comment.type = "comment";
+    var op = Operator.ObjectOperation.Create([comment.id], comment);
+    return this.__apply__(op);
   };
 
   // Adds nodes to a view

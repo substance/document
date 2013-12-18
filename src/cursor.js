@@ -1,7 +1,6 @@
 "use strict";
 
 var _ = require("underscore");
-var SRegExp = require("substance-regexp");
 var util = require("substance-util");
 var errors = util.errors;
 
@@ -39,16 +38,14 @@ Cursor.Prototype = function() {
     if (this.nodePos === null || this.charPos === null) return false;
     if (this.nodePos < 0 || this.charPos < 0) return false;
 
-    var node = this.container.getNodeFromPosition(this.nodePos);
-
-    if (!node) return false;
-    if (this.charPos >= node.getLength()) return false;
+    var l = this.container.getLength(this.nodePos);
+    if (this.charPos >= l) return false;
 
     return true;
   };
 
   this.isRightBound = function() {
-    return this.charPos === this.node.getLength();
+    return this.charPos === this.container.getLength(this.nodePos);
   };
 
   this.isLeftBound = function() {
@@ -72,7 +69,7 @@ Cursor.Prototype = function() {
       this.charPos = 0;
     } else if (this.nodePos > 0) {
       this.nodePos -= 1;
-      this.charPos = this.node.length;
+      this.charPos = this.container.getLength(this.nodePos);
     }
   };
 
@@ -82,7 +79,7 @@ Cursor.Prototype = function() {
 
   this.nextNode = function() {
     if (!this.isRightBound()) {
-      this.charPos = this.node.length;
+      this.charPos = this.container.getLength(this.nodePos);
     } else if (this.nodePos < this.container.getLength()-1) {
       this.nodePos += 1;
       this.charPos = 0;
@@ -94,13 +91,10 @@ Cursor.Prototype = function() {
   //
 
   this.prevWord = function() {
-    if (!this.node) throw new CursorError('Invalid node position');
 
     // Cursor is at first position -> move to prev paragraph if there is any
     if (this.isLeftBound()) {
       this.prevChar();
-    } else if (this.node.prevWord) {
-      this.charPos = this.node.prevWord(this.charPos);
     } else {
       return this.prevChar();
     }
@@ -111,13 +105,10 @@ Cursor.Prototype = function() {
   //
 
   this.nextWord = function() {
-    if (!this.node) throw new CursorError('Invalid node position');
 
     // Cursor is a last position -> move to next paragraph if there is any
     if (this.isRightBound()) {
       this.nextChar();
-    } else if (this.node.nextWord) {
-      this.charPos = this.node.nextWord(this.charPos);
     } else {
       this.nextChar();
     }
@@ -129,7 +120,6 @@ Cursor.Prototype = function() {
   // Useful when navigating over paragraph boundaries
 
   this.nextChar = function() {
-    if (!this.node) throw new CursorError('Invalid node position');
 
     // Last char in paragraph
     if (this.isRightBound()) {
@@ -149,13 +139,12 @@ Cursor.Prototype = function() {
   // Useful when navigating over paragraph boundaries
 
   this.prevChar = function() {
-    if (!this.node) throw new CursorError('Invalid node position');
     if (this.charPos<0) throw new CursorError('Invalid char position');
 
     if (this.isLeftBound()) {
       if (this.nodePos > 0) {
         this.nodePos -= 1;
-        this.charPos = this.node.getLength();
+        this.charPos = this.container.getLength(this.nodePos);
       }
     } else {
       this.charPos -= 1;
@@ -192,9 +181,6 @@ Cursor.Prototype = function() {
   };
 
   this.set = function(nodePos, charPos) {
-    this.nodePos = nodePos;
-    this.charPos = charPos;
-
     if (nodePos !== null && !_.isNumber(nodePos)) {
       throw new CursorError("Illegal argument: expected nodePos as number");
     }
@@ -211,12 +197,15 @@ Cursor.Prototype = function() {
       if (nodePos < 0 || nodePos >= n) {
         throw new CursorError("Invalid node position: " + nodePos);
       }
-      var node = this.container.getNodeFromPosition(nodePos);
-      var l = node.getLength();
+
+      var l = this.container.getLength(nodePos);
       if (charPos < 0 || charPos > l) {
         throw new CursorError("Invalid char position: " + charPos);
       }
     }
+
+    this.nodePos = nodePos;
+    this.charPos = charPos;
   };
 
   this.position = function() {
@@ -225,13 +214,5 @@ Cursor.Prototype = function() {
 };
 
 Cursor.prototype = new Cursor.Prototype();
-
-Object.defineProperties(Cursor.prototype, {
-  node: {
-    get: function() {
-      return this.container.getNodeFromPosition(this.nodePos);
-    }
-  }
-});
 
 module.exports = Cursor;

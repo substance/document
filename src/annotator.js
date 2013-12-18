@@ -106,40 +106,6 @@ Annotator.Prototype = function() {
     self.document.apply(Operator.ObjectOperation.Set([annotation.id, "range"], annotation.range, newRange));
   };
 
-  // TODO: extract range overlap checking logic into a dedicated Range class
-  var _filterByNodeAndRange = function(view, nodeId, range) {
-    var annotations = this._index.get(nodeId);
-
-    if (range) {
-      var sStart = range[0];
-      var sEnd = range[1];
-
-      var filtered = {};
-
-      // Note: this treats all annotations as if they were inclusive (left+right)
-      // TODO: maybe we should apply the same rules as for Transformations?
-      _.each(annotations, function(a) {
-        var aStart = a.range[0];
-        var aEnd = a.range[1];
-
-        var overlap = (aEnd >= sStart);
-
-        // Note: it is allowed to give only omit the end part
-        if (sEnd) {
-          overlap &= aStart <= sEnd;
-        }
-
-        if (overlap) {
-          filtered[a.id] = a;
-        }
-      });
-      annotations = filtered;
-    }
-
-    return annotations;
-  };
-
-
   // Truncates an existing annotation
   // --------
   // Deletes an annotation that has a collapsed range after truncation.
@@ -300,19 +266,20 @@ Annotator.Prototype = function() {
   };
 
   this.paste = function(annotations, newNodeId, offset) {
+    throw new Error("FIXME: this must be updated considering the other API changes.");
 
-    for (var i = 0; i < annotations.length; i++) {
-      var annotation = annotations[i];
-      if (newNodeId !== undefined) {
-        annotation.path = _.clone(annotation.path);
-        annotation.path[0] = newNodeId;
-      }
-      if (offset !== undefined) {
-        annotation.range[0] += offset;
-        annotation.range[1] += offset;
-      }
-      this.create(annotation);
-    }
+    // for (var i = 0; i < annotations.length; i++) {
+    //   var annotation = annotations[i];
+    //   if (newNodeId !== undefined) {
+    //     annotation.path = _.clone(annotation.path);
+    //     annotation.path[0] = newNodeId;
+    //   }
+    //   if (offset !== undefined) {
+    //     annotation.range[0] += offset;
+    //     annotation.range[1] += offset;
+    //   }
+    //   this.create(annotation);
+    // }
   };
 
   // Copy annotations in the given selection.
@@ -322,41 +289,42 @@ Annotator.Prototype = function() {
   // annotation type, for others, new annotation fragments would be created.
 
   this.copy = function(selection) {
+    throw new Error("FIXME: this must be updated considering the other API changes.");
 
-    var ranges = _getRanges(this, selection);
+    // var ranges = _getRanges(this, selection);
 
-    // get all affected annotations
-    var annotations = this.getAnnotations({selection: selection});
-    var result = [];
+    // // get all affected annotations
+    // var annotations = this.getAnnotations({selection: selection});
+    // var result = [];
 
-    _.each(annotations, function(annotation) {
+    // _.each(annotations, function(annotation) {
 
-      // TODO: determine if an annotation would be split by the given selection.
-      var range = ranges[annotation.path[0]];
-      var isPartial = (range[0] > annotation.range[0] || range[1] < annotation.range[1]);
+    //   // TODO: determine if an annotation would be split by the given selection.
+    //   var range = ranges[annotation.path[0]];
+    //   var isPartial = (range[0] > annotation.range[0] || range[1] < annotation.range[1]);
 
-      var newAnnotation;
-      if (isPartial) {
-        // for the others create a new fragment (depending on type) and truncate the original
-        if (this.isSplittable(annotation.type)) {
-          newAnnotation = util.clone(annotation);
-          // make the range relative to the selection
-          newAnnotation.id = util.uuid();
-          newAnnotation.range = [Math.max(0, annotation.range[0] - range[0]), annotation.range[1] - range[0]];
-          result.push(newAnnotation);
-        }
-      } else {
-        // add totally included ones
-        // TODO: need more control over uuid generation
-        newAnnotation = util.clone(annotation);
-        newAnnotation.id = util.uuid();
-        newAnnotation.range = [newAnnotation.range[0] - range[0], newAnnotation.range[1] - range[0]];
-        result.push(newAnnotation);
-      }
+    //   var newAnnotation;
+    //   if (isPartial) {
+    //     // for the others create a new fragment (depending on type) and truncate the original
+    //     if (this.isSplittable(annotation.type)) {
+    //       newAnnotation = util.clone(annotation);
+    //       // make the range relative to the selection
+    //       newAnnotation.id = util.uuid();
+    //       newAnnotation.range = [Math.max(0, annotation.range[0] - range[0]), annotation.range[1] - range[0]];
+    //       result.push(newAnnotation);
+    //     }
+    //   } else {
+    //     // add totally included ones
+    //     // TODO: need more control over uuid generation
+    //     newAnnotation = util.clone(annotation);
+    //     newAnnotation.id = util.uuid();
+    //     newAnnotation.range = [newAnnotation.range[0] - range[0], newAnnotation.range[1] - range[0]];
+    //     result.push(newAnnotation);
+    //   }
 
-    }, this);
+    // }, this);
 
-    return result;
+    // return result;
   };
 
   // Retrieve annotations
@@ -368,46 +336,79 @@ Annotator.Prototype = function() {
   // - filter: a custom filter of type `function(annotation) -> boolean`
   //
 
-  this.getAnnotations = function(options) {
-    options = options || {};
-    if (!options.view) options.view = "content";
+  var _filterAnnotations = function(filter) {
+    var filtered = [];
+    _.each(annotations, function(a) {
+      if(filter(a)) {
+        filtered.push(a);
+      }
+    });
+    return filtered;
+  };
+
+  var __isOverlap = function(anno, range) {
+    var sStart = range.start;
+    var sEnd = range.end;
+    var aStart = anno.range[0];
+    var aEnd = anno.range[1];
+
+    var overlap = (aEnd >= sStart);
+
+    // Note: it is allowed to give only omit the end part
+    if (sEnd) {
+      overlap &= (aStart <= sEnd);
+    }
+
+    return overlap;
+  };
+
+  var _filterByRange = function(range) {
+
+    var result = [];
+    var element = range.element;
+
+    if (element.type === "node") {
+      var node = element.node;
+      var annotations = this._index.get(node.id);
+
+      _.each(annotations, function(a) {
+        if (__isOverlap(a, range)) {
+          result.push(a);
+        }
+      });
+    }
+    else if (element.type === "property") {
+      throw new Error("Not yet implemented")
+    }
+    else {
+      throw new Error("Not yet implemented")
+    }
+
+    return result;
+  };
+
+
+  this.getAnnotationsForNode = function(nodeId) {
+    var annotations = this._index.get(nodeId);
+  };
+
+  this.getAnnotations = function(sel) {
+    if (!(sel instanceof Document.Selection)) {
+      throw new Error("API has changed: now getAnnotations() takes only a selection.");
+    }
 
     var doc = this.document;
+    var annotations = [];
 
-    var annotations = {};
+    var ranges = sel.getRanges();
 
-    if (options.node) {
-      annotations = _filterByNodeAndRange.call(this, options.view, options.node, options.range);
+    for (var i = 0; i < ranges.length; i++) {
+      var range = ranges[i];
+      var annos = _filterByRange.call(this, range);
+      annotations = annotations.concat(annos);
     }
 
-    else if (options.selection) {
-      var sel = options.selection;
-      var ranges = sel.getRanges();
-
-      for (var i = 0; i < ranges.length; i++) {
-        // Note: pushing an array and do flattening afterwards
-        var range = ranges[i];
-        _.extend(annotations, _filterByNodeAndRange.call(this, options.view, range.node.id, [range.start, range.end]));
-      }
-
-    } else {
-      _.each(doc.nodes, function(node) {
-        var baseType = doc.schema.baseType(node.type);
-        if(baseType === 'annotation') {
-          annotations[node.id] = node;
-        }
-      });
-    }
-
-    if (options.filter) {
-      var filtered = {};
-      _.each(annotations, function(a) {
-        if(options.filter(a)) {
-          filtered[a.id] = a;
-        }
-      });
-      annotations = filtered;
-    }
+    console.log("Annotator.getAnnotations():", sel, annotations);
 
     return annotations;
   };
