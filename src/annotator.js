@@ -6,7 +6,6 @@
 var _ = require("underscore");
 var util = require("substance-util");
 var Document = require("./document");
-var DocumentError = Document.DocumentError;
 var Operator = require("substance-operator");
 
 // Module
@@ -55,100 +54,20 @@ Annotator = function(doc, options) {
 
 Annotator.Prototype = function() {
 
-  var _getRanges = function(self, sel) {
-    var nodes = sel.getNodes();
-    var ranges = {};
-
-    for (var i = 0; i < nodes.length; i++) {
-      var node = nodes[i];
-      var range = [0,null];
-
-      // in the first node search only in the trailing part
-      if (i === 0) {
-        range[0] = sel.startChar();
-      }
-
-      // in the last node search only in the leading part
-      if (i === nodes.length-1) {
-        range[1] = sel.endChar();
-      }
-
-      ranges[node.id] = range;
-    }
-
-    return ranges;
-  };
-
   // Creates a new annotation
   // --------
   //
 
-  var _create = function(self, path, type, range, data) {
-    var annotation = {
-      "id": util.uuid(),
-      "type": type,
-      "path": path,
-      "range": range
-    };
 
-    if (data) _.extend(annotation, data);
-    return self.create(annotation);
-  };
+  // var _update = function(self, annotation, newRange) {
+  //   self.document.apply(Operator.ObjectOperation.Set([annotation.id, "range"], annotation.range, newRange));
+  // };
 
   // Deletes an annotation
   // --------
   //
   var _delete = function(self, annotation) {
     self.document.delete(annotation.id);
-  };
-
-  var _update = function(self, annotation, newRange) {
-    self.document.apply(Operator.ObjectOperation.Set([annotation.id, "range"], annotation.range, newRange));
-  };
-
-  // Truncates an existing annotation
-  // --------
-  // Deletes an annotation that has a collapsed range after truncation.
-  // If the annotation is splittable and the given range is an inner segment,
-  // the first will be truncated and a second one will be created to annotate the tail.
-  // If the annotation is not splittable it will be deleted.
-
-  var _truncate = function(self, annotation, range) {
-    var s1 = annotation.range[0];
-    var s2 = range[0];
-    var e1 = annotation.range[1];
-    var e2 = range[1];
-
-    var newRange;
-
-    // truncate all = delete
-    if (s1 >= s2 && e1 <= e2) {
-      _delete(self, annotation);
-
-    // truncate the head
-    } else if (s1 >= s2  && e1 > e2) {
-      newRange = [e2, e1];
-      _update(self, annotation, newRange);
-    }
-
-    // truncate the tail
-    else if (s1 < s2 && e1 <= e2) {
-      newRange = [s1, s2];
-      _update(self, annotation, newRange);
-    }
-    // from the middle: split or delete
-    else {
-      if (self.isSplittable(annotation.type)) {
-        newRange = [s1, s2];
-        _update(self, annotation, newRange);
-
-        var tailRange = [e2, e1];
-        _create(self, annotation.path, annotation.type, tailRange);
-
-      } else {
-        _delete(self, annotation);
-      }
-    }
   };
 
   // Takes care of updating annotations whenever an graph operation is applied.
@@ -265,7 +184,7 @@ Annotator.Prototype = function() {
     }, this);
   };
 
-  this.paste = function(annotations, newNodeId, offset) {
+  this.paste = function(/*annotations, newNodeId, offset*/) {
     throw new Error("FIXME: this must be updated considering the other API changes.");
 
     // for (var i = 0; i < annotations.length; i++) {
@@ -288,7 +207,7 @@ Annotator.Prototype = function() {
   // Partially selected annotations may not get copied depending on the
   // annotation type, for others, new annotation fragments would be created.
 
-  this.copy = function(selection) {
+  this.copy = function(/*selection*/) {
     throw new Error("FIXME: this must be updated considering the other API changes.");
 
     // var ranges = _getRanges(this, selection);
@@ -336,15 +255,15 @@ Annotator.Prototype = function() {
   // - filter: a custom filter of type `function(annotation) -> boolean`
   //
 
-  var _filterAnnotations = function(filter) {
-    var filtered = [];
-    _.each(annotations, function(a) {
-      if(filter(a)) {
-        filtered.push(a);
-      }
-    });
-    return filtered;
-  };
+  // var _filterAnnotations = function(filter, annotations) {
+  //   var filtered = [];
+  //   _.each(annotations, function(a) {
+  //     if(filter(a)) {
+  //       filtered.push(a);
+  //     }
+  //   });
+  //   return filtered;
+  // };
 
   var __isOverlap = function(anno, range) {
     var sStart = range.start;
@@ -391,9 +310,8 @@ Annotator.Prototype = function() {
     return result;
   };
 
-
   this.getAnnotationsForNode = function(nodeId) {
-    var annotations = this._index.get(nodeId);
+    return this._index.get(nodeId);
   };
 
   // TODO: we could do a minor optimization, as it happens that the same query is performed multiple times
@@ -403,7 +321,6 @@ Annotator.Prototype = function() {
       throw new Error("API has changed: now getAnnotations() takes only a selection.");
     }
 
-    var doc = this.document;
     var annotations = [];
 
     var ranges = sel.getRanges();
@@ -437,55 +354,6 @@ Annotator.Prototype = function() {
 
   this.isSplittable = function(type) {
     return this.split.indexOf(type) >= 0;
-  };
-
-  // Creates an annotation for the current selection of given type
-  // --------
-  //
-  // This action may involve more complex co-actions:
-  //
-  // - toggle delete one or more annotations
-  // - truncate one or more annotations
-  //
-  // TODO: this implementation totally depends on that the annotated text is stored
-  // in the "content" property of the node
-
-  this.annotate = function(selection, type, data) {
-    var sel = selection.range();
-    var node = selection.cursor.node;
-
-    if (sel.start[0] !== sel.end[0]) throw new DocumentError('Multi-node annotations are not supported.');
-
-    var range = [sel.start[1], sel.end[1]];
-    var annotations = this.getAnnotations({node: node.id, range: range});
-
-    if (selection.isCollapsed()) {
-      // Note: creating annotations without selection is not supported yet
-      // TODO: discuss
-
-      // toggle annotations of same type
-      _.each(annotations, function(a) {
-        if (a.type === type) {
-          _delete(this, a);
-        }
-      }, this);
-
-    } else {
-
-      // truncate all existing annotations of the same type (or group)
-      var toggled = false;
-      _.each(annotations, function(a) {
-        if (this.isExclusive(type, a.type)) {
-          _truncate(this, a, range);
-          if (type === a.type) toggled = true;
-        }
-      }, this);
-
-      // create a new annotation
-      if (!toggled) {
-        return _create(this, [node.id, "content"], type, range, data);
-      }
-    }
   };
 
   this.dispose = function() {

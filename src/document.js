@@ -15,7 +15,7 @@ var util = require("substance-util");
 var errors = util.errors;
 var Data = require("substance-data");
 var Operator = require("substance-operator");
-var Chronicle = require("substance-chronicle");
+// var Chronicle = require("substance-chronicle");
 
 // Module
 // ========
@@ -146,6 +146,12 @@ Document.Prototype = function() {
     comment.type = "comment";
     var op = Operator.ObjectOperation.Create([comment.id], comment);
     return this.__apply__(op);
+  };
+
+  this.annotate = function(anno, data) {
+    anno.id = anno.type + "_" + util.uuid();
+    _.extend(anno, data);
+    this.create(anno);
   };
 
   // Adds nodes to a view
