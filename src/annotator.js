@@ -331,7 +331,7 @@ Annotator.Prototype = function() {
       annotations = annotations.concat(annos);
     }
 
-    console.log("Annotator.getAnnotations():", sel, annotations);
+    // console.log("Annotator.getAnnotations():", sel, annotations);
     return annotations;
   };
 
