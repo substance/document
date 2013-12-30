@@ -397,7 +397,8 @@ Annotator.defaultBehavior = {
     "link": "style",
     "remark": "marker",
     "idea": "marker",
-    "error": "marker"
+    "remark_reference": "marker",
+    "error_reference": "marker"
   },
   expansion: {
     "emphasis": {
@@ -423,7 +424,9 @@ Annotator.defaultBehavior = {
     cross_reference: 1,
     figure_reference: 1,
     person_reference: 1,
-    citation_reference: 1
+    citation_reference: 1,
+    error_reference: 1,
+    remark_reference: 1
   }
 };
 
