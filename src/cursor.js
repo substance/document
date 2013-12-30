@@ -9,7 +9,6 @@ var CursorError = errors.define("CursorError");
 // Document.Selection.Cursor
 // ================
 //
-// Hi, I'm an iterator, just so you know.
 
 var Cursor = function(container, nodePos, charPos, view) {
   this.container = container;

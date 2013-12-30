@@ -494,7 +494,7 @@ Range.Prototype = function() {
   //
 
   this.isRightBound = function() {
-    return this.end === this.node.getLength();
+    return this.end === this.component.getLength();
   };
 
   // Returns true if the range includes the first character of a node
@@ -518,8 +518,7 @@ Range.Prototype = function() {
   //
 
   this.content = function() {
-    // TODO: rethink. such ranges will only work for for text nodes
-    return this.node.content.slice(this.start, this.end);
+    throw new Error("Not supported anymore");
   };
 
   // Returns true if all chars are selected
