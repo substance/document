@@ -395,7 +395,7 @@ Annotator.defaultBehavior = {
     "emphasis": "style",
     "strong": "style",
     "link": "style",
-    "question": "marker",
+    "remark": "marker",
     "idea": "marker",
     "error": "marker"
   },
@@ -410,7 +410,7 @@ Annotator.defaultBehavior = {
   split: ["emphasis", "strong"],
   levels: {
     idea: 1,
-    question: 1,
+    remark: 1,
     error: 1,
     comment: 1,
     link: 1,
