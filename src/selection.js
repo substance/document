@@ -82,15 +82,15 @@ Selection.Prototype = function() {
   // --------
   //
   // sel: an instanceof Selection
-  //      or a document range `{start: [nodePos, charPos], end: [nodePos, charPos]}`
-  //      or a document position `[nodePos, charPos]`
+  //      or a document range `{start: [pos, charPos], end: [pos, charPos]}`
+  //      or a document position `[pos, charPos]`
 
   this.set = function(sel) {
     var cursor = this.__cursor;
 
     if (sel instanceof Selection) {
       this.start = _.clone(sel.start);
-      cursor.set(sel.__cursor.nodePos, sel.__cursor.charPos);
+      cursor.set(sel.__cursor.pos, sel.__cursor.charPos);
     } else if (_.isArray(sel)) {
       this.start = _.clone(sel);
       cursor.set(sel[0], sel[1]);
@@ -141,7 +141,7 @@ Selection.Prototype = function() {
 
   this.isReverse = function() {
     var cursor = this.__cursor;
-    return (cursor.nodePos < this.start[0]) || (cursor.nodePos === this.start[0] && cursor.charPos < this.start[1]);
+    return (cursor.pos < this.start[0]) || (cursor.pos === this.start[0] && cursor.charPos < this.start[1]);
   };
 
   // Set cursor to position
@@ -164,7 +164,7 @@ Selection.Prototype = function() {
   };
 
   this.getCursorPosition = function() {
-    return [this.__cursor.nodePos, this.__cursor.charPos];
+    return [this.__cursor.pos, this.__cursor.charPos];
   };
 
   // Fully selects a the node with the given id
@@ -172,16 +172,14 @@ Selection.Prototype = function() {
   //
 
   this.selectNode = function(nodeId) {
-    var nodePos = this.container.getPosition(nodeId);
-    if (nodePos < 0) {
+    var pos = this.container.getPosition(nodeId);
+    if (pos < 0) {
       throw new SelectionError("Node is not visible: " + nodeId);
     }
-    // FIXME: see above
-    // var node = this.container.getNodeFromPosition(nodePos);
-    var l = this.container.getLength(nodePos);
+    var l = this.container.getLength(pos);
     this.set({
-      start: [nodePos, 0],
-      end: [nodePos, l]
+      start: [pos, 0],
+      end: [pos, l]
     });
   };
 
@@ -208,8 +206,8 @@ Selection.Prototype = function() {
   //
 
   // TODO: is this really necessary? ~> document.hasPredecessor
-  this.hasPredecessor = function(nodePos) {
-    return nodePos > 0;
+  this.hasPredecessor = function(pos) {
+    return pos > 0;
   };
 
   // Check if the given node has a successor
@@ -217,9 +215,9 @@ Selection.Prototype = function() {
   //
 
   // TODO: is this really necessary? ~> document.hasSuccessor
-  this.hasSuccessor = function(nodePos) {
+  this.hasSuccessor = function(pos) {
     var l = this.container.getLength();
-    return nodePos < l-1;
+    return pos < l-1;
   };
 
 
@@ -238,7 +236,7 @@ Selection.Prototype = function() {
       this.__cursor.set(this.start[0], this.start[1]);
 
     } else if (direction === "cursor") {
-      this.start[0] = this.__cursor.nodePos;
+      this.start[0] = this.__cursor.pos;
       this.start[1] = this.__cursor.charPos;
 
     } else {
@@ -354,7 +352,7 @@ Selection.Prototype = function() {
   //
 
   this.startNode = function() {
-    return this.isReverse() ? this.__cursor.nodePos : this.start[0];
+    return this.isReverse() ? this.__cursor.pos : this.start[0];
   };
 
   // Returns end node offset
@@ -362,7 +360,7 @@ Selection.Prototype = function() {
   //
 
   this.endNode = function() {
-    return this.isReverse() ? this.start[0] : this.__cursor.nodePos;
+    return this.isReverse() ? this.start[0] : this.__cursor.pos;
   };
 
 
@@ -400,7 +398,7 @@ Selection.Prototype = function() {
   // over 1+ characters
 
   this.isCollapsed = function() {
-    return this.start[0] === this.__cursor.nodePos && this.start[1] === this.__cursor.charPos;
+    return this.start[0] === this.__cursor.pos && this.start[1] === this.__cursor.charPos;
   };
 
 
@@ -436,15 +434,15 @@ Object.defineProperties(Selection.prototype, {
 // or ask if it's partially selected or not
 // For example if an image is fully selected we can just delete it
 
-var Range = function(selection, nodePos, start, end) {
+var Range = function(selection, pos, start, end) {
   this.selection = selection;
   // The node pos within the document which can range
   // between selection.startNode() and selection.endNode()
-  this.nodePos = nodePos;
+  this.pos = pos;
   this.start = start;
   this.end = end;
 
-  this.component = selection.container.getComponent(nodePos);
+  this.component = selection.container.getComponent(pos);
 };
 
 Range.Prototype = function() {
@@ -454,7 +452,7 @@ Range.Prototype = function() {
   //
 
   this.isFirst = function() {
-    return this.nodePos === this.selection.startNode();
+    return this.pos === this.selection.startNode();
   };
 
   // Returns true if the range denotes the last range in a selection
@@ -462,7 +460,7 @@ Range.Prototype = function() {
   //
 
   this.isLast = function() {
-    return this.nodePos === this.selection.endNode();
+    return this.pos === this.selection.endNode();
   };
 
   // Returns true if the range denotes the last range in a selection
