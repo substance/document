@@ -100,6 +100,52 @@ Annotator.Prototype = function() {
     // }
   };
 
+  // A helper to implement an editor which can break nodes.
+  // --------
+  // TODO: this seems to be very tailored to text nodes. Refactor this when needed.
+  //
+  this.breakNode = function(node, charPos, newNode) {
+    var annotations = _nodeAnnotationsByRange(this, node, {start: charPos});
+    _.each(annotations, function(annotation) {
+    //   var range = ranges[annotation.path[0]];
+      var isInside = (charPos > annotation.range[0] || charPos[1] < annotation.range[1]);
+
+      // 1. if the cursor is inside an annotation it gets either split or truncated
+      if (isInside) {
+        // create a new annotation fragment if the annotation is splittable
+        if (this.isSplittable(annotation.type)) {
+          var splitAnnotation = util.clone(annotation);
+          splitAnnotation.range = [0, annotation.range[1] - charPos];
+          splitAnnotation.id = util.uuid();
+          this.document.create(splitAnnotation);
+        }
+        // in either cases truncate the first part
+        var newRange =_.clone(annotation.range);
+        newRange[1] = charPos;
+
+        // if the fragment has a zero range now, delete it
+        if (newRange[1] === newRange[0]) {
+          this.document.delete(annotation.id);
+        }
+        // ... otherwise update the range
+        else {
+          this.document.set([annotation.id, "range"], newRange);
+        }
+      }
+
+      // 2. if the cursor is before an annotation then simply transfer the annotation to the new node
+      else {
+        // Note: we are preserving the annotation so that anything which is connected to the annotation
+        // remains valid.
+        var newPath = _.clone(annotation.path);
+        newPath[0] = newNode.id;
+        this.document.set([annotation.id, "path"], newPath);
+        var newRange = [annotation.range[0] - charPos, annotation.range[1] - charPos];
+        this.document.set([annotation.id, "range"], newRange);
+      }
+    }, this);
+  };
+
   this.getAnnotationsForNode = function(nodeId) {
     return this.index.get(nodeId);
   };
@@ -235,6 +281,18 @@ Annotator.Prototype = function() {
     else {
       console.error("FIXME");
     }
+    _.each(annotations, function(a) {
+      if (__isOverlap(self, a, range)) {
+        result.push(a);
+      }
+    });
+    return result;
+  };
+
+  var _nodeAnnotationsByRange = function(self, node, range) {
+    var result = [];
+    var index = self.document.getIndex("annotations");
+    var annotations = index.get(node.id);
     _.each(annotations, function(a) {
       if (__isOverlap(self, a, range)) {
         result.push(a);
