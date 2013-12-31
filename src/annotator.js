@@ -117,7 +117,7 @@ Annotator.Prototype = function() {
     var ranges = sel.getRanges();
     for (var i = 0; i < ranges.length; i++) {
       var range = ranges[i];
-      var annos = _annotationsByRange(this.document, range);
+      var annos = _annotationsByRange(this, this.document, range);
       annotations = annotations.concat(annos);
     }
     // console.log("Annotator.getAnnotations():", sel, annotations);
@@ -183,21 +183,40 @@ Annotator.Prototype = function() {
   // Checks if an annotation overlaps with a given range
   // --------
   //
-  var __isOverlap = function(anno, range) {
+  var __isOverlap = function(self, anno, range) {
     var sStart = range.start;
     var sEnd = range.end;
     var aStart = anno.range[0];
     var aEnd = anno.range[1];
-    var overlap = (aEnd >= sStart);
 
-    // Note: it is allowed to omit the end part
-    if (_.isNumber(sEnd)) {
-      overlap &= (aStart <= sEnd);
+    var expandLeft = false;
+    var expandRight = false;
+    var expandSpec = self.config.expansion[anno.type];
+    if (expandSpec) {
+      if (expandSpec.left) expandLeft =  expandSpec.left(anno);
+      if (expandSpec.right) expandRight = expandSpec.right(anno);
     }
+
+    var overlap;
+    if (expandRight) {
+      overlap = (aEnd >= sStart);
+    } else {
+      overlap = (aEnd > sStart);
+    }
+
+    // Note: it is allowed to leave range.end undefined
+    if (_.isNumber(sEnd)) {
+      if (expandLeft) {
+        overlap &= (aStart <= sEnd);
+      } else {
+        overlap &= (aStart < sEnd);
+      }
+    }
+
     return overlap;
   };
 
-  var _annotationsByRange = function(doc, range) {
+  var _annotationsByRange = function(self, doc, range) {
     var result = [];
     var component = range.component;
     var annotations;
@@ -217,7 +236,7 @@ Annotator.Prototype = function() {
       console.error("FIXME");
     }
     _.each(annotations, function(a) {
-      if (__isOverlap(a, range)) {
+      if (__isOverlap(self, a, range)) {
         result.push(a);
       }
     });
