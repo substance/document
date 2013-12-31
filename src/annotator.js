@@ -100,11 +100,13 @@ Annotator.Prototype = function() {
     // }
   };
 
-  // A helper to implement an editor which can break nodes.
+  // A helper to implement an editor which can breaks or joins nodes.
   // --------
   // TODO: this seems to be very tailored to text nodes. Refactor this when needed.
   //
-  this.breakNode = function(node, charPos, newNode) {
+  this.transferAnnotations = function(node, charPos, newNode, offset) {
+    offset = offset || 0;
+
     var annotations = _nodeAnnotationsByRange(this, node, {start: charPos});
     _.each(annotations, function(annotation) {
     //   var range = ranges[annotation.path[0]];
@@ -115,7 +117,7 @@ Annotator.Prototype = function() {
         // create a new annotation fragment if the annotation is splittable
         if (this.isSplittable(annotation.type)) {
           var splitAnnotation = util.clone(annotation);
-          splitAnnotation.range = [0, annotation.range[1] - charPos];
+          splitAnnotation.range = [offset, offset + annotation.range[1] - charPos];
           splitAnnotation.id = util.uuid();
           this.document.create(splitAnnotation);
         }
@@ -140,7 +142,7 @@ Annotator.Prototype = function() {
         var newPath = _.clone(annotation.path);
         newPath[0] = newNode.id;
         this.document.set([annotation.id, "path"], newPath);
-        var newRange = [annotation.range[0] - charPos, annotation.range[1] - charPos];
+        var newRange = [offset + annotation.range[0] - charPos, offset + annotation.range[1] - charPos];
         this.document.set([annotation.id, "range"], newRange);
       }
     }, this);
