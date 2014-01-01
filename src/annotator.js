@@ -316,6 +316,41 @@ Annotator.isTrue = function() {
   return true;
 };
 
+// A helper to decide whether a graph operation affects annotations of a given node
+// --------
+// E.g., this is used by node views to detect annotation changes and to update the view accordingly.
+//
+
+var _isInstanceOf = function(doc, node, type) {
+  var schema = doc.getSchema();
+  return schema.isInstanceOf(node.type, type);
+};
+
+
+Annotator.changesAnnotations = function(doc, op, path) {
+  var anno;
+  if (op.type === "delete") {
+    anno = op.val;
+  } else {
+    anno = doc.get(op.path[0]);
+  }
+  var result = false;
+
+  if (_isInstanceOf(doc, anno, "annotation")) {
+    // any annotation operation with appropriate path
+    if (_.isEqual(path, anno.path)) {
+      result = true;
+    }
+    // ... or those who are changing the path to that
+    else if (op.type === "set" && op.path[1] === "path" && (_.isEqual(path, op.original)|| _.isEqual(path, op.val))) {
+      result = true;
+    }
+  }
+
+  return result;
+};
+
+
 _getConfig = function(doc) {
   // Note: this is rather experimental
   // It is important to inverse the control over the annotation behavior,
