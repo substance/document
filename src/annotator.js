@@ -31,11 +31,13 @@ Annotator.Prototype = function() {
   // 2. op='delete', path[0]==a.path[0]: the annotation gets deleted
   // 3. op='set', path==a.path: the annotation gets deleted as the referenced property has been reset
   //
-  this.update = function(op) {
+  this.update = function(op, options) {
+    options = options || {};
+    var path = options.path || op.path;
     var index = this.document.getIndex("annotations");
-    var annotations = index.get(op.path);
+    var annotations = index.get(path);
     _.each(annotations, function(a) {
-      _update(this, a, op);
+      _update(this, a, op, options);
     }, this);
   };
 
@@ -197,10 +199,12 @@ Annotator.Prototype = function() {
   // Updates a single annotation according to a given operation.
   // --------
   //
-  var _update = function(self, annotation, op) {
+  var _update = function(self, annotation, op, options) {
+    var path = options.path || op.path;
+
     // only apply the transformation on annotations with the same property
     // Note: currently we only have annotations on the `content` property of nodes
-    if (!_.isEqual(annotation.path, op.path)) return;
+    if (!_.isEqual(annotation.path, path)) return;
 
     if (op.type === "update") {
       // Note: these are implicit transformations, i.e., not triggered via annotation controls
@@ -276,7 +280,11 @@ Annotator.Prototype = function() {
       annotations = index.get(node.id);
     }
     else if (component.type === "property") {
-      annotations = index.get(component.propertyPath);
+      // Note: If a component displays a referenced property (e.g., Cover.title)
+      // IMO it makes more sense to attach annotations to the referencing path instead of the original path.
+      // E.g., ["cover", "title"] instead of ["document", "title"]
+      //annotations = index.get(component.propertyPath);
+      annotations = index.get(component.path);
     }
     else if (component.type === "custom") {
       annotations = index.get(component.path);
