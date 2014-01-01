@@ -111,6 +111,7 @@ Annotator.Prototype = function() {
     _.each(annotations, function(annotation) {
     //   var range = ranges[annotation.path[0]];
       var isInside = (charPos > annotation.range[0] || charPos[1] < annotation.range[1]);
+      var newRange;
 
       // 1. if the cursor is inside an annotation it gets either split or truncated
       if (isInside) {
@@ -122,7 +123,7 @@ Annotator.Prototype = function() {
           this.document.create(splitAnnotation);
         }
         // in either cases truncate the first part
-        var newRange =_.clone(annotation.range);
+        newRange =_.clone(annotation.range);
         newRange[1] = charPos;
 
         // if the fragment has a zero range now, delete it
@@ -142,7 +143,7 @@ Annotator.Prototype = function() {
         var newPath = _.clone(annotation.path);
         newPath[0] = newNode.id;
         this.document.set([annotation.id, "path"], newPath);
-        var newRange = [offset + annotation.range[0] - charPos, offset + annotation.range[1] - charPos];
+        newRange = [offset + annotation.range[0] - charPos, offset + annotation.range[1] - charPos];
         this.document.set([annotation.id, "range"], newRange);
       }
     }, this);
@@ -302,7 +303,6 @@ Annotator.Prototype = function() {
     });
     return result;
   };
-
 };
 
 Annotator.Prototype.prototype = util.Events;
