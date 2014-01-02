@@ -3,6 +3,10 @@
 var _ = require("underscore");
 var util = require("substance-util");
 
+var util = require("substance-util");
+var errors = util.errors;
+var ContainerError = errors.define("ContainerError");
+
 // The container must be much more view oriented as the actual visualized components depend very much on the
 // used renderers.
 
@@ -12,7 +16,7 @@ var Container = function(document, name, surfaces) {
 
   var container = this.document.get(name);
   if (!container || container.type !== "view") {
-    throw new Error("Illegal argument: no view with name " + name);
+    throw new ContainerError("Illegal argument: no view with name " + name);
   }
 
   this.view = container;
@@ -20,7 +24,7 @@ var Container = function(document, name, surfaces) {
   this.__roots = null;
   this.__children = null;
 
-  this.surfaces = surfaces;
+  this.surfaces = surfaces || new Container.DefaultNodeSurfaceProvider(document);
   this.rebuild();
 
   this.listenTo(this.document, "operation:applied", this.update);
@@ -44,11 +48,11 @@ Container.Prototype = function() {
       var id = rootNodes[i];
       var nodeSurface = this.surfaces.getNodeSurface(id);
       if (!nodeSurface) {
-        throw new Error("Aaaaah! no surface available for node " + id);
+        throw new ContainerError("Aaaaah! no surface available for node " + id);
       }
       var components = nodeSurface.components;
       if (!components) {
-        throw new Error("Node Surface did not provide components: " + nodeSurface.node.type);
+        throw new ContainerError("Node Surface did not provide components: " + nodeSurface.node.type);
       }
       __children[id] = [];
       for (var j = 0; j < components.length; j++) {
@@ -162,10 +166,10 @@ Container.Prototype = function() {
     return components[pos];
   };
 
-  this.getNodeComponents = function(node) {
-    var result = this.__children[node.id];
+  this.getNodeComponents = function(nodeId) {
+    var result = this.__children[nodeId];
     if (!result) {
-      throw new Error("Node is not in this container:"+node.id);
+      throw new ContainerError("Node is not in this container:"+nodeId);
     }
     return result;
   };
@@ -247,4 +251,6 @@ Object.defineProperties(Container.prototype, {
 });
 
 Container.DefaultNodeSurfaceProvider = require("./node_surface_provider");
+Container.ContainerError = ContainerError;
+
 module.exports = Container;

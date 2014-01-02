@@ -90,13 +90,7 @@ Cursor.Prototype = function() {
   //
 
   this.prevWord = function() {
-
-    // Cursor is at first position -> move to prev paragraph if there is any
-    if (this.isLeftBound()) {
-      this.prevChar();
-    } else {
-      return this.prevChar();
-    }
+    throw new Error("Not implemented");
   };
 
   // Return next occuring word for a given node/character position
@@ -104,13 +98,7 @@ Cursor.Prototype = function() {
   //
 
   this.nextWord = function() {
-
-    // Cursor is a last position -> move to next paragraph if there is any
-    if (this.isRightBound()) {
-      this.nextChar();
-    } else {
-      this.nextChar();
-    }
+    throw new Error("Not implemented");
   };
 
   // Return next char, for a given node/character position
@@ -119,7 +107,6 @@ Cursor.Prototype = function() {
   // Useful when navigating over paragraph boundaries
 
   this.nextChar = function() {
-
     // Last char in paragraph
     if (this.isRightBound()) {
       if (this.pos < this.container.getLength()-1) {

@@ -59,6 +59,7 @@ TestDocument.prototype = new TestDocument.Prototype();
 TestDocument.prototype.constructor = TestDocument;
 
 TestDocument.Schema = Schema;
+TestDocument.nodeTypes = nodeTypes;
 
 TestDocument.Seed = {
   nodes : {

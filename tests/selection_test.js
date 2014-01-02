@@ -8,6 +8,7 @@ var assert = Test.assert;
 var registerTest = Test.registerTest;
 var TestDocument = require('./test_document');
 var Selection = require("../src/selection");
+var Container = require("../src/container");
 
 // Test
 // ========
@@ -22,7 +23,7 @@ var SelectionTest = function() {
   this.fixture = function() {
     var seed = require("./fixture.json");
     this.doc = new TestDocument({seed: seed});
-    this.container = this.doc.get("content");
+    this.container = new Container(this.doc, "content");
     this.sel = new Selection(this.container);
   };
 
@@ -44,7 +45,7 @@ var SelectionTest = function() {
       assert.isFalse(this.sel.isCollapsed());
     },
 
-    "set() should reject invalid positions", function() {
+    "Selection.set() should reject invalid positions", function() {
       assert.exception(Selection.SelectionError, function() {
         this.sel.set({start: [-1,0], end: [0,3]});
       }, this);
@@ -61,7 +62,7 @@ var SelectionTest = function() {
       // Note: char positions are checked by Cursor and this behavior should be tested there.
     },
 
-    "setCursor() should collapse the selection", function() {
+    "Selection.setCursor() should collapse the selection", function() {
       this.sel.setCursor([0, 1]);
       assert.isTrue(this.sel.isCollapsed());
     },
@@ -71,7 +72,7 @@ var SelectionTest = function() {
       assert.isTrue(this.sel.isReverse());
     },
 
-    "range() always provides a selection in ascending order", function() {
+    "Selection.range() always provides a selection in ascending order", function() {
       var expected = {start: [0,0], end: [0,3]};
       this.sel.set({start: [0,0], end: [0,3]});
       assert.isObjectEqual(expected, this.sel.range());
@@ -80,38 +81,38 @@ var SelectionTest = function() {
       assert.isObjectEqual(expected, this.sel.range());
     },
 
-    "range() should return null for invalid selections", function() {
+    "Selection.range() should return null for invalid selections", function() {
       var sel = new Selection(this.container);
       assert.isNull(sel.range());
     },
 
-    "clear() should invalidate the selection", function() {
+    "Selection.clear() should invalidate the selection", function() {
       var sel = this.sel;
       sel.set({start: [0,0], end: [0,3]});
       sel.clear();
       assert.isTrue(sel.isNull());
     },
 
-    "selectNode() should span a range over the whole content of a node", function() {
+    "Selection.selectNode() should span a range over the whole content of a node", function() {
       this.sel.selectNode("h1");
       var l = this.doc.get("h1").content.length;
       assert.isObjectEqual({start: [0,0], end: [0, l]}, this.sel.range());
     },
 
-    "selectNode() should reject invalid node ids", function() {
-      assert.exception(Selection.SelectionError, function() {
+    "Selection.selectNode() should reject invalid node ids", function() {
+      assert.exception(Container.ContainerError, function() {
         this.sel.selectNode("bla");
       }, this);
     },
 
-    "selectNode() should reject selecting invisible nodes", function() {
+    "Selection.selectNode() should reject selecting invisible nodes", function() {
       this.doc.hide("content", "p1");
       assert.exception(Selection.SelectionError, function() {
         this.sel.selectNode("p1");
       }, this);
     },
 
-    "collapse(): [0->3], right -> 3", function() {
+    "Selection.collapse(): [0->3], right -> 3", function() {
       var sel = this.sel;
       sel.set({start: [0,0], end: [0,3]});
       sel.collapse("right");
@@ -120,7 +121,7 @@ var SelectionTest = function() {
       assert.isObjectEqual({start: [0,3], end: [0,3]}, sel.range());
     },
 
-    "collapse(): [0->3], left -> 0", function() {
+    "Selection.collapse(): [0->3], left -> 0", function() {
       var sel = this.sel;
       sel.set({start: [0,0], end: [0,3]});
       sel.collapse("left");
@@ -129,7 +130,7 @@ var SelectionTest = function() {
       assert.isObjectEqual({start: [0,0], end: [0,0]}, sel.range());
     },
 
-    "collapse(): [0<-3], right -> 3", function() {
+    "Selection.collapse(): [0<-3], right -> 3", function() {
       var sel = this.sel;
       sel.set({start: [0,0], end: [0,3]});
       sel.collapse("right");
@@ -138,7 +139,7 @@ var SelectionTest = function() {
       assert.isObjectEqual({start: [0,3], end: [0,3]}, sel.range());
     },
 
-    "collapse(): [0<-3], left -> 0", function() {
+    "Selection.collapse(): [0<-3], left -> 0", function() {
       var sel = this.sel;
       sel.set({start: [0,0], end: [0,3]});
       sel.collapse("left");
@@ -147,13 +148,13 @@ var SelectionTest = function() {
       assert.isObjectEqual({start: [0,0], end: [0,0]}, sel.range());
     },
 
-    "collapse() should reject invalid direction name", function() {
+    "Selection.collapse() should reject invalid direction name", function() {
       assert.exception(Selection.SelectionError, function() {
         this.sel.collapse("blupp");
       }, this);
     },
 
-    "hasMultipleNodes()", function() {
+    "Selection.hasMultipleNodes()", function() {
       var sel = new Selection(this.container);
       // null selection should return false
       assert.isFalse(sel.hasMultipleNodes());
@@ -165,25 +166,7 @@ var SelectionTest = function() {
       assert.isTrue(sel.hasMultipleNodes());
     },
 
-/*
-  this.move = function(direction, granularity) {
-
-    // moving an expanded selection by char collapses the selection
-    // and sets the cursor to the boundary of the direction
-    if (!this.isCollapsed() && granularity === "char") {
-      this.collapse(direction);
-    }
-    // otherwise the cursor gets moved (together with start)
-    else {
-      this.__cursor.move(direction, granularity);
-      this.start = this.__cursor.position();
-    }
-
-    this.trigger('selection:changed', this.range());
-  };
-
-*/
-    "move('right', 'char')", function() {
+    "Selection.move('right', 'char')", function() {
       this.fixture();
       var sel = this.sel;
       sel.setCursor([0,0]);
@@ -191,27 +174,25 @@ var SelectionTest = function() {
       assert.isObjectEqual({start: [0,1], end: [0,1]}, sel.range());
     },
 
-    "move('right', 'char') at end of node should move to next", function() {
+    "Selection.move('right', 'char') at end of node should move to next", function() {
       var sel = this.sel;
-      var node = this.container.getNodeFromPosition(0);
-      var l = node.content.length;
+      var l = this.container.getLength(0);
       sel.setCursor([0,l]);
       sel.move('right', 'char');
       assert.isObjectEqual({start: [1,0], end: [1,0]}, sel.range());
     },
 
-    "move('right', 'char') at end of document should do nothing", function() {
+    "Selection.move('right', 'char') at end of document should do nothing", function() {
       var sel = this.sel;
       var nodePos = 5;
-      var node = this.container.getNodeFromPosition(nodePos);
-      var l = node.content.length;
-      var pos = [nodePos,l];
+      var l = this.container.getLength(nodePos);
+      var pos = [nodePos, l];
       sel.setCursor(pos);
       sel.move('right', 'char');
       assert.isObjectEqual({start: pos, end: pos}, sel.range());
     },
 
-    "move('left', 'char')", function() {
+    "Selection.move('left', 'char')", function() {
       this.fixture();
       var sel = this.sel;
       sel.setCursor([0,3]);
@@ -219,16 +200,15 @@ var SelectionTest = function() {
       assert.isObjectEqual({start: [0,2], end: [0,2]}, sel.range());
     },
 
-    "move('left', 'char') at begin of node should move to previous", function() {
+    "Selection.move('left', 'char') at begin of node should move to previous", function() {
       var sel = this.sel;
-      var node = this.container.getNodeFromPosition(0);
-      var l = node.content.length;
+      var l = this.container.getLength(0);
       sel.setCursor([1,0]);
       sel.move('left', 'char');
       assert.isObjectEqual({start: [0,l], end: [0,l]}, sel.range());
     },
 
-    "move('left', 'char') at begin of document should do nothing", function() {
+    "Selection.move('left', 'char') at begin of document should do nothing", function() {
       var sel = this.sel;
       var pos = [0,0];
       sel.setCursor(pos);
@@ -237,101 +217,30 @@ var SelectionTest = function() {
     },
 
 
-    "move('right', 'char') with selected range should collapse to the right boundary", function() {
+    "Selection.move('right', 'char') with selected range should collapse to the right boundary", function() {
       var sel = this.sel;
       sel.set({start: [0,0], end: [0,3]});
       sel.move('right', 'char');
       assert.isObjectEqual({start: [0,3], end: [0,3]}, sel.range());
     },
 
-    "move('left', 'char') with selected range should collapse to the left boundary", function() {
+    "Selection.move('left', 'char') with selected range should collapse to the left boundary", function() {
       var sel = this.sel;
       sel.set({start: [0,0], end: [0,3]});
       sel.move('left', 'char');
       assert.isObjectEqual({start: [0,0], end: [0,0]}, sel.range());
     },
 
-    "move('right', 'word')", function() {
-      // "The quick brown fox jumps over the lazy dog."
-      var sel = this.sel;
-      sel.setCursor([1,1]); // after 'T' in 'The'
-      var expected = [1,3]; // after 'e' in 'The'
-      sel.move('right', 'word');
-      assert.isObjectEqual({start: expected, end: expected}, sel.range());
-    },
-
-    "move('right', 'word') should step to node boundary (e.g, '.' at the end)", function() {
-      // "The quick brown fox jumps over the lazy dog."
-      var sel = this.sel;
-      sel.setCursor([1,42]); // before '.'
-      var expected = [1, 43]; // after '.'
-      sel.move('right', 'word');
-      assert.isObjectEqual({start: expected, end: expected}, sel.range());
-    },
-
-    "move('left', 'word')", function() {
-      // "The quick brown fox jumps over the lazy dog."
-      var sel = this.sel;
-      sel.setCursor([1,7]); // before 'c' of 'quick'
-      var expected = [1,4]; // before 'q' of 'quick'
-      sel.move('left', 'word');
-      assert.isObjectEqual({start: expected, end: expected}, sel.range());
-    },
-
-    "move('left', 'word') should skip leading non-word characters (e.g., whitespaces)", function() {
-      // "  Pack my box with five dozen liquor jugs."
-      var sel = this.sel;
-      sel.setCursor([2,2]); // before 'P' of 'Pack'
-      var expected = [2,0]; // at begin of line
-      sel.move('left', 'word');
-      assert.isObjectEqual({start: expected, end: expected}, sel.range());
-    },
-
-    // Note: expand is not tested in greater detail as it delegates to move
-    "expand('right', 'word')", function() {
-      // "The quick brown fox jumps over the lazy dog."
-      var sel = this.sel;
-      sel.setCursor([1,1]); // after 'T' in 'The'
-      var expected = [1,3]; // after 'e' in 'The'
-      sel.expand('right', 'word');
-      assert.isObjectEqual({start: [1,1], end: expected}, sel.range());
-    },
-
-    // Note: expand is not tested in greater detail as it delegates to move
-    "expand('left', 'word') with change of direction", function() {
-      // "The quick brown fox jumps over the lazy dog."
-      var sel = this.sel;
-      sel.set({
-        start: [1,6],  // after 'u' in 'quick'
-        end: [1,9] // after 'k' in 'quick'
-      });
-      sel.expand('left', 'word');
-      assert.isObjectEqual({start: [1,4], end: [1,6]}, sel.range());
-      assert.isTrue(sel.isReverse());
-    },
-
-    "getNodes()", function() {
-      var sel = this.sel;
-      sel.set({
-        start: [1,0],
-        end: [3,6]
-      });
-      var expected = [this.doc.get("p1"), this.doc.get("p2"), this.doc.get("h2")];
-      var actual = sel.getNodes();
-      assert.isArrayEqual(expected, actual);
-    },
-
-    // TODO: test ranges more thoroughly
-    "getRanges()", function() {
+    "Selection.getRanges()", function() {
       var sel = this.sel;
       sel.set({
         start: [1,1],
         end: [3,6]
       });
       var ranges = sel.getRanges();
-      assert.isObjectEqual(this.doc.get("p1"), ranges[0].node);
-      assert.isObjectEqual(this.doc.get("p2"), ranges[1].node);
-      assert.isObjectEqual(this.doc.get("h2"), ranges[2].node);
+      assert.isObjectEqual(this.doc.get("p1"), ranges[0].component.node);
+      assert.isObjectEqual(this.doc.get("p2"), ranges[1].component.node);
+      assert.isObjectEqual(this.doc.get("h2"), ranges[2].component.node);
     },
 
     "Range.isPartial()/isFull()", function() {

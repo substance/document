@@ -172,14 +172,15 @@ Selection.Prototype = function() {
   //
 
   this.selectNode = function(nodeId) {
-    var pos = this.container.getPosition(nodeId);
-    if (pos < 0) {
-      throw new SelectionError("Node is not visible: " + nodeId);
-    }
-    var l = this.container.getLength(pos);
+    var components = this.container.getNodeComponents(nodeId);
+
+    var first = components[0];
+    var last = components[components.length-1];
+
+    var l = this.container.getLength(last.pos);
     this.set({
-      start: [pos, 0],
-      end: [pos, l]
+      start: [first.pos, 0],
+      end: [last.pos, l]
     });
   };
 
