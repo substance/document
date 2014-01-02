@@ -3,6 +3,7 @@
 var _ = require("underscore");
 var util = require("substance-util");
 var Document = require("../index");
+var Annotator = Document.Annotator;
 
 var nodeTypes = require("substance-nodes");
 
@@ -55,6 +56,7 @@ TestDocument.Prototype = function() {
 };
 TestDocument.Prototype.prototype = Document.prototype;
 TestDocument.prototype = new TestDocument.Prototype();
+TestDocument.prototype.constructor = TestDocument;
 
 TestDocument.Schema = Schema;
 
@@ -73,7 +75,25 @@ TestDocument.Seed = {
   }
 };
 
-TestDocument.Paragraph = nodeTypes.paragraph.Node;
-TestDocument.Heading = nodeTypes.heading.Node;
+TestDocument.Text = nodeTypes.text.Model;
+TestDocument.Heading = nodeTypes.heading.Model;
+
+TestDocument.annotationBehavior = {
+  groups: {
+    "strong": "style",
+    "idea": "marker"
+  },
+  expansion: {
+    "strong": {
+      left: Annotator.isOnNodeStart,
+    }
+  },
+  split: ["strong"],
+  levels: {
+    idea: 1,
+    strong: 2
+  }
+};
+
 
 module.exports = TestDocument;
