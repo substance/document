@@ -246,4 +246,5 @@ Object.defineProperties(Container.prototype, {
   },
 });
 
+Container.DefaultNodeSurfaceProvider = require("./node_surface_provider");
 module.exports = Container;
