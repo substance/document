@@ -15,12 +15,12 @@
     "substance-operator": "",
     "substance-chronicle": "",
     "substance-data": "",
-    "substance-regexp": "",
-    "substance-nodes": ""
+    "substance-regexp": ""
   },
   "devDependencies": {
     "mocha": "",
-    "substance-test": ""
+    "substance-test": "",
+    "substance-nodes": ""
   },
   "scripts": {
     "test": "mocha -R spec tests/run.js"
