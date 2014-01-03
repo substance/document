@@ -19,6 +19,7 @@ var Container = function(document, name, surfaces) {
     throw new ContainerError("Illegal argument: no view with name " + name);
   }
 
+  // TODO: rename this.view to this.node, which is less confusing
   this.view = container;
   this.__components = null;
   this.__roots = null;

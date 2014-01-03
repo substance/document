@@ -358,6 +358,10 @@ Annotator.changesAnnotations = function(doc, op, path) {
   return result;
 };
 
+// A static helper to create a document index for annotations
+Annotator.createIndex = function(doc) {
+  return doc.addIndex("annotations", {types: ["annotation"], property: "path"});
+};
 
 _getConfig = function(doc) {
   // Note: this is rather experimental
