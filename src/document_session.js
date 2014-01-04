@@ -45,6 +45,11 @@ DocumentSession.Prototype = function() {
       }
     };
   };
+
+  this.dispose = function(){
+    this.container.dispose();
+  };
+
 };
 DocumentSession.prototype = new DocumentSession.Prototype();
 
