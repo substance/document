@@ -142,6 +142,7 @@ Container.Prototype = function() {
     return this.view.nodes.indexOf(id);
   };
 
+  // TODO: what is this for? Describe the purpose and how it is used
   this.lookupRootNode = function(nodeId) {
     var components = this.getComponents();
     for (var i = 0; i < components.length; i++) {
@@ -151,14 +152,13 @@ Container.Prototype = function() {
         if (component.node.id === nodeId) return this.__roots[i];
         break;
       case "property":
-        // TODO: I am not sure here.
         if (component.path[0] === nodeId) return this.__roots[i];
         break;
       default:
         // throw new Error("Not implemented.");
       }
     }
-    console.error("Could not fina a root node for the given id:" + nodeId);
+    console.error("Could not find a root node for the given id:" + nodeId);
     return null;
   };
 
