@@ -2,9 +2,9 @@
 
 var _ = require("underscore");
 
-var NodeSurfaceProvider = function(document) {
-  this.document = document;
-  this.nodeTypes = document.constructor.nodeTypes;
+var NodeSurfaceProvider = function(doc) {
+  this.document = doc;
+  this.nodeTypes = this.document.constructor.nodeTypes;
   this.nodeSurfaces = {};
 };
 
