@@ -189,45 +189,6 @@ Container.Prototype = function() {
     return new Container(doc, this.name, this.surfaces.createCopy(doc));
   };
 
-  this.getTopLevelNodes = function() {
-    throw new Error("This has been removed. Use getNodes() instead.");
-  };
-  this.getPosition = function() {
-    throw new Error("This has been removed.");
-  };
-  this.getNodeFromPosition = function() {
-    throw new Error("This has been removed.");
-  };
-  this.getParent = function() {
-    throw new Error("This has been removed. Fix me.");
-  };
-  this.getRoot = function() {
-    throw new Error("This has been removed. Fix me.");
-  };
-  this.hasSuccessor = function() {
-    throw new Error("This has been removed. Fix me.");
-  };
-  this.hasPredecessor = function() {
-    throw new Error("This has been removed. Fix me.");
-  };
-  this.getPredecessor = function() {
-    throw new Error("This has been removed. Fix me.");
-  };
-  this.getSuccessor = function() {
-    throw new Error("This has been removed. Fix me.");
-  };
-  this.firstChild = function() {
-    throw new Error("This has been removed. Fix me.");
-  };
-  this.lastChild = function() {
-    throw new Error("This has been removed. Fix me.");
-  };
-  this.before = function() {
-    throw new Error("This has been removed. Fix me.");
-  };
-  this.after = function() {
-    throw new Error("This has been removed. Fix me.");
-  };
 };
 
 Container.prototype = _.extend(new Container.Prototype(), util.Events.Listener);
@@ -242,13 +203,7 @@ Object.defineProperties(Container.prototype, {
   "nodes": {
     get: function() { return this.view.nodes; },
     set: function(val) { this.view.nodes = val; }
-  },
-  "treeView": {
-    get: function() { throw new Error("This has been removed. Fix me."); },
-  },
-  "listView": {
-    get: function() { throw new Error("This has been removed. Fix me."); },
-  },
+  }
 });
 
 Container.DefaultNodeSurfaceProvider = require("./node_surface_provider");
