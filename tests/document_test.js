@@ -5,7 +5,6 @@
 
 var Test = require('substance-test');
 var assert = Test.assert;
-var registerTest = Test.registerTest;
 var TestDocument = require('./test_document');
 var Document = require("../index");
 
@@ -13,6 +12,10 @@ var Document = require("../index");
 // ========
 
 var DocumentTest = function () {
+  Test.call(this);
+};
+
+DocumentTest.Prototype = function() {
 
   this.setup = function() {
 
@@ -162,5 +165,7 @@ var DocumentTest = function () {
 
   ];
 };
+DocumentTest.Prototype.prototype = Test.prototype;
+DocumentTest.prototype = new DocumentTest.Prototype();
 
-registerTest(['Substance.Document', 'Document Manipulation'], new DocumentTest());
+Test.registerTest(['Substance.Document', 'Document Manipulation'], new DocumentTest());

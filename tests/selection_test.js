@@ -5,7 +5,6 @@
 
 var Test = require('substance-test');
 var assert = Test.assert;
-var registerTest = Test.registerTest;
 var TestDocument = require('./test_document');
 var Selection = require("../src/selection");
 var Container = require("../src/container");
@@ -14,7 +13,10 @@ var Container = require("../src/container");
 // ========
 
 var SelectionTest = function() {
+  Test.call(this);
+};
 
+SelectionTest.Prototype = function() {
 
   this.setup = function() {
     this.fixture();
@@ -257,13 +259,7 @@ var SelectionTest = function() {
 
   ];
 };
-
-// General aid for the writertest
-SelectionTest.Prototype = function() {
-  // helpers go here
-};
-
+SelectionTest.Prototype.prototype = Test.prototype;
 SelectionTest.prototype = new SelectionTest.Prototype();
 
-
-registerTest(['Substance.Document', 'Selection'], new SelectionTest());
+Test.registerTest(['Substance.Document', 'Selection'], new SelectionTest());
