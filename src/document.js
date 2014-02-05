@@ -29,6 +29,7 @@ var DocumentError = errors.define("DocumentError");
 
 var Document = function(options) {
   Data.Graph.call(this, options.schema, options);
+  this.blobs = {};
 };
 
 // Default Document Schema
@@ -66,10 +67,26 @@ Document.Prototype = function() {
     return this.schema;
   };
 
-
   this.create = function(node) {
     __super__.create.call(this, node);
     return this.get(node.id);
+  };
+
+  // Create a blob based on an ArrayBuffer
+  // --------
+  //
+  // Currently assumes image/png as a mime type, this needs to be changed
+
+  this.createBlob = function(id, data, options) {
+    return this.blobs[id] = new Blob([data], options);
+  };
+
+  // Returns a blob based on the blob id
+  // --------
+  // 
+
+  this.getBlob = function(id) {
+    return this.blobs[id];
   };
 
   // Delegates to Graph.get but wraps the result in the particular node constructor
