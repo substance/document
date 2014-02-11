@@ -322,8 +322,9 @@ Selection.Prototype = function() {
   //
 
   this.getRanges = function() {
-    var ranges = [];
+    if (this.isNull()) return [];
 
+    var ranges = [];
     var sel = this.range();
 
     for (var i = sel.start[0]; i <= sel.end[0]; i++) {
