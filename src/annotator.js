@@ -373,11 +373,11 @@ _getConfig = function(doc) {
   // - the `constructor` property set on the class
   // - a static property `annotationBehavior` specifying the behavior
   //   according to `Annotator.defaultBehavior`
-  if (doc.constructor && doc.constructor.annotationBehavior) {
-    return doc.constructor.annotationBehavior;
-  } else {
+  var annotationBehavior = doc.getAnnotationBehavior();
+  if (!annotationBehavior) {
     throw new Error("No Annotation behavior specified.");
   }
+  return annotationBehavior;
 };
 
 module.exports = Annotator;

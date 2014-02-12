@@ -4,7 +4,7 @@ var _ = require("underscore");
 
 var NodeSurfaceProvider = function(doc) {
   this.document = doc;
-  this.nodeTypes = this.document.constructor.nodeTypes;
+  this.nodeTypes = this.document.nodeTypes;
   this.nodeSurfaces = {};
 };
 
