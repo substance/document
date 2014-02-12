@@ -122,6 +122,7 @@ Annotator.Prototype = function() {
           var splitAnnotation = util.clone(annotation);
           splitAnnotation.range = [offset, offset + annotation.range[1] - charPos];
           splitAnnotation.id = util.uuid();
+          splitAnnotation.path[0] = newNode.id;
           this.document.create(splitAnnotation);
         }
         // in either cases truncate the first part
