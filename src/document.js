@@ -81,6 +81,15 @@ Document.Prototype = function() {
     return this.blobs[id] = new Blob([data], options);
   };
 
+  // Create a blob based on an ArrayBuffer
+  // --------
+  //
+  // Currently assumes image/png as a mime type, this needs to be changed
+
+  this.deleteBlob = function(id) {
+    delete this.blobs[id];
+  };
+
   // Returns a blob based on the blob id
   // --------
   //
