@@ -30,6 +30,12 @@ DocumentSession.Prototype = function() {
     var annotator = new Annotator(doc);
     var container = this.container.createContainer(doc);
     var sel = new Selection(container, this.selection);
+    // Note: we save the old and new selection along with
+    // the operation created by the simulation
+    var data = {};
+    if (!sel.isNull()) {
+      data["selBefore"] = sel.toJSON();
+    }
     return {
       document: doc,
       view: container.name,
@@ -40,7 +46,8 @@ DocumentSession.Prototype = function() {
         container.dispose();
       },
       save: function() {
-        doc.save();
+        data["selAfter"] = sel.toJSON();
+        doc.save(data);
         this.dispose();
       }
     };

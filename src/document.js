@@ -83,7 +83,7 @@ Document.Prototype = function() {
 
   // Returns a blob based on the blob id
   // --------
-  // 
+  //
 
   this.getBlob = function(id) {
     return this.blobs[id];
@@ -228,7 +228,7 @@ Document.Prototype = function() {
       return op;
     };
 
-    simulation.save = function() {
+    simulation.save = function(data) {
       var _ops = [];
       for (var i = 0; i < ops.length; i++) {
         if (ops[i].type !== "compound") {
@@ -237,13 +237,12 @@ Document.Prototype = function() {
           _ops = _ops.concat(ops[i].ops);
         }
       }
-
       if (_ops.length === 0) {
         // nothing has been recorded
         return;
       }
-
       var compound = Operator.ObjectOperation.Compound(_ops);
+      if (data) compound.data = _.clone(data);
       self.apply(compound);
     };
 

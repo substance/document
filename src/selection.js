@@ -301,7 +301,20 @@ Selection.Prototype = function() {
   //
 
   this.toJSON = function() {
-    return this.range();
+    var data = null;
+
+    if (!this.isNull()) {
+      if (this.isCollapsed()) {
+        data = this.__cursor.toJSON();
+      } else {
+        data = {
+          start: _.clone(this.start),
+          end: this.__cursor.toJSON()
+        }
+      }
+    }
+
+    return data;
   };
 
   // For a given document return the selected nodes

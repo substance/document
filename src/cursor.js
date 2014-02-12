@@ -29,6 +29,10 @@ var Cursor = function(container, pos, charPos, view) {
 
 Cursor.Prototype = function() {
 
+  this.toJSON = function() {
+    return [this.pos, this.charPos];
+  };
+
   this.copy = function() {
     return new Cursor(this.container, this.pos, this.charPos, this.view);
   };
