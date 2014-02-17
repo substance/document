@@ -24,6 +24,7 @@ var Container = function(document, name, surfaces) {
   this.__components = null;
   this.__roots = null;
   this.__children = null;
+  this.__updater = null;
 
   this.surfaces = surfaces || new Container.DefaultNodeSurfaceProvider(document);
   this.rebuild();
@@ -39,6 +40,7 @@ Container.Prototype = function() {
     var __components = [];
     var __roots = [];
     var __children = {};
+    var __updater = [];
     var view = this.document.get(this.name);
 
     var rootNodes = view.nodes;
@@ -51,6 +53,11 @@ Container.Prototype = function() {
       if (!nodeSurface) {
         throw new ContainerError("Aaaaah! no surface available for node " + id);
       }
+
+      if (nodeSurface.update) {
+        __updater.push(nodeSurface.update.bind(nodeSurface));
+      }
+
       var components = nodeSurface.components;
       if (!components) {
         throw new ContainerError("Node Surface did not provide components: " + nodeSurface.node.type);
@@ -68,6 +75,7 @@ Container.Prototype = function() {
     this.__components = __components;
     this.__roots = __roots;
     this.__children = __children;
+    this.__updater = __updater;
     this.view = view;
   };
 
@@ -119,6 +127,23 @@ Container.Prototype = function() {
   this.update = function(op) {
     var path = op.path;
     var needRebuild = (!this.__components || path[0] === this.view.id);
+
+    // Note: we let the NodeSurfaces in invalidate the container
+    // TODO: this could be done more efficiently.
+    // This strategy means that every container iterates through all
+    // surfaces on *each* graph operation.
+    // One way to solve this efficiently would be to add an invalidate()
+    // that runs with a timeout=0.
+    // This however comes with extra listeners and hard to control order of
+    // observer calls.
+    if (!needRebuild) {
+      for (var i = 0; i < this.__updater.length; i++) {
+        if (this.__updater[i](op)) {
+          needRebuild = true;
+          break;
+        }
+      }
+    }
     if (needRebuild) this.rebuild();
   };
 

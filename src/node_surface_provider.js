@@ -18,10 +18,17 @@ NodeSurfaceProvider.Prototype = function() {
       node = node_or_nodeId;
       nodeId = node.id;
     }
-    if (!this.nodeSurfaces[nodeId]) {
-      var nodeSurface;
 
+    if (!this.nodeSurfaces[nodeId]) {
       node = node || this.document.get(nodeId);
+      this.nodeSurfaces[nodeId] = this.createNodeSurface(node);
+    }
+
+    return this.nodeSurfaces[nodeId];
+  };
+
+  this.createNodeSurface = function(node) {
+      var nodeSurface;
       if (!node) {
         throw new Error("Unknown node: " + nodeId);
       }
@@ -35,10 +42,7 @@ NodeSurfaceProvider.Prototype = function() {
         nodeSurface = new NodeSurfaceProvider.EmptySurface(node);
       }
 
-      this.nodeSurfaces[nodeId] = nodeSurface;
-    }
-
-    return this.nodeSurfaces[nodeId];
+      return nodeSurface;
   };
 
   // Creates a copy of this provider for a given document.
