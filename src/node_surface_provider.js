@@ -38,7 +38,7 @@ NodeSurfaceProvider.Prototype = function() {
         // Note: passing this provider ot allow nesting/delegation
         nodeSurface = new NodeSurface(node, this);
       } else {
-        console.log("No surface available for node type", node.type,". Using Stub.");
+        // console.log("No surface available for node type", node.type,". Using Stub.");
         nodeSurface = new NodeSurfaceProvider.EmptySurface(node);
       }
 
