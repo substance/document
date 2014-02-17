@@ -76,9 +76,16 @@ Document.Prototype = function() {
   // --------
   //
   // Currently assumes image/png as a mime type, this needs to be changed
+  // 
+  // This is more a createSupplement thing, with smart detection of content types
+  // e.g. JSON should be mapped to JS objects, XML to DOMFragments, text files to strings
 
   this.createBlob = function(id, data, options) {
-    return this.blobs[id] = new Blob([data], options);
+    if (_.isString(data)) {
+      return this.blobs[id] = JSON.parse(data);
+    } else {
+      return this.blobs[id] = new Blob([data], options);
+    }
   };
 
   // Create a blob based on an ArrayBuffer
