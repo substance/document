@@ -22,6 +22,7 @@ var Operator = require("substance-operator");
 
 var DocumentError = errors.define("DocumentError");
 
+
 // Document
 // --------
 //
@@ -29,7 +30,15 @@ var DocumentError = errors.define("DocumentError");
 
 var Document = function(options) {
   Data.Graph.call(this, options.schema, options);
-  this.blobs = {};
+
+  // Temporary store for file data
+  // Used by File Nodes for storing file contents either as blobs or strings
+  this.fileData = {};
+
+  // Index for supplements
+  this.addIndex("files", {
+    types: ["file"]
+  });
 };
 
 // Default Document Schema
@@ -70,39 +79,6 @@ Document.Prototype = function() {
   this.create = function(node) {
     __super__.create.call(this, node);
     return this.get(node.id);
-  };
-
-  // Create a blob based on an ArrayBuffer
-  // --------
-  //
-  // Currently assumes image/png as a mime type, this needs to be changed
-  // 
-  // This is more a createSupplement thing, with smart detection of content types
-  // e.g. JSON should be mapped to JS objects, XML to DOMFragments, text files to strings
-
-  this.createBlob = function(id, data, options) {
-    if (_.isString(data)) {
-      return this.blobs[id] = JSON.parse(data);
-    } else {
-      return this.blobs[id] = new Blob([data], options);
-    }
-  };
-
-  // Create a blob based on an ArrayBuffer
-  // --------
-  //
-  // Currently assumes image/png as a mime type, this needs to be changed
-
-  this.deleteBlob = function(id) {
-    delete this.blobs[id];
-  };
-
-  // Returns a blob based on the blob id
-  // --------
-  //
-
-  this.getBlob = function(id) {
-    return this.blobs[id];
   };
 
   // Delegates to Graph.get but wraps the result in the particular node constructor
