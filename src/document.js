@@ -238,6 +238,7 @@ Document.Prototype = function() {
       self.apply(compound);
     };
 
+    simulation.simulation = true;
     return simulation;
   };
 
