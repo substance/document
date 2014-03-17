@@ -310,7 +310,7 @@ Selection.Prototype = function() {
         data = {
           start: _.clone(this.start),
           end: this.__cursor.toJSON()
-        }
+        };
       }
     }
 

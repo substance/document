@@ -30,7 +30,7 @@ NodeSurfaceProvider.Prototype = function() {
   this.createNodeSurface = function(node) {
       var nodeSurface;
       if (!node) {
-        throw new Error("Unknown node: " + nodeId);
+        throw new Error("Unknown node: " + node.id);
       }
 
       var NodeSurface = this.nodeTypes[node.type].Surface;
