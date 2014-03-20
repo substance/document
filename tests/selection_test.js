@@ -8,6 +8,7 @@ var assert = Test.assert;
 var TestDocument = require('./test_document');
 var Selection = require("../src/selection");
 var Container = require("../src/container");
+var errors = require("substance-util").errors;
 
 // Test
 // ========
@@ -54,10 +55,10 @@ SelectionTest.Prototype = function() {
       assert.exception(Selection.SelectionError, function() {
         this.sel.set({start: [2000,0], end: [0,3]});
       }, this);
-      assert.exception(Selection.SelectionError, function() {
+      assert.exception(errors.CursorError, function() {
         this.sel.set({start: [0,0], end: [-1,3]});
       }, this);
-      assert.exception(Selection.SelectionError, function() {
+      assert.exception(errors.CursorError, function() {
         this.sel.set({start: [0,0], end: [2000,3]});
       }, this);
 
@@ -109,7 +110,7 @@ SelectionTest.Prototype = function() {
 
     "Selection.selectNode() should reject selecting invisible nodes", function() {
       this.doc.hide("content", "p1");
-      assert.exception(Selection.SelectionError, function() {
+      assert.exception(errors.ContainerError, function() {
         this.sel.selectNode("p1");
       }, this);
     },

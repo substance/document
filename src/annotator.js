@@ -368,11 +368,6 @@ _getConfig = function(doc) {
   // Note: this is rather experimental
   // It is important to inverse the control over the annotation behavior,
   // i.e., which annotations exist and how they should be handled
-  // This approach makes use of the static context of a Document implementation (e.g., Substance.Article)
-  // For this to work you need to have:
-  // - the `constructor` property set on the class
-  // - a static property `annotationBehavior` specifying the behavior
-  //   according to `Annotator.defaultBehavior`
   var annotationBehavior = doc.getAnnotationBehavior();
   if (!annotationBehavior) {
     throw new Error("No Annotation behavior specified.");

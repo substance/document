@@ -53,6 +53,10 @@ TestDocument.Prototype = function() {
     options.seed = data;
     return new TestDocument(options);
   };
+
+  this.getAnnotationBehavior = function() {
+    return TestDocument.annotationBehavior;
+  };
 };
 TestDocument.Prototype.prototype = Document.prototype;
 TestDocument.prototype = new TestDocument.Prototype();
