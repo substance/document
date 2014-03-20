@@ -27,7 +27,7 @@
   "devDependencies": {
     "mocha": "1.12.x",
     "substance-test": "git+https://github.com/substance/test.git#master",
-    "substance-nodes": "git+https://github.com/substance/nodes.git#master"
+    "substance-nodes": "git+https://github.com/substance/nodes.git#single_column"
   },
   "scripts": {
     "test": "mocha -R spec tests/run.js"
