@@ -10,7 +10,7 @@ var ContainerError = errors.define("ContainerError");
 // The container must be much more view oriented as the actual visualized components depend very much on the
 // used renderers.
 
-var Container = function(document, name, surfaces) {
+var Container = function(document, name, surfaceProvider) {
   this.document = document;
   this.name = name;
 
@@ -22,11 +22,10 @@ var Container = function(document, name, surfaces) {
   // TODO: rename this.view to this.node, which is less confusing
   this.view = container;
   this.__components = null;
-  this.__roots = null;
   this.__children = null;
   this.__updater = null;
 
-  this.surfaces = surfaces || new Container.DefaultNodeSurfaceProvider(document);
+  this.surfaceProvider = surfaceProvider || new Container.DefaultNodeSurfaceProvider(document);
   this.rebuild();
 
   this.listenTo(this.document, "operation:applied", this.update);
@@ -38,7 +37,6 @@ Container.Prototype = function() {
 
   this.rebuild = function() {
     var __components = [];
-    var __roots = [];
     var __children = {};
     var __updater = [];
     var view = this.document.get(this.name);
@@ -49,7 +47,7 @@ Container.Prototype = function() {
     // Nodes are duplicated for simulation. Not so the references in the components.
     for (var i = 0; i < rootNodes.length; i++) {
       var id = rootNodes[i];
-      var nodeSurface = this.surfaces.getNodeSurface(id);
+      var nodeSurface = this.surfaceProvider.getNodeSurface(id);
       if (!nodeSurface) {
         throw new ContainerError("Aaaaah! no surface available for node " + id);
       }
@@ -66,14 +64,12 @@ Container.Prototype = function() {
       for (var j = 0; j < components.length; j++) {
         var component = _.clone(components[j]);
         component.pos = __components.length;
-        component.nodePos = i;
+        component.rootPos = i;
         __children[id].push(component);
         __components.push(component);
-        __roots.push(rootNodes[i]);
       }
     }
     this.__components = __components;
-    this.__roots = __roots;
     this.__children = __children;
     this.__updater = __updater;
     this.view = view;
@@ -92,16 +88,6 @@ Container.Prototype = function() {
       var component = components[i];
       if (_.isEqual(component.path, path)) {
         return component;
-      }
-    }
-
-    if (path.length === 1) {
-      var id = path[0];
-      var roots = this.__roots;
-      for (var j = 0; j < roots.length; j++) {
-        if (roots[j] === id) {
-          return components[j];
-        }
       }
     }
 
@@ -152,38 +138,33 @@ Container.Prototype = function() {
     if (pos === undefined) {
       return components.length;
     } else {
-      return components[pos].getLength();
+      return components[pos].length;
     }
   };
 
   this.getRootNodeFromPos = function(pos) {
-    if (!this.__roots) this.rebuild();
-    return this.document.get(this.__roots[pos]);
+    if (!this.__components) this.rebuild();
+    return this.__components[pos].root;
   };
 
   this.getNodePos = function(pos) {
-    if (!this.__roots) this.rebuild();
-    var id = this.__roots[pos];
+    if (!this.__components) this.rebuild();
+    var id = this.__components[pos].root.id;
     return this.view.nodes.indexOf(id);
   };
 
-  // TODO: what is this for? Describe the purpose and how it is used
-  this.lookupRootNode = function(nodeId) {
+  // This is used to find the containing node of a reference target.
+  // E.g., an annotation might point to ['caption_2', 'content'] which is actually
+  // contained by the 'figure_1' on the top-level.
+  this.lookupRootNode = function(path) {
     var components = this.getComponents();
     for (var i = 0; i < components.length; i++) {
       var component = components[i];
-      switch(component.type) {
-      case "node":
-        if (component.node.id === nodeId) return this.__roots[i];
-        break;
-      case "property":
-        if (component.path[0] === nodeId) return this.__roots[i];
-        break;
-      default:
-        // throw new Error("Not implemented.");
+      if ( (component.alias && _.isEqual(path, component.alias)) || _.isEqual(path, component.path) ) {
+        return component.root;
       }
     }
-    console.error("Could not find a root node for the given id:" + nodeId);
+    console.error("Could not find a root node for the given path:" + path);
     return null;
   };
 
@@ -211,7 +192,7 @@ Container.Prototype = function() {
   // This is particularly used for creating manipulation sessions.
   //
   this.createContainer = function(doc) {
-    return new Container(doc, this.name, this.surfaces.createCopy(doc));
+    return new Container(doc, this.name, this.surfaceProvider.createCopy(doc));
   };
 
 };

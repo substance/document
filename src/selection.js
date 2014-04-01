@@ -507,7 +507,7 @@ Range.Prototype = function() {
   //
 
   this.isRightBound = function() {
-    return this.end === this.component.getLength();
+    return this.end === this.component.length;
   };
 
   // Returns true if the range includes the first character of a node

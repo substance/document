@@ -241,9 +241,9 @@ SelectionTest.Prototype = function() {
         end: [3,6]
       });
       var ranges = sel.getRanges();
-      assert.isObjectEqual(this.doc.get("p1"), ranges[0].component.node);
-      assert.isObjectEqual(this.doc.get("p2"), ranges[1].component.node);
-      assert.isObjectEqual(this.doc.get("h2"), ranges[2].component.node);
+      assert.isObjectEqual(this.doc.get("p1"), ranges[0].component.root);
+      assert.isObjectEqual(this.doc.get("p2"), ranges[1].component.root);
+      assert.isObjectEqual(this.doc.get("h2"), ranges[2].component.root);
     },
 
     "Range.isPartial()/isFull()", function() {

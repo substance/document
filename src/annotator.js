@@ -276,23 +276,12 @@ Annotator.Prototype = function() {
     var annotations;
     var index = doc.getIndex("annotations");
 
-    if (component.type === "node") {
-      var node = component.node;
-      annotations = index.get(node.id);
-    }
-    else if (component.type === "property") {
-      // Note: If a component displays a referenced property (e.g., Cover.title)
-      // IMO it makes more sense to attach annotations to the referencing path instead of the original path.
-      // E.g., ["cover", "title"] instead of ["document", "title"]
-      //annotations = index.get(component.propertyPath);
-      annotations = index.get(component.path);
-    }
-    else if (component.type === "custom") {
-      annotations = index.get(component.path);
-    }
-    else {
-      console.error("FIXME");
-    }
+    // Note: If a component displays a referenced property (e.g., Cover.title)
+    // IMO it makes more sense to attach annotations to the referencing path instead of the original path.
+    // E.g., ["cover", "title"] instead of ["document", "title"]
+    //annotations = index.get(component.propertyPath);
+    annotations = index.get(component.path);
+
     _.each(annotations, function(a) {
       if (__isOverlap(self, a, range)) {
         result.push(a);
