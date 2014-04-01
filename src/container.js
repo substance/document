@@ -62,7 +62,7 @@ Container.Prototype = function() {
       }
       __children[id] = [];
       for (var j = 0; j < components.length; j++) {
-        var component = _.clone(components[j]);
+        var component = components[j].clone();
         component.pos = __components.length;
         component.rootPos = i;
         __children[id].push(component);
@@ -86,6 +86,10 @@ Container.Prototype = function() {
     var components = this.getComponents();
     for (var i = 0; i < components.length; i++) {
       var component = components[i];
+      // a node surface can register an alias for a component
+      if (component.alias && _.isEqual(component.alias, path)) {
+        return component;
+      }
       if (_.isEqual(component.path, path)) {
         return component;
       }

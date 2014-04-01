@@ -1,14 +1,11 @@
 "use strict";
 
-var Component = function(name, root, path, options) {
+var Component = function(root, path, options) {
   options = options || {};
 
-  if (!name || !root || !path) {
+  if (!root || !path) {
     throw new Error("Inclomplete arguments for Component");
   }
-
-  // to identify the component within a node
-  this.name = name;
 
   // each component belongs to a document node
   // the node is the one which is included in the container
@@ -27,13 +24,17 @@ var Component = function(name, root, path, options) {
   // TODO: IMO this should be removed as it can be retrieved via the container
   this.rootPos = null;
 
+
+  // to identify the component within a node
+  this.name = options.name;
+
   // a component can be used in a composite.
   // for composites we use a similar path pattern which however
   // does not correspond to real graph paths.
   // E.g. a figure 'fig_1' could have a node as caption 'caption_1'.
   // The path to the text content would be ['caption_1', 'content']
   // In the view it has the path ['fig_1', 'caption', 'content']
-  this.alias = null;
+  this.alias = options.alias;
 
   if (options.length) {
     this.__getLength__ = options.length;
@@ -42,13 +43,21 @@ var Component = function(name, root, path, options) {
 };
 
 Component.Protoype = function() {
+
   this.__getLength__ = function() {
     throw new Error("This is abstract and must be overridden");
   };
-};
-Component.protoype = new Component.Protoype();
 
-Object.defineProperties(Component.protoype, {
+  this.clone = function() {
+    var ClonedComponent = function() {};
+    ClonedComponent.prototype = this;
+    return new ClonedComponent();
+  };
+
+};
+Component.prototype = new Component.Protoype();
+
+Object.defineProperties(Component.prototype, {
   "length": {
     get: function() {
       return this.__getLength__.call(this);
