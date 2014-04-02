@@ -279,8 +279,13 @@ Annotator.Prototype = function() {
     // Note: If a component displays a referenced property (e.g., Cover.title)
     // IMO it makes more sense to attach annotations to the referencing path instead of the original path.
     // E.g., ["cover", "title"] instead of ["document", "title"]
-    //annotations = index.get(component.propertyPath);
     annotations = index.get(component.path);
+
+    if (component.alias) {
+      // HACK: component.alias and component.path are not used consistently yet
+      // so we use both for now
+      annotations = _.extend(annotations, index.get(component.alias));
+    }
 
     _.each(annotations, function(a) {
       if (__isOverlap(self, a, range)) {
