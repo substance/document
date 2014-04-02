@@ -177,6 +177,11 @@ Container.Prototype = function() {
     return components[pos];
   };
 
+  this.last = function() {
+    var components = this.getComponents();
+    return components[components.length-1];
+  };
+
   this.getNodeComponents = function(nodeId) {
     var result = this.__children[nodeId];
     if (!result) {
