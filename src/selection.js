@@ -85,7 +85,7 @@ Selection.Prototype = function() {
   //      or a document range `{start: [pos, charPos], end: [pos, charPos]}`
   //      or a document position `[pos, charPos]`
 
-  this.set = function(sel) {
+  this.set = function(sel, options) {
     var cursor = this.__cursor;
 
     if (sel instanceof Selection) {
@@ -110,14 +110,14 @@ Selection.Prototype = function() {
       throw new SelectionError("Invalid char position: " + start[1]);
     }
 
-    this.trigger('selection:changed', this.range());
+    this.trigger('selection:changed', this.range(), options);
     return this;
   };
 
-  this.clear = function() {
+  this.clear = function(options) {
     this.start = null;
     this.__cursor.set(null, null);
-    this.trigger('selection:changed', null);
+    this.trigger('selection:changed', null, options);
   };
 
   this.range = function() {
@@ -226,7 +226,7 @@ Selection.Prototype = function() {
   // --------
   //
 
-  this.collapse = function(direction) {
+  this.collapse = function(direction, options) {
     if (direction !== "right" && direction !== "left" && direction !== "start" && direction !== "cursor") {
       throw new SelectionError("Invalid direction: " + direction);
     }
@@ -258,7 +258,7 @@ Selection.Prototype = function() {
       }
     }
 
-    this.trigger('selection:changed', this.range());
+    this.trigger('selection:changed', this.range(), options);
   };
 
   // move selection to position
@@ -266,7 +266,7 @@ Selection.Prototype = function() {
   //
   // Convenience for placing the single cusor where start=end
 
-  this.move = function(direction, granularity) {
+  this.move = function(direction, granularity, options) {
 
     // moving an expanded selection by char collapses the selection
     // and sets the cursor to the boundary of the direction
@@ -279,7 +279,7 @@ Selection.Prototype = function() {
       this.start = this.__cursor.position();
     }
 
-    this.trigger('selection:changed', this.range());
+    this.trigger('selection:changed', this.range(), options);
   };
 
   // Expand current selection
@@ -289,11 +289,11 @@ Selection.Prototype = function() {
   // They can either be right-bound or left-bound
   //
 
-  this.expand = function(direction, granularity) {
+  this.expand = function(direction, granularity, options) {
     // expanding is done by moving the cursor
     this.__cursor.move(direction, granularity);
 
-    this.trigger('selection:changed', this.range());
+    this.trigger('selection:changed', this.range(), options);
   };
 
   // JSON serialization
