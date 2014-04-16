@@ -224,7 +224,7 @@ Annotator.Prototype = function() {
         if (newRange[0] === newRange[1]) {
           self.document.delete(annotation.id);
         } else {
-          self.document.set([annotation.id, "range"], newRange);
+          self.document.set([annotation.id, "range"], newRange, {"incremental": true});
         }
       }
     }
