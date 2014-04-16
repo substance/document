@@ -36,6 +36,7 @@ Container.Prototype = function() {
   _.extend(this, util.Events);
 
   this.rebuild = function() {
+    // console.log("Container.rebuild", this.name);
     var __components = [];
     var __children = {};
     var __updater = [];
@@ -63,6 +64,7 @@ Container.Prototype = function() {
       __children[id] = [];
       for (var j = 0; j < components.length; j++) {
         var component = components[j].clone();
+        component.surface.detachView();
         component.pos = __components.length;
         component.rootPos = i;
         __children[id].push(component);
