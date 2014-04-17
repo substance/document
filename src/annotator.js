@@ -145,8 +145,9 @@ Annotator.Prototype = function() {
         // remains valid.
         var newPath = _.clone(annotation.path);
         newPath[0] = newNode.id;
-        this.document.set([annotation.id, "path"], newPath);
         newRange = [offset + annotation.range[0] - charPos, offset + annotation.range[1] - charPos];
+
+        this.document.set([annotation.id, "path"], newPath);
         this.document.set([annotation.id, "range"], newRange);
       }
     }, this);
