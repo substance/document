@@ -246,6 +246,10 @@ Document.Prototype = function() {
     return Document.fromSnapshot(data, options);
   };
 
+  this.newInstance = function() {
+    return new Document({ "schema": this.schema });
+  };
+
   this.uuid = function(type) {
     return type + "_" + util.uuid();
   };
