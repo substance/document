@@ -4,6 +4,8 @@ var _ = require("underscore");
 var util = require("substance-util");
 var errors = util.errors;
 var Cursor = require("./cursor");
+var ComponentSelection = require("./component_selection");
+var NodeSelection = require("./node_selection");
 
 var SelectionError = errors.define("SelectionError");
 
@@ -357,9 +359,49 @@ Selection.Prototype = function() {
       if (!_.isNumber(endChar)) {
         endChar = this.container.getLength(i);
       }
-      ranges.push(new Selection.Range(this, i, startChar, endChar));
+
+      var component = this.container.getComponent(i);
+      ranges.push(new ComponentSelection(component, startChar, endChar));
     }
     return ranges;
+  };
+
+  // Gets ranges grouped by nodes
+  // ----
+
+  this.getNodeSelections = function() {
+    if (this.isNull()) return [];
+
+    var nodeSelections = [];
+    var sel = this.range();
+    var current = null;
+
+    for (var pos = sel.start[0]; pos <= sel.end[0]; pos++) {
+
+      var component = this.container.getComponent(pos);
+      var startChar = 0;
+      var endChar = component.length;
+
+      if (!current || current.node !== component.root) {
+        var node = component.root;
+        var nodeComponents = this.container.getNodeComponents(node.id);
+        current = new NodeSelection(node, nodeComponents, []);
+        nodeSelections.push(current);
+      }
+
+      // the first component has a specific startChar
+      if (pos === sel.start[0]) {
+        startChar = sel.start[1];
+      }
+      // the last node has a specific endChar
+      else if (pos === sel.end[0]) {
+        endChar = sel.end[1];
+      }
+
+      current.ranges.push(new ComponentSelection(component, startChar, endChar));
+    }
+
+    return nodeSelections;
   };
 
   // Returns start node offset
@@ -440,132 +482,6 @@ Object.defineProperties(Selection.prototype, {
   }
 });
 
-// Document.Selection.Range
-// ================
-//
-// A Document.Selection consists of 1..n Ranges
-// Each range belongs to a node in the document
-// This allows us to ask the range about the selected text
-// or ask if it's partially selected or not
-// For example if an image is fully selected we can just delete it
-
-var Range = function(selection, pos, start, end) {
-  this.selection = selection;
-  // The node pos within the document which can range
-  // between selection.startNode() and selection.endNode()
-  this.pos = pos;
-  this.start = start;
-  this.end = end;
-
-  this.component = selection.container.getComponent(pos);
-};
-
-Range.Prototype = function() {
-
-  // Returns true if the range denotes the first range in a selection
-  // --------
-  //
-
-  this.isFirst = function() {
-    return this.pos === this.selection.startNode();
-  };
-
-  // Returns true if the range denotes the last range in a selection
-  // --------
-  //
-
-  this.isLast = function() {
-    return this.pos === this.selection.endNode();
-  };
-
-  // Returns true if the range denotes the last range in a selection
-  // --------
-  //
-
-  this.hasPredecessor = function() {
-    return !this.isFirst();
-  };
-
-  // Returns true if the range denotes the last range in a selection
-  // --------
-  //
-
-  this.hasSuccessor = function() {
-    return !this.isLast();
-  };
-
-  // Returns true if the range is fully enclosed by both a preceding and successing range
-  // --------
-  //
-
-  this.isEnclosed = function() {
-    return this.hasPredecessor() && this.hasSuccessor();
-  };
-
-  // Returns true if the range includes the last character of a node
-  // --------
-  //
-
-  this.isRightBound = function() {
-    return this.end === this.component.length;
-  };
-
-  // Returns true if the range includes the first character of a node
-  // --------
-  //
-
-  this.isLeftBound = function() {
-    return this.start === 0;
-  };
-
-  // Returns the length of the range which corresponds to the number of chars contained
-  // --------
-  //
-
-  this.length = function() {
-    return this.end - this.start;
-  };
-
-  // Returns the range's content
-  // --------
-  //
-
-  this.content = function() {
-    throw new Error("Not supported anymore");
-  };
-
-  // Returns true if all chars are selected
-  // --------
-  //
-
-  this.isFull = function() {
-    return this.isLeftBound() && this.isRightBound();
-  };
-
-  // Returns true if the range includes the first character of a node
-  // --------
-  //
-
-  this.isPartial = function() {
-    return !this.isFull();
-  };
-
-};
-
-Range.prototype = new Range.Prototype();
-
-Object.defineProperties(Range.prototype, {
-  node: {
-    get: function() {
-      throw new Error("Not supported anymore");
-    },
-    set: function() {
-      throw new Error("Not supported anymore");
-    }
-  }
-});
-
-Selection.Range = Range;
 Selection.SelectionError = SelectionError;
 
 // Export
