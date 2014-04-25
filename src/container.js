@@ -211,7 +211,7 @@ Container.Prototype = function() {
   this.after = function(nodeId) {
     var comps = this.getNodeComponents(nodeId);
     var lastComp = comps[comps.length-1];
-    if (this.__components.length === lastComp.pos) {
+    if (this.__components.length - 1 === lastComp.pos) {
       return [lastComp.pos, lastComp.length];
     } else {
       return [lastComp.pos+1, 0];
