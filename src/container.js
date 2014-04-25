@@ -206,6 +206,18 @@ Container.Prototype = function() {
     return new Container(doc, this.name, this.surfaceProvider.createCopy(doc));
   };
 
+  // Returns the first position after a given node.
+  // if the node is the last in the container it will set
+  this.after = function(nodeId) {
+    var comps = this.getNodeComponents(nodeId);
+    var lastComp = comps[comps.length-1];
+    if (this.__components.length === lastComp.pos) {
+      return [lastComp.pos, lastComp.length];
+    } else {
+      return [lastComp.pos+1, 0];
+    }
+  };
+
 };
 
 Container.prototype = _.extend(new Container.Prototype(), util.Events.Listener);
