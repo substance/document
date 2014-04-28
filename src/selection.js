@@ -455,7 +455,7 @@ Selection.Prototype = function() {
   // over 1+ characters
 
   this.isCollapsed = function() {
-    return this.start[0] === this.__cursor.pos && this.start[1] === this.__cursor.charPos;
+    return !this.isNull() && this.start[0] === this.__cursor.pos && this.start[1] === this.__cursor.charPos;
   };
 
 
