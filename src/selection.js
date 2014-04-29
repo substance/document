@@ -91,8 +91,13 @@ Selection.Prototype = function() {
     var cursor = this.__cursor;
 
     if (sel instanceof Selection) {
-      this.start = _.clone(sel.start);
-      cursor.set(sel.__cursor.pos, sel.__cursor.charPos);
+      if (sel.isNull()) {
+        this.clear();
+        return;
+      } else {
+        this.start = _.clone(sel.start);
+        cursor.set(sel.__cursor.pos, sel.__cursor.charPos);
+      }
     } else if (_.isArray(sel)) {
       this.start = _.clone(sel);
       cursor.set(sel[0], sel[1]);
