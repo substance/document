@@ -54,6 +54,9 @@ Component.Protoype = function() {
     return new ClonedComponent();
   };
 
+  this.getLength = function() {
+    return this.length;
+  };
 };
 Component.prototype = new Component.Protoype();
 
