@@ -218,6 +218,10 @@ Container.Prototype = function() {
     }
   };
 
+  this.first = function(nodeId) {
+    var comps = this.getNodeComponents(nodeId);
+    return [comps[0].pos, 0];
+  };
 };
 
 Container.prototype = _.extend(new Container.Prototype(), util.Events.Listener);
