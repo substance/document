@@ -88,8 +88,11 @@ Selection.Prototype = function() {
   //      or a document position `[pos, charPos]`
 
   this.set = function(sel, options) {
-    var cursor = this.__cursor;
+    if (sel === null) {
+      return this.clear();
+    }
 
+    var cursor = this.__cursor;
     if (sel instanceof Selection) {
       if (sel.isNull()) {
         this.clear();
