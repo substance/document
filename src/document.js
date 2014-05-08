@@ -15,13 +15,12 @@ var util = require("substance-util");
 var errors = util.errors;
 var Data = require("substance-data");
 var Operator = require("substance-operator");
-// var Chronicle = require("substance-chronicle");
+var Container = require("./container");
 
 // Module
 // ========
 
 var DocumentError = errors.define("DocumentError");
-
 
 // Document
 // --------
@@ -96,6 +95,11 @@ Document.Prototype = function() {
     if (NodeType && !(node instanceof NodeType)) {
       node = new NodeType(node, this);
       this.nodes[node.id] = node;
+    }
+
+    // wrap containers (~views) into Container instances
+    if (node.type === "view" && !(node instanceof Container)) {
+      this.nodes[node.id] = new Container(this, node.id);
     }
 
     return node;

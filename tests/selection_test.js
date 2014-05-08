@@ -26,7 +26,7 @@ SelectionTest.Prototype = function() {
   this.fixture = function() {
     var seed = require("./fixture.json");
     this.doc = new TestDocument({seed: seed});
-    this.container = new Container(this.doc, "content");
+    this.container = this.doc.get("content");
     this.sel = new Selection(this.container);
   };
 

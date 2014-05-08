@@ -14,13 +14,19 @@ var Container = function(document, name, surfaceProvider) {
   this.document = document;
   this.name = name;
 
-  var container = this.document.get(name);
-  if (!container || container.type !== "view") {
+  var viewNode = this.document.nodes[name];
+  if (viewNode instanceof Container) {
+    throw new ContainerError("ViewNode is already wrapped as Container: " + name);
+  } else {
+    // HACK: replace the JSON node
+    this.document.nodes[name] = this;
+  }
+  if (!viewNode || viewNode.type !== "view") {
     throw new ContainerError("Illegal argument: no view with name " + name);
   }
 
   // TODO: rename this.view to this.node, which is less confusing
-  this.view = container;
+  this.__viewNode = viewNode;
   this.__components = null;
   this.__children = null;
   this.__updater = null;
@@ -40,9 +46,8 @@ Container.Prototype = function() {
     var __components = [];
     var __children = {};
     var __updater = [];
-    var view = this.document.get(this.name);
 
-    var rootNodes = view.nodes;
+    var rootNodes = this.__viewNode.nodes;
 
     // TODO: we have a problem with doc-simulation here.
     // Nodes are duplicated for simulation. Not so the references in the components.
@@ -74,7 +79,6 @@ Container.Prototype = function() {
     this.__components = __components;
     this.__children = __children;
     this.__updater = __updater;
-    this.view = view;
   };
 
   this.getComponents = function() {
@@ -103,7 +107,7 @@ Container.Prototype = function() {
   };
 
   this.getNodes = function(idsOnly) {
-    var nodeIds = this.view.nodes;
+    var nodeIds = this.__viewNode.nodes;
     if (idsOnly) {
       return _.clone(nodeIds);
     }
@@ -118,7 +122,7 @@ Container.Prototype = function() {
 
   this.update = function(op) {
     var path = op.path;
-    var needRebuild = (!this.__components || path[0] === this.view.id);
+    var needRebuild = (!this.__components || path[0] === this.__viewNode.id);
 
     // Note: we let the NodeSurfaces in invalidate the container
     // TODO: this could be done more efficiently.
@@ -156,7 +160,7 @@ Container.Prototype = function() {
   this.getNodePos = function(pos) {
     if (!this.__components) this.rebuild();
     var id = this.__components[pos].root.id;
-    return this.view.nodes.indexOf(id);
+    return this.__viewNode.nodes.indexOf(id);
   };
 
   // This is used to find the containing node of a reference target.
@@ -203,7 +207,11 @@ Container.Prototype = function() {
   // This is particularly used for creating manipulation sessions.
   //
   this.createContainer = function(doc) {
-    return new Container(doc, this.name, this.surfaceProvider.createCopy(doc));
+    // HACK: I want to tie the Containers to the document directly
+    // Do we really need the ability to control the node-surface factory?
+    var container = new Container(doc, this.name, this.surfaceProvider.createCopy(doc));
+    doc.nodes[this.name] = container;
+    return container;
   };
 
   // Returns the first position after a given node.
@@ -222,20 +230,24 @@ Container.Prototype = function() {
     var comps = this.getNodeComponents(nodeId);
     return [comps[0].pos, 0];
   };
+
+  this.toJSON = function() {
+    return this.__viewNode;
+  };
 };
 
 Container.prototype = _.extend(new Container.Prototype(), util.Events.Listener);
 
 Object.defineProperties(Container.prototype, {
   "id": {
-    get: function() { return this.view.id; }
+    get: function() { return this.__viewNode.id; }
   },
   "type": {
-    get: function() { return this.view.type; }
+    get: function() { return this.__viewNode.type; }
   },
   "nodes": {
-    get: function() { return this.view.nodes; },
-    set: function(val) { this.view.nodes = val; }
+    get: function() { return this.__viewNode.nodes; },
+    set: function(val) { this.__viewNode.nodes = val; }
   }
 });
 
