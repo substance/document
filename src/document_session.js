@@ -34,7 +34,10 @@ DocumentSession.Prototype = function() {
     // the operation created by the simulation
     var data = {};
     if (!sel.isNull()) {
-      data["selBefore"] = sel.toJSON();
+      data["before"] = {
+        "container": this.container.name,
+        "sel": sel.toJSON()
+      };
     }
     return {
       document: doc,
@@ -46,7 +49,10 @@ DocumentSession.Prototype = function() {
         container.dispose();
       },
       save: function() {
-        data["selAfter"] = sel.toJSON();
+        data["after"] = {
+          "container": this.container.name,
+          "sel": sel.toJSON()
+        };
         doc.save(data);
         this.dispose();
       }
