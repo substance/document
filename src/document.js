@@ -99,7 +99,8 @@ Document.Prototype = function() {
 
     // wrap containers (~views) into Container instances
     if (node.type === "view" && !(node instanceof Container)) {
-      this.nodes[node.id] = new Container(this, node.id);
+      node = new Container(this, node.id);
+      this.nodes[node.id] = node;
     }
 
     return node;
