@@ -55,6 +55,13 @@ Document.schema = {
       }
     },
 
+    // Note: we switch to 'container' as 'view' is confusing in presence of Application.View
+    // TODO: remove 'view'... make sure to have migrations in place
+    "container": {
+      "properties": {
+        "nodes": ["array", "content"]
+      }
+    },
     "view": {
       "properties": {
         "nodes": ["array", "content"]
