@@ -21,7 +21,8 @@ var Container = function(document, name, surfaceProvider) {
     // HACK: replace the JSON node
     this.document.nodes[name] = this;
   }
-  if (!viewNode || viewNode.type !== "view") {
+  // TODO: get rid of 'view' as node type... instead use 'container'
+  if (!viewNode || (viewNode.type !== "view" && viewNode.type !== "container")) {
     throw new ContainerError("Illegal argument: no view with name " + name);
   }
 

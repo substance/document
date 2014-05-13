@@ -98,7 +98,8 @@ Document.Prototype = function() {
     }
 
     // wrap containers (~views) into Container instances
-    if (node.type === "view" && !(node instanceof Container)) {
+    // TODO: get rid of the 'view' type... it is misleading in presence of Application.Views.
+    if ((node.type === "view" || node.type === "container") && !(node instanceof Container)) {
       node = new Container(this, node.id);
       this.nodes[node.id] = node;
     }
