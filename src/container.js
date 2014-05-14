@@ -19,7 +19,7 @@ var Container = function(document, name, surfaceProvider) {
     throw new ContainerError("ViewNode is already wrapped as Container: " + name);
   }
   // TODO: get rid of 'view' as node type... instead use 'container'
-  if (!viewNode || (viewNode.type !== "view" && viewNode.type !== "container")) {
+  if (!viewNode || !viewNode.nodes) {
     throw new ContainerError("Illegal argument: no view with name " + name);
   }
 
