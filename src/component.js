@@ -48,15 +48,16 @@ Component.Protoype = function() {
     throw new Error("This is abstract and must be overridden");
   };
 
+  this.getLength = function() {
+    return this.length;
+  };
+
   this.clone = function() {
     var ClonedComponent = function() {};
     ClonedComponent.prototype = this;
     return new ClonedComponent();
   };
 
-  this.getLength = function() {
-    return this.length;
-  };
 };
 Component.prototype = new Component.Protoype();
 
