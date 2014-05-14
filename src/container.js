@@ -17,9 +17,6 @@ var Container = function(document, name, surfaceProvider) {
   var viewNode = this.document.nodes[name];
   if (viewNode instanceof Container) {
     throw new ContainerError("ViewNode is already wrapped as Container: " + name);
-  } else {
-    // HACK: replace the JSON node
-    this.document.nodes[name] = this;
   }
   // TODO: get rid of 'view' as node type... instead use 'container'
   if (!viewNode || (viewNode.type !== "view" && viewNode.type !== "container")) {
@@ -209,7 +206,9 @@ Container.Prototype = function() {
   //
   this.createContainer = function(doc) {
     // HACK: I want to tie the Containers to the document directly
-    // Do we really need the ability to control the node-surface factory?
+    // i.e., to make sure that this exact instance is used, not one created by document.get('content').
+    // However this seems overengineered... Do we really need the ability to control the node-surface factory?
+    // If not, the whole would be obsolete.
     var container = new Container(doc, this.name, this.surfaceProvider.createCopy(doc));
     doc.nodes[this.name] = container;
     return container;
