@@ -161,7 +161,7 @@ Annotator.Prototype = function() {
   // --------
   // TODO: we could do a minor optimization, as it happens that the same query is performed multiple times.
   //
-  this.getAnnotations = function(sel) {
+  this.getAnnotations = function(sel, options) {
     if (!(sel instanceof Document.Selection)) {
       throw new Error("API has changed: now getAnnotations() takes only a selection.");
     }
@@ -170,7 +170,7 @@ Annotator.Prototype = function() {
     var ranges = sel.getRanges();
     for (var i = 0; i < ranges.length; i++) {
       var range = ranges[i];
-      var annos = _annotationsByRange(this, this.document, range);
+      var annos = _annotationsByRange(this, this.document, range, options);
       annotations = annotations.concat(annos);
     }
     // console.log("Annotator.getAnnotations():", sel, annotations);
@@ -238,7 +238,7 @@ Annotator.Prototype = function() {
   // Checks if an annotation overlaps with a given range
   // --------
   //
-  var __isOverlap = function(self, anno, range) {
+  var __isOverlap = function(self, anno, range, options) {
     var sStart = range.start;
     var sEnd = range.end;
     var aStart = anno.range[0];
@@ -246,10 +246,19 @@ Annotator.Prototype = function() {
 
     var expandLeft = false;
     var expandRight = false;
-    var expandSpec = self.config.expansion[anno.type];
-    if (expandSpec) {
-      if (expandSpec.left) expandLeft =  expandSpec.left(anno);
-      if (expandSpec.right) expandRight = expandSpec.right(anno);
+
+    if (options && options[anno.type]) {
+      expandLeft = options[anno.type].left || false;
+      expandRight = options[anno.type].right || false;
+    } else {
+      // NOTE: it seems that it is not the best idea to use the predefined
+      // inclusion rules within the isOverlap function.
+      // Instead, sometimes the desire is for a much more dynamic/custom control (using options)
+      var expandSpec = self.config.expansion[anno.type];
+      if (expandSpec) {
+        if (expandSpec.left) expandLeft =  expandSpec.left(anno);
+        if (expandSpec.right) expandRight = expandSpec.right(anno);
+      }
     }
 
     var overlap;
@@ -262,16 +271,16 @@ Annotator.Prototype = function() {
     // Note: it is allowed to leave range.end undefined
     if (_.isNumber(sEnd)) {
       if (expandLeft) {
-        overlap &= (aStart <= sEnd);
+        overlap = overlap && (aStart <= sEnd);
       } else {
-        overlap &= (aStart < sEnd);
+        overlap = overlap && (aStart < sEnd);
       }
     }
 
     return overlap;
   };
 
-  var _annotationsByRange = function(self, doc, range) {
+  var _annotationsByRange = function(self, doc, range, options) {
     var result = [];
     var component = range.component;
     var annotations;
@@ -289,7 +298,7 @@ Annotator.Prototype = function() {
     }
 
     _.each(annotations, function(a) {
-      if (__isOverlap(self, a, range)) {
+      if (__isOverlap(self, a, range, options)) {
         result.push(a);
       }
     });
