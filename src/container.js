@@ -10,9 +10,12 @@ var ContainerError = errors.define("ContainerError");
 // The container must be much more view oriented as the actual visualized components depend very much on the
 // used renderers.
 
+var __id__ = 0;
+
 var Container = function(document, name, surfaceProvider) {
   this.document = document;
   this.name = name;
+  this.__id__ = __id__++;
 
   var viewNode = this.document.nodes[name];
   if (viewNode instanceof Container) {
@@ -195,6 +198,7 @@ Container.Prototype = function() {
   };
 
   this.dispose = function() {
+    console.error("Typically we do not want this, as a container is bound to the life-time of a document.")
     this.stopListening();
   };
 

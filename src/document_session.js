@@ -46,7 +46,7 @@ DocumentSession.Prototype = function() {
       annotator: annotator,
       container: container,
       dispose: function() {
-        container.dispose();
+        // TODO: remove... nothing to dispose...
       },
       save: function() {
         data["after"] = {
@@ -60,7 +60,7 @@ DocumentSession.Prototype = function() {
   };
 
   this.dispose = function(){
-    this.container.dispose();
+    // TODO: remove... nothing to dispose...
   };
 
 };
