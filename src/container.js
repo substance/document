@@ -235,6 +235,11 @@ Container.Prototype = function() {
     return [comps[0].pos, 0];
   };
 
+  this.getLastCoor = function() {
+    var lastComp = this.__components[this.__components.length-1];
+    return [lastComp.pos, lastComp.length];
+  };
+
   this.toJSON = function() {
     return this.__viewNode;
   };
