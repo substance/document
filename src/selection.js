@@ -476,6 +476,26 @@ Selection.Prototype = function() {
     return !this.isNull() && (this.startNode() !== this.endNode());
   };
 
+  // Get Text
+  // --------
+  //
+  // Get text of current selection
+
+  this.getText = function() {
+    // TODO: make work for multinode selections too
+    if (this.isNull() || this.hasMultipleNodes()) return "";
+
+    var component = this.container.getComponent(this.start[0]); //.node;
+
+    var content = this.container.document.get(component.path);
+    if (content !== undefined) {
+      return content.substring(this.startChar(), this.endChar());
+    } else {
+      console.error("FIXME: expecting text node but got: ", node);
+      return ""
+    }
+  };
+
 };
 
 Selection.Prototype.prototype = util.Events;
