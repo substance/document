@@ -234,6 +234,16 @@ Document.Prototype = function() {
     };
 
     simulation.save = function(data) {
+
+      // HACK: write back all binaries that have been created on the simulation doc
+      // we do that before we apply the operations so that listeners can access the
+      // data
+      // TODO: when the composer is feature complete we need to refactor the
+      // transaction stuff
+      _.each(simulation.fileData, function(data, key) {
+        self.fileData[key] = data;
+      });
+
       var _ops = [];
       for (var i = 0; i < ops.length; i++) {
         if (ops[i].type !== "compound") {
@@ -249,6 +259,7 @@ Document.Prototype = function() {
       var compound = Operator.ObjectOperation.Compound(_ops);
       if (data) compound.data = _.clone(data);
       self.apply(compound);
+
     };
 
     simulation.simulation = true;
