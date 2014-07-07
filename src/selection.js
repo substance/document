@@ -327,18 +327,6 @@ Selection.Prototype = function() {
     return data;
   };
 
-  // For a given document return the selected nodes
-  // --------
-  //
-
-  this.getNodes = function() {
-    throw new Error("This method has been removed, as it is not valid anymore after the Container refactor.");
-    // var allNodes = this.container.getNodes();
-    // if (this.isNull()) return [];
-    // var range = this.range();
-
-    // return allNodes.slice(range.start[0], range.end[0]+1);
-  };
 
   // Derives Range objects for the selection
   // --------
@@ -416,7 +404,7 @@ Selection.Prototype = function() {
   // --------
   //
 
-  this.startNode = function() {
+  this.startNodePos = function() {
     return this.isReverse() ? this.__cursor.pos : this.start[0];
   };
 
@@ -424,8 +412,23 @@ Selection.Prototype = function() {
   // --------
   //
 
-  this.endNode = function() {
+  this.endNodePos = function() {
     return this.isReverse() ? this.start[0] : this.__cursor.pos;
+  };
+
+
+
+  // For a given document return the selected nodes
+  // --------
+  //
+
+  this.getNodes = function() {
+    throw new Error("This method has been removed, as it is not valid anymore after the Container refactor.");
+    // var allNodes = this.container.getNodes();
+    // if (this.isNull()) return [];
+    // var range = this.range();
+
+    // return allNodes.slice(range.start[0], range.end[0]+1);
   };
 
 
@@ -473,7 +476,7 @@ Selection.Prototype = function() {
   // Returns true if the selection refers to multiple nodes
 
   this.hasMultipleNodes = function() {
-    return !this.isNull() && (this.startNode() !== this.endNode());
+    return !this.isNull() && (this.startNodePos() !== this.endNodePos());
   };
 
   // Get Text
@@ -494,6 +497,15 @@ Selection.Prototype = function() {
       console.error("FIXME: expecting text node but got: ", node);
       return ""
     }
+  };
+
+
+  this.getStartNode = function() {
+    return this.container.getComponent(this.start[0]).root;
+  };
+
+  this.getEndNode = function() {
+    return this.container.getComponent(this.end[0]).root;
   };
 
 };
