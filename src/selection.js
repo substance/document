@@ -9,20 +9,21 @@ var NodeSelection = require("./node_selection");
 
 var SelectionError = errors.define("SelectionError");
 
+
 // Document.Selection
 // ================
 //
 // A selection refers to a sub-fragment of a Substance.Document. It holds
-// start/end positions for node and character offsets as well as a direction.
+// start/end positions for component and character offsets as well as a direction.
 //
 //     {
-//       start: [NODE_POS, CHAR_POS]
-//       end: [NODE_POS, CHAR_POS]
+//       start: [COMP_POS, CHAR_POS]
+//       end: [COMP_POS, CHAR_POS]
 //       direction: "left"|"right"
 //     }
 //
-// NODE_POS: Node offset in the document (0 = first node)
-// CHAR_POS: Character offset within a textnode (0 = first char)
+// COMP_POS: Component offset in the document (0 = first component)
+// CHAR_POS: Character offset within a component (0 = first char)
 //
 // Example
 // --------
@@ -69,7 +70,7 @@ var Selection = function(container, selection) {
 
 Selection.Prototype = function() {
 
-  // Get node from position in contnet view
+  // Get copy of selection
   // --------
   //
 
@@ -113,7 +114,7 @@ Selection.Prototype = function() {
     // being hysterical about the integrity of selections
     var n = this.container.getLength();
     if (start[0] < 0 || start[0] >= n) {
-      throw new SelectionError("Invalid node position: " + start[0]);
+      throw new SelectionError("Invalid component position: " + start[0]);
     }
     var l = this.container.getLength(start[0]);
     if (start[1] < 0 || start[1] > l) {
@@ -342,12 +343,12 @@ Selection.Prototype = function() {
       var startChar = 0;
       var endChar = null;
 
-      // in the first node search only in the trailing part
+      // in the first coponent search only in the trailing part
       if (i === sel.start[0]) {
         startChar = sel.start[1];
       }
 
-      // in the last node search only in the leading part
+      // in the last component search only in the leading part
       if (i === sel.end[0]) {
         endChar = sel.end[1];
       }
@@ -400,39 +401,61 @@ Selection.Prototype = function() {
     return nodeSelections;
   };
 
-  // Returns start node offset
+  // Returns start component offset
   // --------
   //
 
-  this.startNodePos = function() {
+  this.startPos = function() {
     return this.isReverse() ? this.__cursor.pos : this.start[0];
   };
 
-  // Returns end node offset
+  // Returns end component offset
   // --------
   //
 
-  this.endNodePos = function() {
+  this.endPos = function() {
     return this.isReverse() ? this.start[0] : this.__cursor.pos;
   };
 
+  // Returns the the node id a given component position belongs to
+  // --------
+  //
 
+  this.getNodeByComponentPos = function(pos) {
+    return this.container.getComponent(pos).root;
+  };
 
-  // For a given document return the selected nodes
+  // Get root node of first selected component
+  // --------
+  //
+
+  this.getStartNode = function() {
+    return this.getNodeByComponentPos(this.start[0]);
+  };
+
+  // Get root node of last selected component
+  // --------
+  //
+
+  this.getEndNode = function() {
+    return this.getNodeByComponentPos(this.end[0]);
+  };
+
+  // Get corresponding root nodes for all selected components
   // --------
   //
 
   this.getNodes = function() {
-    throw new Error("This method has been removed, as it is not valid anymore after the Container refactor.");
-    // var allNodes = this.container.getNodes();
-    // if (this.isNull()) return [];
-    // var range = this.range();
-
-    // return allNodes.slice(range.start[0], range.end[0]+1);
+    var startPos = this.startPos();
+    var endPos = this.endPos();
+    var nodes = [];
+    for (var i = startPos; i <= endPos; i++) { 
+      nodes.push(this.getNodeByComponentPos(i));
+    }
+    return nodes;
   };
 
-
-  // Returns start node offset
+  // Returns start char offset within a component
   // --------
   //
 
@@ -440,7 +463,7 @@ Selection.Prototype = function() {
     return this.isReverse() ? this.__cursor.charPos : this.start[1];
   };
 
-  // Returns end node offset
+  // Returns end char offset within a component
   // --------
   //
 
@@ -476,7 +499,7 @@ Selection.Prototype = function() {
   // Returns true if the selection refers to multiple nodes
 
   this.hasMultipleNodes = function() {
-    return !this.isNull() && (this.startNodePos() !== this.endNodePos());
+    return !this.isNull() && (this.startPos() !== this.endPos());
   };
 
   // Get Text
@@ -498,16 +521,6 @@ Selection.Prototype = function() {
       return ""
     }
   };
-
-
-  this.getStartNode = function() {
-    return this.container.getComponent(this.start[0]).root;
-  };
-
-  this.getEndNode = function() {
-    return this.container.getComponent(this.end[0]).root;
-  };
-
 };
 
 Selection.Prototype.prototype = util.Events;

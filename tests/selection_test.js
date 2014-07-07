@@ -41,9 +41,9 @@ SelectionTest.Prototype = function() {
     "Setting a range in the first node", function() {
       this.sel.set({start: [0,0], end: [0,3]});
       assert.isFalse(this.sel.isCollapsed());
-      assert.isEqual(0, this.sel.startNodePos());
+      assert.isEqual(0, this.sel.startPos());
       assert.isEqual(0, this.sel.startChar());
-      assert.isEqual(0, this.sel.endNodePos());
+      assert.isEqual(0, this.sel.endPos());
       assert.isEqual(3, this.sel.endChar());
       assert.isFalse(this.sel.isCollapsed());
     },
