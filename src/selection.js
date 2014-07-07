@@ -446,10 +446,12 @@ Selection.Prototype = function() {
   //
 
   this.getNodes = function() {
+    if (this.isNull()) return [];
+
     var startPos = this.startPos();
     var endPos = this.endPos();
     var nodes = [];
-    for (var i = startPos; i <= endPos; i++) { 
+    for (var i = startPos; i <= endPos; i++) {
       nodes.push(this.getNodeByComponentPos(i));
     }
     return nodes;
