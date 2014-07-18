@@ -18,15 +18,15 @@
   },
   "dependencies": {
     "underscore": "1.5.x",
-    "substance-util": "git+https://github.com/substance/util.git#0.2.x",
-    "substance-operator": "git+https://github.com/substance/operator.git#0.2.x",
-    "substance-chronicle": "git+https://github.com/substance/chronicle.git#0.2.x",
-    "substance-data": "git+https://github.com/substance/data.git#0.8.x",
-    "substance-regexp": "git+https://github.com/substance/regexp.git#0.1.x"
+    "substance-util": "git+https://github.com/substance/util.git#lens",
+    "substance-operator": "git+https://github.com/substance/operator.git#lens",
+    "substance-chronicle": "git+https://github.com/substance/chronicle.git#lens",
+    "substance-data": "git+https://github.com/substance/data.git#lens",
+    "substance-regexp": "git+https://github.com/substance/regexp.git#lens"
   },
   "devDependencies": {
-    "mocha": "1.12.x",
-    "substance-test": "git+https://github.com/substance/test.git#0.2.x"
+    "mocha": "*",
+    "substance-test": "0.2.x"
   },
   "scripts": {
     "test": "mocha -R spec tests/run.js"
