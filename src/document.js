@@ -14,8 +14,8 @@ var _ = require("underscore");
 var util = require("substance-util");
 var errors = util.errors;
 var Data = require("substance-data");
-var Operator = require("substance-operator");
-var Chronicle = require("substance-chronicle");
+//var Operator = require("substance-operator");
+//var Chronicle = require("substance-chronicle");
 var Container = require("./container");
 
 // Module
@@ -62,23 +62,6 @@ Document.schema = {
 Document.Prototype = function() {
   var __super__ = util.prototype(this);
 
-  this.__apply__ = function(op) {
-    var result = __super__.__apply__.call(this, op, "silent");
-
-    // book-keeping of Container instances
-    Operator.Helpers.each(op, function(_op) {
-      // TODO: this can probably be optimized...
-      if (_op.type === "set" || _op.type === "update") {
-        _.each(this.containers, function(container) {
-          container.update(_op);
-        }, this);
-      }
-    }, this);
-
-    return result;
-  };
-
-
   this.getIndex = function(name) {
     return this.indexes[name];
   };
@@ -86,7 +69,6 @@ Document.Prototype = function() {
   this.getSchema = function() {
     return this.schema;
   };
-
 
   this.create = function(node) {
     __super__.create.call(this, node);
@@ -160,29 +142,22 @@ Document.Prototype = function() {
     indexes = indexes.sort().reverse();
     indexes = _.uniq(indexes);
 
-    var ops = _.map(indexes, function(index) {
-      return Operator.ArrayOperation.Delete(index, view.nodes[index]);
-    });
-
-    var op = Operator.ObjectOperation.Update([viewId, "nodes"], Operator.ArrayOperation.Compound(ops));
-
-    return this.apply(op);
+    var container = this.nodes[viewId];
+    for (var i = 0; i < indexes.length; i++) {
+      container.nodes.slice(indexes[i], 1);
+    }
   };
 
   // Adds nodes to a view
   // --------
   //
 
-  this.show = function(viewId, nodes, target) {
+  this.show = function(viewId, nodeId, target) {
     if (target === undefined) target = -1;
 
     var view = this.get(viewId);
     if (!view) {
       throw new DocumentError("Invalid view id: " + viewId);
-    }
-
-    if (_.isString(nodes)) {
-      nodes = [nodes];
     }
 
     var l = view.nodes.length;
@@ -191,61 +166,7 @@ Document.Prototype = function() {
     target = Math.min(target, l);
     if (target<0) target = Math.max(0, l+target+1);
 
-    var ops = [];
-    for (var idx = 0; idx < nodes.length; idx++) {
-      var nodeId = nodes[idx];
-      if (this.nodes[nodeId] === undefined) {
-        throw new DocumentError("Invalid node id: " + nodeId);
-      }
-      ops.push(Operator.ArrayOperation.Insert(target + idx, nodeId));
-    }
-
-    if (ops.length > 0) {
-      var update = Operator.ObjectOperation.Update([viewId, "nodes"], Operator.ArrayOperation.Compound(ops));
-      return this.apply(update);
-    }
-  };
-
-  // Start simulation, which conforms to a transaction (think databases)
-  // --------
-  //
-
-  this.startSimulation = function() {
-    // TODO: this should be implemented in a more cleaner and efficient way.
-    // Though, for now and sake of simplicity done by creating a copy
-    var self = this;
-    var simulation = this.fromSnapshot(this.toJSON());
-    var ops = [];
-    simulation.ops = ops;
-
-    var __apply__ = simulation.apply;
-
-    simulation.apply = function(op) {
-      ops.push(op);
-      op = __apply__.call(simulation, op);
-      return op;
-    };
-
-    simulation.save = function() {
-      var _ops = [];
-      for (var i = 0; i < ops.length; i++) {
-        if (ops[i].type !== "compound") {
-          _ops.push(ops[i]);
-        } else {
-          _ops = _ops.concat(ops[i].ops);
-        }
-      }
-
-      if (_ops.length === 0) {
-        // nothing has been recorded
-        return;
-      }
-
-      var compound = Operator.ObjectOperation.Compound(_ops);
-      self.apply(compound);
-    };
-
-    return simulation;
+    view.nodes[target] = nodeId;
   };
 
   this.fromSnapshot = function(data, options) {
