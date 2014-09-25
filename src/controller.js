@@ -343,6 +343,10 @@ Controller.Prototype = function() {
     _updateSelection.call(this, op);
   };
 
+  this.getDocument = function() {
+    return this.__document;
+  };
+
 };
 
 // Inherit the prototype of Substance.Document which extends util.Events
