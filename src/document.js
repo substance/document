@@ -166,7 +166,7 @@ Document.Prototype = function() {
     target = Math.min(target, l);
     if (target<0) target = Math.max(0, l+target+1);
 
-    view.nodes[target] = nodeId;
+    view.nodes.splice(target, 0, nodeId);
   };
 
   this.fromSnapshot = function(data, options) {
