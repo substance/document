@@ -144,7 +144,7 @@ Document.Prototype = function() {
 
     var container = this.nodes[viewId];
     for (var i = 0; i < indexes.length; i++) {
-      container.nodes.slice(indexes[i], 1);
+      container.nodes.splice(indexes[i], 1);
     }
   };
 
