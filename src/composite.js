@@ -4,7 +4,6 @@ var Composite = function(node, doc) {
   DocumentNode.call(this, node, doc);
 };
 
-
 // Type definition
 // -----------------
 //
@@ -38,8 +37,6 @@ Composite.example = {
   "no_example": "yet"
 };
 
-
-
 Composite.Prototype = function() {
 
   this.getLength = function() {
@@ -50,8 +47,13 @@ Composite.Prototype = function() {
   // -------
   //
 
+  // Only for legacy reasons
   this.getNodes = function() {
-    throw new Error("Composite.getNodes() is abstract.");
+    return this.getChildrenIds();
+  };
+
+  this.getChildrenIds = function() {
+    throw new Error("Composite.getChildrenIds() is abstract.");
   };
 
   // Tells if this composite is can be changed with respect to its children
