@@ -36,7 +36,6 @@ var Annotator = function(doc, options) {
     "error": "marker"
   };
 
-
   this.expansion = {
     "emphasis": {
       left: Annotator.isOnNodeStart,
@@ -547,29 +546,12 @@ Annotator.createIndex = function(doc) {
 //
 //   Removes 'idea1' from stack and creates a new 'bold1'
 //
-var _levels = {
-  idea: 1,
-  question: 1,
-  error: 1,
-  link: 1,
-  strong: 2,
-  emphasis: 2,
-  code: 2,
-  subscript: 2,
-  superscript: 2,
-  underline: 2,
-  cross_reference: 1,
-  figure_reference: 1,
-  person_reference: 1,
-  contributor_reference: 1,
-  citation_reference: 1
-};
-
 var ENTER = 1;
 var EXIT = -1;
 
 var Fragmenter = function(options) {
-  this.levels = options.levels || _levels;
+  options = options || {};
+  this.levels = options.levels || {};
 };
 
 Fragmenter.Prototype = function() {
@@ -604,7 +586,7 @@ Fragmenter.Prototype = function() {
   var extractEntries = function(annotations) {
     var entries = [];
     _.each(annotations, function(a) {
-      var l = this.levels[a.type];
+      var l = this.levels[a.type] || a.getLevel();
 
       // ignore annotations that are not registered
       if (l === undefined) {
