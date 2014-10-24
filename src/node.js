@@ -115,7 +115,18 @@ Node.Prototype = function() {
 Node.prototype = new Node.Prototype();
 Node.prototype.constructor = Node;
 
-Node.defineProperties = function(NodePrototype, properties, readonly) {
+Node.defineProperties = function(NodeClassOrNodePrototype, properties, readonly) {
+  var NodePrototype = NodeClassOrNodePrototype;
+
+  if (arguments.length === 1) {
+    var NodeClass = NodeClassOrNodePrototype;
+    NodePrototype = NodeClass.prototype;
+    if (!NodePrototype || !NodeClass.type) {
+      throw new Error("Illegal argument: expected NodeClass");
+    }
+    properties = Object.keys(NodeClass.type.properties);
+  }
+
   _.each(properties, function(name) {
     var spec = {
       get: function() {
