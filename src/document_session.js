@@ -1,7 +1,9 @@
 "use strict";
 
+var _ = require('underscore');
 var Annotator = require("./annotator");
 var Selection = require("./selection");
+var MultiNodeAnnotations = require('./multi_node_annotations');
 
 // DocumentSession
 // ========
@@ -19,6 +21,7 @@ var DocumentSession = function(container) {
   this.container = container;
   this.annotator = new Annotator(this.document);
   this.selection = new Selection(this.container);
+  this.multiNodeAnnotations = new MultiNodeAnnotations(this.document, this.container);
 };
 
 DocumentSession.Prototype = function() {
@@ -30,6 +33,7 @@ DocumentSession.Prototype = function() {
     var annotator = new Annotator(doc);
     var container = this.container.createContainer(doc);
     var sel = new Selection(container, this.selection);
+    var multiNodeAnnotations = new MultiNodeAnnotations(doc, container);
     // Note: we save the old and new selection along with
     // the operation created by the simulation
     var data = {};
@@ -45,6 +49,7 @@ DocumentSession.Prototype = function() {
       selection: sel,
       annotator: annotator,
       container: container,
+      multiNodeAnnotations: multiNodeAnnotations,
       dispose: function() {
         // TODO: remove... nothing to dispose...
       },
@@ -61,6 +66,21 @@ DocumentSession.Prototype = function() {
 
   this.dispose = function(){
     // TODO: remove... nothing to dispose...
+  };
+
+  // EXPERIMENTAL: multi node annotations
+
+  this.getAnnotations = function(propertyPath, options) {
+    options = options || {};
+    var result = {};
+    var singleNodeAnnos, multiNodeAnnoFragments;
+    singleNodeAnnos = this.document.getIndex('annotations').get(propertyPath);
+    _.extend(result, singleNodeAnnos);
+    if (options.all) {
+      multiNodeAnnoFragments = this.multiNodeAnnotations.getFragmentsForComponent(propertyPath);
+      _.extend(result, multiNodeAnnoFragments);
+    }
+    return result;
   };
 
 };
