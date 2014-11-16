@@ -1,5 +1,6 @@
 {
   "name": "substance-document",
+  "version": "0.5.0",
   "description": "A document representation and transformation toolkit.",
   "url": "http://github.com/substance/document",
   "keywords": [
@@ -19,10 +20,7 @@
   "dependencies": {
     "underscore": "1.5.x",
     "substance-util": "git+https://github.com/substance/util.git#lens",
-    "substance-operator": "git+https://github.com/substance/operator.git#lens",
-    "substance-chronicle": "git+https://github.com/substance/chronicle.git#lens",
-    "substance-data": "git+https://github.com/substance/data.git#lens",
-    "substance-regexp": "git+https://github.com/substance/regexp.git#lens"
+    "substance-data": "git+https://github.com/substance/data.git#lens"
   },
   "devDependencies": {
     "mocha": "*",
@@ -31,7 +29,6 @@
   "scripts": {
     "test": "mocha -R spec tests/run.js"
   },
-  "version": "0.5.0",
   "engines": {
     "node": ">=0.8.x",
     "npm": ">=1.1.x"
