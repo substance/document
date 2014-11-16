@@ -23,9 +23,7 @@ var Annotator = require("./annotator");
 var Controller = function(document, options) {
   options = options || {};
   this.view = options.view || 'content';
-
   this.__document = document;
-  this.annotator = new Annotator(document);
   this.container = document.get(this.view);
 };
 

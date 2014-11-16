@@ -3,12 +3,8 @@
 var _ = require("underscore");
 
 var Document = require('./src/document');
-Document.Annotator = require('./src/annotator');
 Document.Container = require('./src/container');
-Document.Cursor = require('./src/cursor');
-Document.Selection = require('./src/selection');
 Document.Controller = require('./src/controller');
-
 Document.Node = require('./src/node');
 Document.Composite = require('./src/composite');
 // TODO: this should also be moved to 'substance-nodes'
@@ -16,8 +12,5 @@ Document.Composite = require('./src/composite');
 // Maybe, we should extract such things into helper functions so that it is easier to
 // create custom text based, annotatable nodes.
 Document.TextNode = require('./src/text_node');
-
-// Compatibility
-Document.Writer = require('./src/controller');
 
 module.exports = Document;
