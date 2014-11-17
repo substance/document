@@ -33,6 +33,11 @@ var Document = function(options) {
   Data.Graph.call(this, options.schema, options);
 
   this.containers = {};
+
+  this.addIndex("annotations", {
+    types: ["annotation"],
+    property: "path"
+  });
 };
 
 // Default Document Schema
