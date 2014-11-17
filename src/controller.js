@@ -2,7 +2,6 @@
 
 var _ = require("underscore");
 var util = require("substance-util");
-var Annotator = require("./annotator");
 
 // Document.Controller
 // -----------------
