@@ -1,6 +1,8 @@
 "use strict";
 
 var _ = require("underscore");
+var util = require("substance-util");
+var Fragmenter = util.Fragmenter;
 
 // Substance.Node
 // -----------------
@@ -53,7 +55,7 @@ Node.Prototype = function() {
   };
 
   // helpers for html conversion
-  this.propertyToHtml = function(propertyName, options) {
+  this.propertyToHtml = function(htmlDocument, propertyName, options) {
     options = options || NO_OPTIONS;
     var el = htmlDocument.createElement(options.elementType || 'span');
     var path;
@@ -64,12 +66,36 @@ Node.Prototype = function() {
       path = [this.id, propertyName];
       el.setAttribute('data-property', propertyName);
     }
-    var property = this.document.get(path);
-    var annotations = this.document.indexes['annotations'].get(path);
-    // TODO render as annotated text instead of plain text
-    el.textContent = property.get();
+    var property = this.document.resolve(path);
+    var type = property.baseType;
+    if (type === "string") {
+      this.annotatedTextToHtml(htmlDocument, el, property);
+    } else {
+      throw new Error('Only "string" properties are currently supported');
+    }
+    return el;
   };
 
+  this.annotatedTextToHtml = function(htmlDocument, el, prop) {
+    var text = prop.get();
+    var annotations = this.document.indexes['annotations'].get(prop.path);
+    // this splits the text and annotations into smaller pieces
+    // which is necessary to generate proper HTML.
+    var annotator = new Fragmenter();
+    annotator.onText = function(el, text) {
+      var textNode = htmlDocument.createTextNode(text);
+      el.appendChild(textNode);
+    };
+    annotator.onEnter = function(entry, parentEl) {
+      // TODO: take that specification from the annotation class
+      // var anno = entry.node;
+      var elementType = 'span';
+      var annotationEl = htmlDocument.createElement(elementType);
+      parentEl.appendChild(annotationEl);
+      return annotationEl;
+    };
+    annotator.start(el, text, annotations);
+  };
 };
 
 Node.prototype = new Node.Prototype();
@@ -92,12 +118,12 @@ Node.defineProperties = function(NodeClassOrNodePrototype, properties, readonly)
       get: function() {
         return this.properties[name];
       }
-    }
+    };
     if (!readonly) {
       spec["set"] = function(val) {
         this.properties[name] = val;
         return this;
-      }
+      };
     }
     Object.defineProperty(NodePrototype, name, spec);
   });

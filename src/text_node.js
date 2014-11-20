@@ -48,9 +48,20 @@ Text.example = {
 
 
 Text.Prototype = function() {
+
+  var __super__ = DocumentNode.prototype;
+
   this.getLength = function() {
     return this.properties.content.length;
   };
+
+  this.toHtml = function(htmlDocument, options) {
+    var el = __super__.toHtml.call(this, htmlDocument, options);
+    var prop = this.document.resolve([this.id, 'content']);
+    this.annotatedTextToHtml(htmlDocument, el, prop);
+    return el;
+  };
+
 };
 
 Text.Prototype.prototype = DocumentNode.prototype;
