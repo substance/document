@@ -20,20 +20,6 @@ Node.type = {
   }
 };
 
-// Define node behavior
-// --------
-// These properties define the default behavior of a node, e.g., used when manipulating the document.
-// Sub-types override these settings
-// Note: it is quite experimental, and we will consolidate them soon.
-
-Node.properties = {
-  abstract: true,
-  immutable: true,
-  mergeableWith: [],
-  preventEmpty: true,
-  allowedAnnotations: []
-};
-
 Node.Prototype = function() {
 
   this.toJSON = function() {
@@ -50,66 +36,40 @@ Node.Prototype = function() {
     throw new Error("Node.getLength() is abstract.");
   };
 
-  // Provides how a cursor would change by an operation
-  // --------
-  //
-
-  this.getChangePosition = function(op) {
-    throw new Error("Node.getCharPosition() is abstract.");
-  };
-
-  // Provides an operation that can be used to insert
-  // text at the given position.
-  // --------
-  //
-
-  this.insertOperation = function(charPos, text) {
-    throw new Error("Node.insertOperation() is abstract.");
-  };
-
-  // Provides an operation that can be used to delete a given range.
-  // --------
-  //
-
-  this.deleteOperation = function(startChar, endChar) {
-    throw new Error("Node.deleteOperation() is abstract.");
-  };
-
-  // Note: this API is rather experimental
-  // It is used to dynamically control the behavior for modifications
-  // e.g., via an editor
-
-  // Can this node be joined with another one?
-  // --------
-
-  this.canJoin = function(other) {
-    return false;
-  };
-
-  // Appends the content of another node
-  // --------
-
-  this.join = function(other) {
-    throw new Error("Node.join() is abstract.");
-  };
-
-  // Can a 'hard-break' be applied to this node?
-  // --------
-
-  this.isBreakable = function() {
-    return false;
-  };
-
-  // Breaks this node at a given position
-  // --------
-
-  this.break = function(doc, pos) {
-    throw new Error("Node.split() is abstract.");
-  };
-
   this.getAnnotations = function() {
     return this.document.getIndex("annotations").get(this.properties.id);
   };
+
+  // Built-in HTML conversion
+  // ------------------------
+
+  var NO_OPTIONS = {};
+
+  this.toHtml = function(htmlDocument, options) {
+    options = options || NO_OPTIONS;
+    var el = htmlDocument.createElement(options.elementType || 'div');
+    el.setAttribute('data-id', this.id);
+    return el;
+  };
+
+  // helpers for html conversion
+  this.propertyToHtml = function(propertyName, options) {
+    options = options || NO_OPTIONS;
+    var el = htmlDocument.createElement(options.elementType || 'span');
+    var path;
+    if (_.isArray(propertyName)) {
+      path = propertyName;
+      el.setAttribute('data-property', path.join('.'));
+    } else {
+      path = [this.id, propertyName];
+      el.setAttribute('data-property', propertyName);
+    }
+    var property = this.document.get(path);
+    var annotations = this.document.indexes['annotations'].get(path);
+    // TODO render as annotated text instead of plain text
+    el.textContent = property.get();
+  };
+
 };
 
 Node.prototype = new Node.Prototype();
