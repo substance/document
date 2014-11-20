@@ -1,3 +1,5 @@
+"use strict";
+
 var DocumentNode = require("./node");
 
 var Composite = function(node, doc) {
@@ -15,29 +17,11 @@ Composite.type = {
   }
 };
 
-
-// This is used for the auto-generated docs
-// -----------------
-//
-
-Composite.description = {
-  "name": "Composite",
-  "remarks": [
-    "A file reference to an external resource.",
-  ],
-  "properties": {
-  }
-};
-
-// Example File
-// -----------------
-//
-
-Composite.example = {
-  "no_example": "yet"
-};
-
 Composite.Prototype = function() {
+
+  this.isComposite = true;
+
+  this.__super__ = DocumentNode.prototype;
 
   this.getLength = function() {
     throw new Error("Composite.getLength() is abstract.");
@@ -47,52 +31,34 @@ Composite.Prototype = function() {
   // -------
   //
 
-  // Only for legacy reasons
-  this.getNodes = function() {
-    return this.getChildrenIds();
-  };
-
   this.getChildrenIds = function() {
     throw new Error("Composite.getChildrenIds() is abstract.");
   };
 
-  // Tells if this composite is can be changed with respect to its children
-  // --------
-  //
-
-  this.isMutable = function() {
-    return false;
+  this.toHtml = function(htmlDocument, options) {
+    var el = this.__super__.toHtml.call(this, htmlDocument, options);
+    var childrenEls = this.childrenToHtml(htmlDocument);
+    for (var i = 0; i < childrenEls.length; i++) {
+      this.el.appendChild(childrenEls[i]);
+    }
+    return el;
   };
 
-  this.insertOperation = function(/*charPos, text*/) {
-    return null;
+  this.childrenToHtml = function(htmlDocument) {
+    var childrenEls = [];
+    var childrenIds = this.getChildrenIds();
+    for (var i = 0; i < childrenIds.length; i++) {
+      var childId = childrenIds[i];
+      var child = this.document.get(childId);
+      childrenEls.push(child.toHtml(htmlDocument));
+    }
+    return childrenEls;
   };
 
-  this.deleteOperation = function(/*startChar, endChar*/) {
-    return null;
-  };
-
-  // Inserts reference(s) at the given position
-  // --------
-  //
-
-  this.insertChild = function(/*doc, pos, nodeId*/) {
-    throw new Error("This composite is immutable.");
-  };
-
-  // Removes a reference from this composite.
-  // --------
-
-  this.deleteChild = function(/*doc, nodeId*/) {
-    throw new Error("This composite is immutable.");
-  };
-
-  // Provides the index of the affected node.
-  // --------
-  //
-
-  this.getChangePosition = function(op) {
-    return 0;
+  // Only for legacy reasons
+  this.getNodes = function() {
+    console.error("Deprecated. Use this.getChildrenIds() instead.");
+    return this.getChildrenIds();
   };
 
 };
