@@ -21,7 +21,7 @@ Composite.Prototype = function() {
 
   this.isComposite = true;
 
-  this.__super__ = DocumentNode.prototype;
+  var __super__ = DocumentNode.prototype;
 
   this.getLength = function() {
     throw new Error("Composite.getLength() is abstract.");
@@ -36,7 +36,7 @@ Composite.Prototype = function() {
   };
 
   this.toHtml = function(htmlDocument, options) {
-    var el = this.__super__.toHtml.call(this, htmlDocument, options);
+    var el = __super__.toHtml.call(this, htmlDocument, options);
     var childrenEls = this.childrenToHtml(htmlDocument);
     for (var i = 0; i < childrenEls.length; i++) {
       this.el.appendChild(childrenEls[i]);
