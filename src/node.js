@@ -110,6 +110,10 @@ Node.Prototype = function() {
   this.getAnnotations = function() {
     return this.document.getIndex("annotations").get(this.properties.id);
   };
+
+  this.includeInToc = function() {
+    return false;
+  };
 };
 
 Node.prototype = new Node.Prototype();
