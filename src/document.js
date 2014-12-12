@@ -34,10 +34,17 @@ var Document = function(options) {
   // Used by File Nodes for storing file contents either as blobs or strings
   this.fileData = {};
 
+  this.addIndex("annotations", {
+    types: ["annotation"],
+    property: "path"
+  });
+
   // Index for supplements
   this.addIndex("files", {
     types: ["file"]
   });
+
+
 };
 
 // Default Document Schema

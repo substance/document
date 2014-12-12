@@ -14,7 +14,6 @@ var _getConfig;
 //
 var Annotator = function(doc) {
   this.config = _getConfig(doc);
-  doc.addIndex("annotations", {types: ["annotation"], property: "path"});
   this.document = doc;
 };
 
