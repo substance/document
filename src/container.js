@@ -19,7 +19,13 @@ var Container = function(document, name, surfaceProvider) {
 
   var viewNode = this.document.nodes[name];
   if (viewNode instanceof Container) {
-    throw new ContainerError("ViewNode is already wrapped as Container: " + name);
+    // HACK fixing an issue with creating a container for transactions
+    viewNode = {
+      type: "container",
+      id: viewNode.id,
+      nodes: viewNode.nodes
+    }
+    // throw new ContainerError("ViewNode is already wrapped as Container: " + name);
   }
   // TODO: get rid of 'view' as node type... instead use 'container'
   if (!viewNode || !viewNode.nodes) {
