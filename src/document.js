@@ -293,6 +293,9 @@ Document.Prototype = function() {
       doc.nodes[node.id] = node.toJSON();
     });
     // TODO: maybe we need indexes too?
+    _.each(doc.indexes, function(index) {
+      index.createIndex();
+    });
     return doc;
   };
 };
