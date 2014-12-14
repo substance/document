@@ -5,7 +5,25 @@ var util = require("substance-util");
 var Document = require("./document");
 var Operator = require("substance-operator");
 
-var _getConfig;
+var _getConfig = function(doc) {
+  // Note: this is rather experimental
+  // It is important to inverse the control over the annotation behavior,
+  // i.e., which annotations exist and how they should be handled
+  var annotationBehavior = doc.getAnnotationBehavior();
+  if (!annotationBehavior) {
+    throw new Error("No Annotation behavior specified.");
+  }
+  annotationBehavior.expansion = annotationBehavior || {};
+  annotationBehavior.expansion["annotation_fragment"] = {
+    left: function(fragment) {
+      return !fragment.isFirst();
+    },
+    right: function(fragment) {
+      return !fragment.isLast();
+    }
+  };
+  return annotationBehavior;
+};
 
 // A class that provides helpers to manage a document's annotations.
 // --------
@@ -101,7 +119,7 @@ Annotator.Prototype = function() {
     // }
   };
 
-  // A helper to implement an editor which can breaks or joins nodes.
+  // A helper to implement an editor which can break or join nodes.
   // --------
   // TODO: this seems to be very tailored to text nodes. Refactor this when needed.
   //
@@ -110,7 +128,9 @@ Annotator.Prototype = function() {
 
     var annotations = _nodeAnnotationsByRange(this, node, {start: charPos});
     _.each(annotations, function(annotation) {
-    //   var range = ranges[annotation.path[0]];
+      // don't treat annotation fragments
+      if (annotation.type === "annotation_fragment") return;
+
       var isInside = (charPos > annotation.range[0] || charPos[1] < annotation.range[1]);
       var newRange;
 
@@ -365,17 +385,6 @@ Annotator.changesAnnotations = function(doc, op, path) {
 // A static helper to create a document index for annotations
 Annotator.createIndex = function(doc) {
   return doc.addIndex("annotations", {types: ["annotation"], property: "path"});
-};
-
-_getConfig = function(doc) {
-  // Note: this is rather experimental
-  // It is important to inverse the control over the annotation behavior,
-  // i.e., which annotations exist and how they should be handled
-  var annotationBehavior = doc.getAnnotationBehavior();
-  if (!annotationBehavior) {
-    throw new Error("No Annotation behavior specified.");
-  }
-  return annotationBehavior;
 };
 
 module.exports = Annotator;
