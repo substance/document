@@ -228,7 +228,7 @@ Document.Prototype = function() {
     // TODO: this should be implemented in a more cleaner and efficient way.
     // Though, for now and sake of simplicity done by creating a copy
     var self = this;
-    var simulation = this.fromSnapshot(this.toJSON());
+    var simulation = this.clone();
     var ops = [];
     simulation.ops = ops;
 
@@ -283,6 +283,17 @@ Document.Prototype = function() {
 
   this.uuid = function(type) {
     return type + "_" + util.uuid();
+  };
+
+  this.clone = function() {
+    var doc = new this.constructor();
+    doc.schema = this.schema;
+    doc.nodes = {};
+    _.each(this.nodes, function(node) {
+      doc.nodes[node.id] = node.toJSON();
+    });
+    // TODO: maybe we need indexes too?
+    return doc;
   };
 };
 
