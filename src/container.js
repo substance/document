@@ -247,7 +247,7 @@ Container.Prototype = function() {
   };
 
   this.toJSON = function() {
-    return this.__viewNode;
+    return util.clone(this.__viewNode);
   };
 };
 
