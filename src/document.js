@@ -80,7 +80,8 @@ Document.schema = {
 
 
 Document.Prototype = function() {
-  var __super__ = util.prototype(this);
+
+  _.extend(this, util.Events);
 
   this.getIndex = function(name) {
     return this.graph.indexes[name];
@@ -91,8 +92,11 @@ Document.Prototype = function() {
   };
 
   this.create = function(node) {
-    __super__.create.call(this, node);
-    return this.get(node.id);
+    return this.graph.create(node);
+  };
+
+  this.contains = function() {
+    return this.graph.contains.apply(this.graph, arguments);
   };
 
   // Delegates to Graph.get but wraps the result in the particular node constructor
@@ -140,6 +144,10 @@ Document.Prototype = function() {
 
   this.apply = function(op) {
     this.graph.apply(op);
+  };
+
+  this.addIndex = function() {
+    this.graph.addIndex.apply(this.graph, arguments);
   };
 
   // Serialize to JSON
@@ -295,7 +303,6 @@ Document.Prototype = function() {
   };
 };
 
-Document.Prototype.prototype = Graph.prototype;
 Document.prototype = new Document.Prototype();
 
 Object.defineProperties(Document.prototype, {
