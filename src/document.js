@@ -45,6 +45,9 @@ var Document = function(options) {
   this.addIndex("files", {
     types: ["file"]
   });
+
+  this.listenTo(this.graph, 'operation:applied', this.onGraphOperation);
+  this.listenTo(this.graph, 'graph:changed', this.onGraphUpdate);
 };
 
 // Default Document Schema
@@ -81,6 +84,18 @@ Document.schema = {
 Document.Prototype = function() {
 
   _.extend(this, util.Events);
+
+  this.onGraphOperation = function(op) {
+    console.log('Document.onGraphOperation', op);
+    // TODO: try to get rid of as many low-level listeners as possible
+    //  and use graph:update instead
+    this.trigger('operation:applied', op, this);
+  };
+
+  this.onGraphUpdate = function(changes) {
+    console.log('Document.onGraphUpdate', arguments);
+    this.trigger('graph:changed', changes);
+  };
 
   this.getIndex = function(name) {
     return this.graph.indexes[name];
