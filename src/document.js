@@ -14,6 +14,8 @@ var _ = require("underscore");
 var util = require("substance-util");
 var errors = util.errors;
 var Data = require("substance-data");
+var Graph = Data.OperationalGraph;
+var COWGraph = Data.OperationalGraph.COWGraph;
 var Operator = require("substance-operator");
 var Container = require("./container");
 
@@ -28,7 +30,8 @@ var DocumentError = errors.define("DocumentError");
 // A generic model for representing and transforming digital documents
 
 var Document = function(options) {
-  Data.Graph.call(this, options.schema, options);
+
+  this.graph = new Graph(options.schema, options);
 
   // Temporary store for file data
   // Used by File Nodes for storing file contents either as blobs or strings
@@ -43,8 +46,6 @@ var Document = function(options) {
   this.addIndex("files", {
     types: ["file"]
   });
-
-
 };
 
 // Default Document Schema
@@ -82,7 +83,7 @@ Document.Prototype = function() {
   var __super__ = util.prototype(this);
 
   this.getIndex = function(name) {
-    return this.indexes[name];
+    return this.graph.indexes[name];
   };
 
   this.getSchema = function() {
@@ -99,7 +100,7 @@ Document.Prototype = function() {
   //
 
   this.get = function(path) {
-    var node = __super__.get.call(this, path);
+    var node = this.graph.get(path);
 
     if (!node) return node;
 
@@ -108,17 +109,37 @@ Document.Prototype = function() {
     var NodeType = (nodeSpec !== undefined) ? nodeSpec.Model : null;
     if (NodeType && !(node instanceof NodeType)) {
       node = new NodeType(node, this);
-      this.nodes[node.id] = node;
+      this.graph.nodes[node.id] = node;
     }
 
     // wrap containers (~views) into Container instances
     // TODO: get rid of the 'view' type... it is misleading in presence of Application.Views.
     if ((node.type === "view" || node.type === "container") && !(node instanceof Container)) {
       node = new Container(this, node.id);
-      this.nodes[node.id] = node;
+      this.graph.nodes[node.id] = node;
     }
 
     return node;
+  };
+
+  this.create = function(node) {
+    return this.graph.create(node);
+  };
+
+  this.delete = function(id) {
+    this.graph.delete(id);
+  };
+
+  this.set = function(path, value) {
+    this.graph.set(path, value);
+  };
+
+  this.update = function(path, diff) {
+    this.graph.update(path, diff);
+  };
+
+  this.apply = function(op) {
+    this.graph.apply(op);
   };
 
   // Serialize to JSON
@@ -127,7 +148,7 @@ Document.Prototype = function() {
   // The command is converted into a sequence of graph commands
 
   this.toJSON = function() {
-    var res = __super__.toJSON.call(this);
+    var res = this.graph.toJSON();
     res.id = this.id;
     return res;
   };
@@ -174,7 +195,7 @@ Document.Prototype = function() {
     comment.id = id;
     comment.type = "comment";
     var op = Operator.ObjectOperation.Create([comment.id], comment);
-    return this.__apply__(op);
+    return this.graph.__apply__(op);
   };
 
   this.annotate = function(anno, data) {
@@ -208,7 +229,7 @@ Document.Prototype = function() {
     var ops = [];
     for (var idx = 0; idx < nodes.length; idx++) {
       var nodeId = nodes[idx];
-      if (this.nodes[nodeId] === undefined) {
+      if (this.graph.nodes[nodeId] === undefined) {
         throw new DocumentError("Invalid node id: " + nodeId);
       }
       ops.push(Operator.ArrayOperation.Insert(target + idx, nodeId));
@@ -220,57 +241,45 @@ Document.Prototype = function() {
     }
   };
 
-  // Start simulation, which conforms to a transaction (think databases)
+  // Start transaction
   // --------
   //
+  this.startTransaction = function() {
+    var documentModel = Object.create(this);
+    // shadow the original event listeners
+    documentModel._events =  {};
 
-  this.startSimulation = function() {
-    // TODO: this should be implemented in a more cleaner and efficient way.
-    // Though, for now and sake of simplicity done by creating a copy
-    var self = this;
-    var simulation = this.clone();
-    var ops = [];
-    simulation.ops = ops;
+    documentModel.graph = new COWGraph(this.graph);
+    documentModel.graph.indexes = {};
+    documentModel.original = this;
+    documentModel.transacting = true;
 
-    var __apply__ = simulation.apply;
+    // TODO: create a COW version of necessary/all? indexes
 
-    simulation.apply = function(op) {
-      ops.push(op);
-      op = __apply__.call(simulation, op);
-      return op;
-    };
+    return documentModel;
+  };
 
-    simulation.save = function(data) {
+  this.save = function() {
+    // this method makes only sense for transactional surfaces
+    if (!this.transacting) return;
 
-      // HACK: write back all binaries that have been created on the simulation doc
-      // we do that before we apply the operations so that listeners can access the
-      // data
-      // TODO: when the composer is feature complete we need to refactor the
-      // transaction stuff
-      _.each(simulation.fileData, function(data, key) {
-        self.fileData[key] = data;
-      });
+    var original = this.original;
 
-      var _ops = [];
-      for (var i = 0; i < ops.length; i++) {
-        if (ops[i].type !== "compound") {
-          _ops.push(ops[i]);
-        } else {
-          _ops = _ops.concat(ops[i].ops);
-        }
-      }
-      if (_ops.length === 0) {
-        // nothing has been recorded
-        return;
-      }
-      var compound = Operator.ObjectOperation.Compound(_ops);
-      if (data) compound.data = _.clone(data);
-      self.apply(compound);
+    // HACK: write back all binaries that have been created on the simulation doc
+    // we do that before we apply the operations so that listeners can access the
+    // data
+    // TODO: when the composer is feature complete we need to refactor the
+    // transaction stuff
+    _.each(this.fileData, function(data, key) {
+      original.fileData[key] = data;
+    });
 
-    };
-
-    simulation.simulation = true;
-    return simulation;
+    var ops = this.graph.ops;
+    // if nothing has been changed just return
+    if (!ops || ops.length === 0) return;
+    ops = Operator.Helpers.flatten(ops);
+    var compound = Operator.ObjectOperation.Compound(ops);
+    original.apply(compound);
   };
 
   this.fromSnapshot = function(data, options) {
@@ -284,24 +293,28 @@ Document.Prototype = function() {
   this.uuid = function(type) {
     return type + "_" + util.uuid();
   };
-
-  this.clone = function() {
-    var doc = new this.constructor();
-    doc.schema = this.schema;
-    doc.nodes = {};
-    _.each(this.nodes, function(node) {
-      doc.nodes[node.id] = node.toJSON();
-    });
-    // TODO: maybe we need indexes too?
-    _.each(doc.indexes, function(index) {
-      index.createIndex();
-    });
-    return doc;
-  };
 };
 
-Document.Prototype.prototype = Data.Graph.prototype;
+Document.Prototype.prototype = Graph.prototype;
 Document.prototype = new Document.Prototype();
+
+Object.defineProperties(Document.prototype, {
+  indexes: {
+    get: function() {
+      return this.graph.indexes;
+    }
+  },
+  nodes: {
+    get: function() {
+      return this.graph.nodes;
+    }
+  },
+  schema: {
+    get: function() {
+      return this.graph.schema;
+    }
+  }
+});
 
 Document.fromSnapshot = function(data, options) {
   options = options || {};

@@ -25,8 +25,8 @@ DocumentSession.Prototype = function() {
 
   // TODO: this is used *very* often and is implemented *very* naive.
   // There's a great potential for optimization here
-  this.startSimulation = function() {
-    var doc = this.document.startSimulation();
+  this.startTransaction = function() {
+    var doc = this.document.startTransaction();
     var annotator = new Annotator(doc);
     var container = this.container.createContainer(doc);
     var sel = new Selection(container, this.selection);
