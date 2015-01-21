@@ -41,8 +41,8 @@ Cursor.Prototype = function() {
     if (this.pos === null || this.charPos === null) return false;
     if (this.pos < 0 || this.charPos < 0) return false;
 
-    var l = this.container.getLength(this.pos);
-    if (this.charPos >= l) return false;
+    // var l = this.container.getLength(this.pos);
+    // if (this.charPos >= l) return false;
 
     return true;
   };
@@ -183,15 +183,15 @@ Cursor.Prototype = function() {
       if(!_.isNumber(pos)) {
         throw new CursorError("Illegal argument: expected pos as number");
       }
-      var n = this.container.getLength();
-      if (pos < 0 || pos >= n) {
-        throw new CursorError("Invalid node position: " + pos);
-      }
+      // var n = this.container.getLength();
+      // if (pos < 0 || pos >= n) {
+      //   throw new CursorError("Invalid node position: " + pos);
+      // }
 
-      var l = this.container.getLength(pos);
-      if (charPos < 0 || charPos > l) {
-        throw new CursorError("Invalid char position: " + charPos);
-      }
+      // var l = this.container.getLength(pos);
+      // if (charPos < 0 || charPos > l) {
+      //   throw new CursorError("Invalid char position: " + charPos);
+      // }
     }
 
     this.pos = pos;

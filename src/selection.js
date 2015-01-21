@@ -112,14 +112,14 @@ Selection.Prototype = function() {
     var start = this.start;
 
     // being hysterical about the integrity of selections
-    var n = this.container.getLength();
-    if (start[0] < 0 || start[0] >= n) {
-      throw new SelectionError("Invalid component position: " + start[0]);
-    }
-    var l = this.container.getLength(start[0]);
-    if (start[1] < 0 || start[1] > l) {
-      throw new SelectionError("Invalid char position: " + start[1]);
-    }
+    // var n = this.container.getLength();
+    // if (start[0] < 0 || start[0] >= n) {
+    //   throw new SelectionError("Invalid component position: " + start[0]);
+    // }
+    // var l = this.container.getLength(start[0]);
+    // if (start[1] < 0 || start[1] > l) {
+    //   throw new SelectionError("Invalid char position: " + start[1]);
+    // }
 
     this.trigger('selection:changed', this.range(), options);
     return this;
