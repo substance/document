@@ -18,6 +18,7 @@ var Graph = Data.OperationalGraph;
 var COWGraph = Data.OperationalGraph.COWGraph;
 var Operator = require("substance-operator");
 var Container = require("./container");
+var AnnotationIndex = require('./annotation_index');
 
 // Module
 // ========
@@ -37,10 +38,8 @@ var Document = function(options) {
   // Used by File Nodes for storing file contents either as blobs or strings
   this.fileData = {};
 
-  this.addIndex("annotations", {
-    types: ["annotation"],
-    property: "path"
-  });
+  this.annotationIndex = new AnnotationIndex(this);
+  this.graph.indexes['annotations'] = this.annotationIndex;
 
   // Index for supplements
   this.addIndex("files", {
@@ -87,18 +86,6 @@ Document.Prototype = function() {
     return this.graph.indexes[name];
   };
 
-  this.getSchema = function() {
-    return this.schema;
-  };
-
-  this.create = function(node) {
-    return this.graph.create(node);
-  };
-
-  this.contains = function() {
-    return this.graph.contains.apply(this.graph, arguments);
-  };
-
   // Delegates to Graph.get but wraps the result in the particular node constructor
   // --------
   //
@@ -126,28 +113,44 @@ Document.Prototype = function() {
     return node;
   };
 
-  this.create = function(node) {
-    return this.graph.create(node);
+  this.resolve = function() {
+    return this.graph.resolve.apply(this.graph, arguments);
   };
 
-  this.delete = function(id) {
-    this.graph.delete(id);
+  this.contains = function() {
+    return this.graph.contains.apply(this.graph, arguments);
   };
 
-  this.set = function(path, value) {
-    this.graph.set(path, value);
+  this.create = function() {
+    return this.graph.create.apply(this.graph, arguments);
   };
 
-  this.update = function(path, diff) {
-    this.graph.update(path, diff);
+  this.delete = function() {
+    return this.graph.delete.apply(this.graph, arguments);
   };
 
-  this.apply = function(op) {
-    this.graph.apply(op);
+  this.set = function() {
+    return this.graph.set.apply(this.graph, arguments);
+  };
+
+  this.update = function() {
+    return this.graph.update.apply(this.graph, arguments);
+  };
+
+  this.apply = function() {
+    return this.graph.apply.apply(this.graph, arguments);
   };
 
   this.addIndex = function() {
-    this.graph.addIndex.apply(this.graph, arguments);
+    return this.graph.addIndex.apply(this.graph, arguments);
+  };
+
+  this.getSchema = function() {
+    return this.graph.schema;
+  };
+
+  this.getNodes = function() {
+    return this.graph.nodes;
   };
 
   // Serialize to JSON
@@ -253,18 +256,20 @@ Document.Prototype = function() {
   // --------
   //
   this.startTransaction = function() {
-    var documentModel = Object.create(this);
+    var doc = Object.create(this);
     // shadow the original event listeners
-    documentModel._events =  {};
+    doc._events =  {};
 
-    documentModel.graph = new COWGraph(this.graph);
-    documentModel.graph.indexes = {};
-    documentModel.original = this;
-    documentModel.transacting = true;
+    doc.graph = new COWGraph(this.graph);
+    doc.graph.indexes = {};
+    doc.original = this;
+    doc.transacting = true;
 
     // TODO: create a COW version of necessary/all? indexes
+    doc.annotationIndex = this.annotationIndex.cowIndex(doc);
+    doc.graph.indexes['annotations'] = doc.annotationIndex;
 
-    return documentModel;
+    return doc;
   };
 
   this.save = function() {
