@@ -222,10 +222,6 @@ Container.Prototype = function() {
     // However this seems overengineered... Do we really need the ability to control the node-surface factory?
     // If not, the whole would be obsolete.
     var container = new Container(doc, this.name, this.surfaceProvider.createCopy(doc));
-    // EXPERIMENTAL: we can start initialized; updates will invalidate anyways
-    container.__components = this.__components;
-    container.__children = this.__children;
-    container.__updater = this.__updater;
 
     doc.nodes[this.name] = container;
     return container;
