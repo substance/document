@@ -22,6 +22,7 @@ var _getConfig = function(doc) {
       return !fragment.isLast();
     }
   };
+  annotationBehavior.split.push('annotation_fragment');
   return annotationBehavior;
 };
 
@@ -128,8 +129,6 @@ Annotator.Prototype = function() {
 
     var annotations = _nodeAnnotationsByRange(this, node, {start: charPos});
     _.each(annotations, function(annotation) {
-      // don't treat annotation fragments
-      if (annotation.type === "annotation_fragment") return;
 
       var isInside = (charPos > annotation.range[0] || charPos[1] < annotation.range[1]);
       var newRange;
@@ -168,6 +167,13 @@ Annotator.Prototype = function() {
 
         this.document.set([annotation.id, "path"], newPath);
         this.document.set([annotation.id, "range"], newRange);
+
+        if (annotation.type === "annotation_fragment") {
+          var multiAnno = this.document.get(annotation.annotation_id);
+          newPath = _.clone(multiAnno.startPath);
+          newPath[0] = newNode.id;
+          this.document.set([multiAnno.id, "startPath"], newPath);
+        }
       }
     }, this);
   };
@@ -245,6 +251,14 @@ Annotator.Prototype = function() {
           self.document.delete(annotation.id);
         } else {
           self.document.set([annotation.id, "range"], newRange, {"incremental": true});
+        }
+        if (annotation.type === "annotation_fragment") {
+          var multiAnno = annotation.getAnnotation();
+          if (annotation.isFirst() && multiAnno.startCharPos !== newRange[0]) {
+            self.document.set([annotation.annotation_id, "startCharPos"], newRange[0]);
+          } else if (annotation.isLast() && multiAnno.endCHarPos !== newRange[1]) {
+            self.document.set([annotation.annotation_id, "endCharPos"], newRange[1]);
+          }
         }
       }
     }
