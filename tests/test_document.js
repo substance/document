@@ -100,5 +100,4 @@ TestDocument.annotationBehavior = {
   }
 };
 
-
 module.exports = TestDocument;

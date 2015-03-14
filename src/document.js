@@ -1,10 +1,8 @@
 "use strict";
 
-// Substance.Document 0.5.0
-// (c) 2010-2013 Michael Aufreiter
+// Substance.Document 0.6.0
+// (c) 2015 Substance Software GmbH
 // Substance.Document may be freely distributed under the MIT license.
-// For all details and documentation:
-// http://interior.substance.io/modules/document.html
 
 
 // Import
@@ -43,7 +41,6 @@ var Document = function(options) {
   this.addIndex("files", {
     types: ["file"]
   });
-
 
 };
 
