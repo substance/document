@@ -13,7 +13,6 @@ var util = require("substance-util");
 var errors = util.errors;
 var Data = require("substance-data");
 var Operator = require("substance-operator");
-var Container = require("./container");
 
 // Module
 // ========
@@ -95,28 +94,28 @@ Document.Prototype = function() {
   // --------
   //
 
-  this.get = function(path) {
-    var node = __super__.get.call(this, path);
+  // this.get = function(path) {
+  //   var node = __super__.get.call(this, path);
 
-    if (!node) return node;
+  //   if (!node) return node;
 
-    // Wrap all nodes in an appropriate Node instance
-    var nodeSpec = this.nodeTypes[node.type];
-    var NodeType = (nodeSpec !== undefined) ? nodeSpec.Model : null;
-    if (NodeType && !(node instanceof NodeType)) {
-      node = new NodeType(node, this);
-      this.nodes[node.id] = node;
-    }
+  //   // Wrap all nodes in an appropriate Node instance
+  //   var nodeSpec = this.nodeTypes[node.type];
+  //   var NodeType = (nodeSpec !== undefined) ? nodeSpec.Model : null;
+  //   if (NodeType && !(node instanceof NodeType)) {
+  //     node = new NodeType(node, this);
+  //     this.nodes[node.id] = node;
+  //   }
 
-    // wrap containers (~views) into Container instances
-    // TODO: get rid of the 'view' type... it is misleading in presence of Application.Views.
-    if ((node.type === "view" || node.type === "container") && !(node instanceof Container)) {
-      node = new Container(this, node.id);
-      this.nodes[node.id] = node;
-    }
+  //   // wrap containers (~views) into Container instances
+  //   // TODO: get rid of the 'view' type... it is misleading in presence of Application.Views.
+  //   // if ((node.type === "view" || node.type === "container") && !(node instanceof Container)) {
+  //   //   node = new Container(this, node.id);
+  //   //   this.nodes[node.id] = node;
+  //   // }
 
-    return node;
-  };
+  //   return node;
+  // };
 
   // Serialize to JSON
   // --------
