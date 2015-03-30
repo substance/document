@@ -1,40 +1,22 @@
 {
   "name": "substance-document",
-  "description": "A document representation and transformation toolkit.",
-  "url": "http://github.com/substance/document",
-  "keywords": [
-    "document manipulation",
-    "editing",
-    "selection"
-  ],
-  "author": "Michael Aufreiter",
-  "contributors": [
-    "Oliver Buchtala",
-    "Victor Saiz"
-  ],
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/substance/document.git"
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha -R spec test/run.js"
   },
+  "author": "",
+  "license": "MIT",
+  "keywords": [
+    "substance-addon"
+  ],
   "dependencies": {
-    "underscore": "*",
-    "substance-util": "git+https://github.com/substance/util.git#master",
-    "substance-operator": "git+https://github.com/substance/operator.git#master",
-    "substance-chronicle": "git+https://github.com/substance/chronicle.git#master",
-    "substance-data": "git+https://github.com/michael/data.git#master",
-    "substance-regexp": "git+https://github.com/substance/regexp.git#master"
+    "substance": "git+https://github.com/oliver----/substance.git",
+    "substance-data": "git+https://github.com/substance/data.git#next"
   },
   "devDependencies": {
-    "mocha": "1.12.x",
-    "substance-test": "git+https://github.com/substance/test.git#master",
-    "substance-nodes": "git+https://github.com/substance/nodes.git#single_column"
-  },
-  "scripts": {
-    "test": "mocha -R spec tests/run.js"
-  },
-  "version": "0.6.0",
-  "engines": {
-    "node": ">=0.8.x",
-    "npm": ">=1.1.x"
+    "mocha": "1.21.x",
+    "substance-test": "git+https://github.com/substance/test.git#next"
   }
 }

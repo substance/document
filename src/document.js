@@ -1,314 +1,188 @@
-"use strict";
+'use strict';
 
-// Substance.Document 0.6.0
-// (c) 2015 Substance Software GmbH
-// Substance.Document may be freely distributed under the MIT license.
+var Substance = require('substance');
+var AnnotationIndex = require('./annotation-index');
+var DocumentListeners = require('./document-listeners');
+var DocumentHistory = require('./document-history');
+var Data = require('substance-data/versioned');
+var ChangeMap = require('./change-map');
 
+function Document( schema, seed ) {
 
-// Import
-// ========
-
-var _ = require("underscore");
-var util = require("substance-util");
-var errors = util.errors;
-var Data = require("substance-data");
-var Operator = require("substance-operator");
-
-// Module
-// ========
-
-var DocumentError = errors.define("DocumentError");
-
-// Document
-// --------
-//
-// A generic model for representing and transforming digital documents
-
-var Document = function(options) {
-  Data.Graph.call(this, options.schema, options);
-
-  // Temporary store for file data
-  // Used by File Nodes for storing file contents either as blobs or strings
-  this.fileData = {};
-
-  this.addIndex("annotations", {
-    types: ["annotation"],
-    property: "path"
+  this.schema = schema;
+  this.data = new Data({
+    seed: seed,
+    nodeFactory: Substance.bind(this.__createNode, this)
   });
 
-  // Index for supplements
-  this.addIndex("files", {
-    types: ["file"]
-  });
+  this.annotationIndex = new AnnotationIndex(this);
+  this.indexes['annotations'] = this.annotationIndex;
 
-};
+  this.operationListeners = [];
+  this.data.on('operation:applied', Substance.bind(this.onOperationApplied, this));
 
-// Default Document Schema
-// --------
+  this.isTransacting = false;
+  this.transactionListeners = new DocumentListeners();
+  this.transactionChanges = null;
 
-Document.schema = {
-  // Static indexes
-  "indexes": {
-  },
-
-  "types": {
-    // Specific type for substance documents, holding all content elements
-    "content": {
-      "properties": {
-      }
-    },
-
-    // Note: we switch to 'container' as 'view' is confusing in presence of Application.View
-    // TODO: remove 'view'... make sure to have migrations in place
-    "container": {
-      "properties": {
-        "nodes": ["array", "content"]
-      }
-    },
-    "view": {
-      "properties": {
-        "nodes": ["array", "content"]
-      }
-    }
-  }
-};
-
+  this.history = new DocumentHistory(this);
+}
 
 Document.Prototype = function() {
-  var __super__ = util.prototype(this);
 
-  this.getIndex = function(name) {
-    return this.indexes[name];
+  this.get = function(path) {
+    return this.data.get(path);
   };
 
-  this.getSchema = function() {
-    return this.schema;
+  this.getAnnotations = function(path, start, end) {
+    var sStart = start;
+    var sEnd = end;
+    var annotations = this.annotationIndex.get(path);
+    var result = [];
+    // Filter the annotations by the given char range
+    if (start) {
+      // Note: this treats all annotations as if they were inclusive (left+right)
+      // TODO: maybe we should apply the same rules as for Transformations?
+      Substance.each(annotations, function(a) {
+        var aStart = a.range[0];
+        var aEnd = a.range[1];
+        var overlap = (aEnd >= sStart);
+        // Note: it is allowed to omit the end part
+        if (sEnd) {
+          overlap &= (aStart <= sEnd);
+        }
+        if (overlap) {
+          result.push(this.get(a.id));
+        }
+      }, this);
+    } else {
+      Substance.each(annotations, function(anno) {
+        result.push(this.get(anno.id));
+      }, this);
+    }
+    return result;
+  };
+
+  this.__createNode = function(nodeData) {
+    if (nodeData instanceof Node) {
+      return nodeData;
+    }
+    var node = this.schema.createNode(nodeData.type, nodeData);
+    node.setDocument(this);
   };
 
   this.create = function(node) {
-    __super__.create.call(this, node);
-    return this.get(node.id);
+    node = this.data.create(node);
   };
 
-  // Delegates to Graph.get but wraps the result in the particular node constructor
-  // --------
-  //
+  this.delete = function(nodeOrId) {
+    var node, id;
+    if (Substance.isString(nodeOrId)) {
+      id = nodeOrId;
+      node = this.graph.get(id);
+    } else if (nodeOrId instanceof Node) {
+      node = nodeOrId;
+      id = node.id;
+    } else {
+      throw new Error('Illegal argument');
+    }
+    if (!node) {
+      console.error("Unknown node '%s'", id);
+    }
+    this.data.delete(id);
+    node.setDocument(null);
+  };
 
-  // this.get = function(path) {
-  //   var node = __super__.get.call(this, path);
+  this.set = function(path, value) {
+    this.data.set(path, value);
+  };
 
-  //   if (!node) return node;
+  this.update = function(path, diff) {
+    this.data.update(path, diff);
+  };
 
-  //   // Wrap all nodes in an appropriate Node instance
-  //   var nodeSpec = this.nodeTypes[node.type];
-  //   var NodeType = (nodeSpec !== undefined) ? nodeSpec.Model : null;
-  //   if (NodeType && !(node instanceof NodeType)) {
-  //     node = new NodeType(node, this);
-  //     this.nodes[node.id] = node;
-  //   }
+  this.startTransaction = function() {
+    if (this.isTransacting) {
+      throw new Error('Nested transactions are not supported yet.');
+    }
+    this.isTransacting = true;
+    this.transactionChanges = new ChangeMap();
+    this.history.setRecoveryPoint();
+  };
 
-  //   // wrap containers (~views) into Container instances
-  //   // TODO: get rid of the 'view' type... it is misleading in presence of Application.Views.
-  //   // if ((node.type === "view" || node.type === "container") && !(node instanceof Container)) {
-  //   //   node = new Container(this, node.id);
-  //   //   this.nodes[node.id] = node;
-  //   // }
+  this.cancelTransaction = function() {
+    if (!this.isTransacting) {
+      throw new Error('Not in a transaction.');
+    }
+    this.history.restoreLastRecoveryPoint();
+    this.isTransacting = false;
+  };
 
-  //   return node;
-  // };
-
-  // Serialize to JSON
-  // --------
-  //
-  // The command is converted into a sequence of graph commands
+  this.finishTransaction = function() {
+    if (!this.isTransacting) {
+      throw new Error('Not in a transaction.');
+    }
+    // TODO: notify external listeners
+    this.isTransacting = false;
+    this.history.setRecoveryPoint();
+    this.notifyTransactionApplied(this.transactionChanges);
+  };
 
   this.toJSON = function() {
-    var res = __super__.toJSON.call(this);
-    res.id = this.id;
-    return res;
+    return {
+      schema: [this.schema.name, this.schema.version],
+      nodes: this.nodes
+    };
   };
 
-  // Hide elements from provided view
-  // --------
-  //
+  this.onOperationApplied = function(op) {
+    // record the change for the transaction summary event later
+    this.transactionChanges.update(op);
+    var failed = [];
+    Substance.each(this.operationListeners, function(listener) {
+      try {
+        listener.onOperationApplied(op);
+      } catch (error) {
+        console.error(error);
+        failed.push(listener);
+      }
+    });
+    Substance.each(failed, function(listener) {
+      listener.reset();
+    });
+  };
 
-  this.hide = function(viewId, nodes) {
-    var view = this.get(viewId);
+  this.addOperationListener = function(listener, priority) {
+    listener.__priority = priority || 10;
+    this.operationListeners.push(listener);
+    this.operationListeners.sort(function(a,b) {
+      return a.__priority - b.__priority;
+    });
+  };
 
-    if (!view) {
-      throw new DocumentError("Invalid view id: "+ viewId);
+  this.removeOperationListener = function(listener) {
+    var idx = this.operationListeners.indexOf(listener);
+    if (idx >= 0) {
+      this.operationListeners.splice(idx, 1);
     }
+  };
 
-    if (_.isString(nodes)) {
-      nodes = [nodes];
-    }
+  this.addTransactionListener = function(path, listener) {
+    this.transactionListeners.add(path, listener);
+  };
 
-    var indexes = [];
-    _.each(nodes, function(n) {
-      var i = view.nodes.indexOf(n);
-      if (i>=0) indexes.push(i);
+  this.removeTransactionListener = function(path, listener) {
+    this.transactionListeners.remove(path, listener);
+  };
+
+  this.notifyTransactionApplied = function(transactionChanges) {
+    transactionChanges.traverse(function(path, ops) {
+      this.transactionListeners.notify(path, ops);
     }, this);
-
-    if (indexes.length === 0) return;
-
-    indexes = indexes.sort().reverse();
-    indexes = _.uniq(indexes);
-
-    var ops = _.map(indexes, function(index) {
-      return Operator.ArrayOperation.Delete(index, view.nodes[index]);
-    });
-
-    var op = Operator.ObjectOperation.Update([viewId, "nodes"], Operator.ArrayOperation.Compound(ops));
-
-    return this.apply(op);
   };
 
-  // HACK: it is not desired to have the comments managed along with the editorially document updates
-  // We need an approach with multiple Chronicles instead.
-  this.comment = function(comment) {
-    var id = util.uuid();
-    comment.id = id;
-    comment.type = "comment";
-    var op = Operator.ObjectOperation.Create([comment.id], comment);
-    return this.__apply__(op);
-  };
-
-  this.annotate = function(anno, data) {
-    anno.id = anno.type + "_" + util.uuid();
-    _.extend(anno, data);
-    this.create(anno);
-  };
-
-  // Adds nodes to a view
-  // --------
-  //
-
-  this.show = function(viewId, nodes, target) {
-    if (target === undefined) target = -1;
-
-    var view = this.get(viewId);
-    if (!view) {
-      throw new DocumentError("Invalid view id: " + viewId);
-    }
-
-    if (_.isString(nodes)) {
-      nodes = [nodes];
-    }
-
-    var l = view.nodes.length;
-
-    // target index can be given as negative number (as known from python/ruby)
-    target = Math.min(target, l);
-    if (target<0) target = Math.max(0, l+target+1);
-
-    var ops = [];
-    for (var idx = 0; idx < nodes.length; idx++) {
-      var nodeId = nodes[idx];
-      if (this.nodes[nodeId] === undefined) {
-        throw new DocumentError("Invalid node id: " + nodeId);
-      }
-      ops.push(Operator.ArrayOperation.Insert(target + idx, nodeId));
-    }
-
-    if (ops.length > 0) {
-      var update = Operator.ObjectOperation.Update([viewId, "nodes"], Operator.ArrayOperation.Compound(ops));
-      return this.apply(update);
-    }
-  };
-
-  // Start simulation, which conforms to a transaction (think databases)
-  // --------
-  //
-
-  this.startSimulation = function() {
-    // TODO: this should be implemented in a more cleaner and efficient way.
-    // Though, for now and sake of simplicity done by creating a copy
-    var self = this;
-    var simulation = this.clone();
-    var ops = [];
-    simulation.ops = ops;
-
-    var __apply__ = simulation.apply;
-
-    simulation.apply = function(op) {
-      ops.push(op);
-      op = __apply__.call(simulation, op);
-      return op;
-    };
-
-    simulation.save = function(data) {
-
-      // HACK: write back all binaries that have been created on the simulation doc
-      // we do that before we apply the operations so that listeners can access the
-      // data
-      // TODO: when the composer is feature complete we need to refactor the
-      // transaction stuff
-      _.each(simulation.fileData, function(data, key) {
-        self.fileData[key] = data;
-      });
-
-      var _ops = [];
-      for (var i = 0; i < ops.length; i++) {
-        if (ops[i].type !== "compound") {
-          _ops.push(ops[i]);
-        } else {
-          _ops = _ops.concat(ops[i].ops);
-        }
-      }
-      if (_ops.length === 0) {
-        // nothing has been recorded
-        return;
-      }
-      var compound = Operator.ObjectOperation.Compound(_ops);
-      if (data) compound.data = _.clone(data);
-      self.apply(compound);
-
-    };
-
-    simulation.simulation = true;
-    return simulation;
-  };
-
-  this.fromSnapshot = function(data, options) {
-    return Document.fromSnapshot(data, options);
-  };
-
-  this.newInstance = function() {
-    return new Document({ "schema": this.schema });
-  };
-
-  this.uuid = function(type) {
-    return type + "_" + util.uuid();
-  };
-
-  this.clone = function() {
-    var doc = new this.constructor();
-    doc.schema = this.schema;
-    doc.nodes = {};
-    _.each(this.nodes, function(node) {
-      doc.nodes[node.id] = node.toJSON();
-    });
-    // TODO: maybe we need indexes too?
-    _.each(doc.indexes, function(index) {
-      index.createIndex();
-    });
-    return doc;
-  };
 };
 
-Document.Prototype.prototype = Data.Graph.prototype;
-Document.prototype = new Document.Prototype();
-
-Document.fromSnapshot = function(data, options) {
-  options = options || {};
-  options.seed = data;
-  return new Document(options);
-};
-
-
-Document.DocumentError = DocumentError;
-
-// Export
-// ========
+Substance.initClass(Document);
 
 module.exports = Document;

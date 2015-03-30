@@ -1,15 +1,15 @@
-"use strict";
+'use strict';
 
-var _ = require("underscore");
+var Substance = require('substance');
 
-var Document = require('./src/document');
-Document.Annotator = require('./src/annotator');
-Document.Cursor = require('./src/cursor');
-Document.Selection = require('./src/selection');
-Document.Container = require('./src/container');
-Document.Component = require('./src/component');
-Document.Session = require('./src/document_session');
-Document.NodeViewFactory = require('./src/node_view_factory');
-Document.DocumentRenderer = require('./src/document_renderer');
+Substance.Model = require('./src/model');
+Substance.Node = require('./src/node');
+Substance.Annotation = require('./src/annotation');
 
-module.exports = Document;
+Substance.Document = require('./src/document');
+Substance.Document.Schema = require('./src/schema');
+
+Substance.Registry = require('./src/registry');
+Substance.Factory = require('./src/factory');
+
+module.exports = Substance;
