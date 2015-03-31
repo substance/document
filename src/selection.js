@@ -34,6 +34,10 @@ Selection.Prototype = function() {
     return this === other;
   };
 
+  this.toString = function() {
+    return "null";
+  };
+
 };
 
 Substance.initClass(Selection);
