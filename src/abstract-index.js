@@ -4,28 +4,36 @@ var Substance = require('substance');
 var PathAdapter = Substance.PathAdapter;
 var Annotation = require('./annotation');
 
-var AbstractIndex = function(options) {
+var AbstractIndex = function() {
   this.documentModel = null;
   this.index = new PathAdapter();
-
-  this.select = options.select || function() { return true; };
-  this.getKey = options.getKey || function(node) { return node.type; };
 };
 
 AbstractIndex.Prototype = function() {
 
-  this.get = function(path) {
-    return this.index.get(path) || {};
+  this.setDocument = function(doc) {
+    this.documentModel = doc;
   };
-
-  /* Index updates */
 
   this.initialize = function() {
     Substance.each(this.documentModel.getNodes(), function(node) {
       if (this.select(node)) {
-        this.create(node);
+        var key = this.getKey(node);
+        this.create(key, node);
       }
     }, this);
+  };
+
+  this.select = function() {
+    return true;
+  };
+
+  this.getKey = function(node) {
+    return node.id;
+  };
+
+  this.get = function(path) {
+    return this.index.get(path) || {};
   };
 
   // TODO: is it possible to get the affected node with the operation?
@@ -42,7 +50,7 @@ AbstractIndex.Prototype = function() {
   };
 
   this.update = function(node, property, value, oldValue) {
-    var oldKey = this.getKey(node, oldValue);
+    var oldKey = oldValue;
     this.delete(oldKey, node);
     var newKey = this.getKey(node);
     this.create(newKey, node);
@@ -50,5 +58,9 @@ AbstractIndex.Prototype = function() {
 };
 
 Substance.initClass( AbstractIndex );
+
+AbstractIndex.extend = function(prototype) {
+  return Substance.extend(new AbstractIndex(), prototype);
+};
 
 module.exports = AbstractIndex;

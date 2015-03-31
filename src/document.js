@@ -47,6 +47,8 @@ Document.Prototype = function() {
     if (this.indexes[name]) {
       console.error('Index with name %s already exists.', name);
     }
+    index.setDocument(this);
+    index.initialize();
     this.indexes[name] = index;
     return index;
   };
@@ -85,11 +87,13 @@ Document.Prototype = function() {
       return nodeData;
     }
     var node = this.schema.createNode(nodeData.type, nodeData);
-    node.setDocument(this);
+    node.attach(this);
+    return node;
   };
 
   this.create = function(node) {
     node = this.data.create(node);
+    return node;
   };
 
   this.delete = function(nodeOrId) {

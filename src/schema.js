@@ -5,6 +5,7 @@ var ModelRegistry = require("./model-registry");
 var Model = require('./model');
 var Node = require('./node');
 var Annotation = require('./annotation');
+var ContainerNode = require('./container-node');
 
 function Schema(name, version, nodes) {
   this.name = name;
@@ -79,6 +80,6 @@ Schema.Prototype = function() {
 
 Substance.initClass( Schema );
 
-Schema.static.builtins = [ Node, Annotation ];
+Schema.static.builtins = [ Node, Annotation, ContainerNode ];
 
 module.exports = Schema;

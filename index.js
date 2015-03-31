@@ -5,6 +5,7 @@ var Document = require('./src/document');
 Document.Model = require('./src/model');
 Document.Node = require('./src/node');
 Document.Annotation = require('./src/annotation');
+Document.ContainerNode = require('./src/container-node');
 Document.Schema = require('./src/schema');
 Document.Coordinate = require('./src/coordinate');
 Document.Range = require('./src/range');

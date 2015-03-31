@@ -25,7 +25,7 @@ Model.Prototype = function() {
 
   this.isInstanceOf = function(typeName) {
     var staticData = this.constructor.static;
-    while(staticData) {
+    while (staticData && staticData.name !== "model") {
       if (staticData && staticData.name === typeName) {
         return true;
       }
@@ -40,7 +40,7 @@ Substance.inherit( Model, Substance.EventEmitter );
 /**
  * Symbolic name for this model class. Must be set to a unique string by every subclass.
  */
-Model.static.name = null;
+Model.static.name = "model";
 
 Model.static.schema = {
   type: 'string',
