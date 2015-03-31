@@ -8,6 +8,7 @@ var Data = require('substance-data/versioned');
 var ChangeMap = require('./change-map');
 
 function Document( schema, seed ) {
+  Substance.EventEmitter.call(this);
 
   this.schema = schema;
   this.data = new Data({
@@ -15,14 +16,14 @@ function Document( schema, seed ) {
     nodeFactory: Substance.bind(this.__createNode, this)
   });
 
+  this.indexes = {};
+
   this.annotationIndex = new AnnotationIndex(this);
   this.indexes['annotations'] = this.annotationIndex;
 
-  this.operationListeners = [];
   this.data.on('operation:applied', Substance.bind(this.onOperationApplied, this));
 
   this.isTransacting = false;
-  this.transactionListeners = new DocumentListeners();
   this.transactionChanges = null;
 
   this.history = new DocumentHistory(this);
@@ -30,8 +31,24 @@ function Document( schema, seed ) {
 
 Document.Prototype = function() {
 
+  this.getSchema = function() {
+    return this.schema;
+  };
+
   this.get = function(path) {
     return this.data.get(path);
+  };
+
+  this.getNodes = function() {
+    return this.data.nodes;
+  };
+
+  this.addIndex = function(name, index) {
+    if (this.indexes[name]) {
+      console.error('Index with name %s already exists.', name);
+    }
+    this.indexes[name] = index;
+    return index;
   };
 
   this.getAnnotations = function(path, start, end) {
@@ -125,7 +142,10 @@ Document.Prototype = function() {
     // TODO: notify external listeners
     this.isTransacting = false;
     this.history.setRecoveryPoint();
-    this.notifyTransactionApplied(this.transactionChanges);
+
+    transactionChanges.traverse(function(path, ops) {
+      this.emit('transaction', path, ops);
+    }, this);
   };
 
   this.toJSON = function() {
@@ -138,51 +158,11 @@ Document.Prototype = function() {
   this.onOperationApplied = function(op) {
     // record the change for the transaction summary event later
     this.transactionChanges.update(op);
-    var failed = [];
-    Substance.each(this.operationListeners, function(listener) {
-      try {
-        listener.onOperationApplied(op);
-      } catch (error) {
-        console.error(error);
-        failed.push(listener);
-      }
-    });
-    Substance.each(failed, function(listener) {
-      listener.reset();
-    });
-  };
-
-  this.addOperationListener = function(listener, priority) {
-    listener.__priority = priority || 10;
-    this.operationListeners.push(listener);
-    this.operationListeners.sort(function(a,b) {
-      return a.__priority - b.__priority;
-    });
-  };
-
-  this.removeOperationListener = function(listener) {
-    var idx = this.operationListeners.indexOf(listener);
-    if (idx >= 0) {
-      this.operationListeners.splice(idx, 1);
-    }
-  };
-
-  this.addTransactionListener = function(path, listener) {
-    this.transactionListeners.add(path, listener);
-  };
-
-  this.removeTransactionListener = function(path, listener) {
-    this.transactionListeners.remove(path, listener);
-  };
-
-  this.notifyTransactionApplied = function(transactionChanges) {
-    transactionChanges.traverse(function(path, ops) {
-      this.transactionListeners.notify(path, ops);
-    }, this);
+    this.emit('operation', op);
   };
 
 };
 
-Substance.initClass(Document);
+Substance.inherit(Document, Substance.EventEmitter);
 
 module.exports = Document;

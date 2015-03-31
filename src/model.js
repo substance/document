@@ -1,11 +1,9 @@
 'use strict';
 
 var Substance = require('substance');
-var EventEmitter = require('./event-emitter');
 
 function Model( data ) {
-  // Mix-in
-  EventEmitter.call(this);
+  Substance.EventEmitter.call(this);
 
   this.properties = Substance.extend({}, this.getDefaultProperties(), data);
   this.properties.type = this.constructor.static.name;
@@ -22,11 +20,22 @@ Model.Prototype = function() {
   };
 
   this.getDefaultProperties = function() {
-    return Substance.deepClone(this.constructor.__defaultProperties__);
+    return Substance.deepclone(this.constructor.__defaultProperties__);
+  };
+
+  this.isInstanceOf = function(typeName) {
+    var staticData = this.constructor.static;
+    while(staticData) {
+      if (staticData && staticData.name === typeName) {
+        return true;
+      }
+      staticData = Object.getPrototypeOf(staticData);
+    }
+    return false;
   };
 };
 
-Substance.inherit( Model, EventEmitter );
+Substance.inherit( Model, Substance.EventEmitter );
 
 /**
  * Symbolic name for this model class. Must be set to a unique string by every subclass.
@@ -105,5 +114,27 @@ Model.initModelClass = function( ModelClass ) {
 };
 
 Model.initModelClass( Model );
+
+Model.__extend__ = function( parent, modelSpec ) {
+  var ctor = function ModelClass() {
+    parent.apply(this, arguments);
+  }
+  Substance.inherit(ctor, parent);
+  for(var key in modelSpec) {
+    if (modelSpec.hasOwnProperty(key)) {
+      if (key === "name" || key === "properties") {
+        continue;
+      }
+      ctor.prototype[key] = modelSpec[key];
+    }
+  }
+  ctor.static.name = modelSpec.name;
+  ctor.static.schema = modelSpec.properties;
+  // add a extend method so that this class can be used to create child models.
+  ctor.extend = Substance.bind(Model.__extend__, null, ctor);
+  return ctor;
+};
+
+Model.extend = Substance.bind( Model.__extend__, null, Model);
 
 module.exports = Model;

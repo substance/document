@@ -3,8 +3,8 @@
 var Substance = require('substance');
 var Model = require('./model');
 
-function Node( data ) {
-  Model.call(this, data);
+function Node() {
+  Model.apply(this, arguments);
   this.documentModel = null;
 }
 
@@ -30,5 +30,7 @@ Node.Prototype = function dmNodePrototype() {
 Substance.inherit(Node, Model);
 
 Node.static.name = "node";
+
+Node.extend = Substance.bind( Model.__extend__, null, Node);
 
 module.exports = Node;

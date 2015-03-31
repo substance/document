@@ -47,6 +47,15 @@ ModelRegistry.Prototype = function() {
     }
     return modelClass;
   };
+
+  this.getNodeFactory = function() {
+    return this.nodeFactory;
+  };
+
+  this.getAnnotationFactory = function() {
+    return this.annotationFactory;
+  };
+
 };
 
 Substance.inherit(ModelRegistry, Registry);

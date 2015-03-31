@@ -3,25 +3,17 @@
 var Substance = require('substance');
 var Node = require('./node');
 
-var Annotation = function dmAnnotation( data ) {
-  Node.call(this, data);
-};
+var Annotation = Node.extend({
+  name: "annotation",
 
-Annotation.Prototype = function() {
-  this.canSplit = function() {
-    return this.constructor.static.canSplit;
-  };
-};
+  properties: {
+    path: ['array', 'string'],
+    range: ['array', 'number']
+  },
 
-Substance.inherit( Annotation, Node );
-
-Annotation.static.name = "annotation";
-
-Annotation.static.schema = {
-  path: ['array', 'string'],
-  range: ['array', 'number']
-};
-
-Annotation.static.canSplit = true;
+  canSplit: function() {
+    return true;
+  }
+});
 
 module.exports = Annotation;

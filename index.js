@@ -1,15 +1,19 @@
 'use strict';
 
-var Substance = require('substance');
+var Document = require('./src/document');
 
-Substance.Model = require('./src/model');
-Substance.Node = require('./src/node');
-Substance.Annotation = require('./src/annotation');
+Document.Model = require('./src/model');
+Document.Node = require('./src/node');
+Document.Annotation = require('./src/annotation');
+Document.Schema = require('./src/schema');
+Document.Coordinate = require('./src/coordinate');
+Document.Range = require('./src/range');
 
-Substance.Document = require('./src/document');
-Substance.Document.Schema = require('./src/schema');
+Document.Selection = require('./src/selection');
+Document.NullSelection = Document.Selection.NullSelection;
+Document.PropertySelection = require('./src/property-selection');
+Document.ContainerSelection = require('./src/container-selection');
 
-Substance.Registry = require('./src/registry');
-Substance.Factory = require('./src/factory');
+Document.AbstractIndex = require('./src/abstract-index');
 
-module.exports = Substance;
+module.exports = Document;

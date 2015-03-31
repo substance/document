@@ -9,26 +9,40 @@ var Annotation = require('./annotation');
 function Schema(name, version, nodes) {
   this.name = name;
   this.version = version;
-  this.nodes = nodes;
   this.modelRegistry = new ModelRegistry();
-
   var i;
   var builtins = Schema.static.builtins;
   for (i = 0; i < builtins.length; i++) {
     Model.initModelClass(builtins[i]);
     this.modelRegistry.register(builtins[i]);
   }
-  for (i = 0; i < nodes.length; i++) {
-    Model.initModelClass(nodes[i]);
-    this.modelRegistry.register(nodes[i]);
+  if (nodes) {
+    for (i = 0; i < nodes.length; i++) {
+      Model.initModelClass(nodes[i]);
+      this.modelRegistry.register(nodes[i]);
+    }
   }
 }
 
 Schema.Prototype = function() {
 
+  this.addNodes = function(nodes) {
+    if (!nodes) {
+      return;
+    }
+    for (var i = 0; i < nodes.length; i++) {
+      Model.initModelClass(nodes[i]);
+      this.modelRegistry.register(nodes[i]);
+    }
+  };
+
   this.isAnnotationType = function(type) {
-    var nodeClass = this.modelRegistry.registry[type];
+    var nodeClass = this.getModelClass(type);
     return (nodeClass && nodeClass.prototype instanceof Annotation);
+  };
+
+  this.getModelClass = function(name) {
+    return this.modelRegistry.get(name);
   };
 
   function getJsonForModel(modelClass) {
@@ -50,15 +64,14 @@ Schema.Prototype = function() {
       version: this.version,
       types: {}
     };
-    for (var key in this.modelRegistry.registry) {
-      var modelClass = this.modelRegistry.registry[key];
-      data.types[modelClass.static.name] = getJsonForModel(modelClass);
-    }
+    this.modelRegistry.each(function(modelClass, name) {
+      data.types[name] = getJsonForModel(modelClass);
+    });
     return data;
   };
 
   this.createNode = function(type, data) {
-    var node = this.modelRegistry.nodeFactory.create(type, data);
+    var node = this.modelRegistry.getNodeFactory().create(type, data);
     return node;
   };
 

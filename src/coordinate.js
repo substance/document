@@ -2,9 +2,9 @@
 
 var Substance = require('substance');
 
-function DocumentCoordinate(path, charPos) {
+function DocumentCoordinate(path, offset) {
   this.path = path;
-  this.charPos = charPos;
+  this.offset = offset;
   Object.freeze(this);
 }
 
@@ -12,11 +12,11 @@ DocumentCoordinate.Prototype = function() {
 
   this.equals = function(other) {
     return (other === this ||
-      (Substance.equals(other.path, this.path) && other.charPos === this.charPos) );
+      (Substance.isArrayEqual(other.path, this.path) && other.offset === this.offset) );
   };
 
-  this.withCharPos = function(charPos) {
-    return new DocumentCoordinate(this.path, charPos);
+  this.withCharPos = function(offset) {
+    return new DocumentCoordinate(this.path, offset);
   };
 
   this.getNodeId = function() {
