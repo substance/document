@@ -15,6 +15,6 @@ Document.NullSelection = Document.Selection.NullSelection;
 Document.PropertySelection = require('./src/property-selection');
 Document.ContainerSelection = require('./src/container-selection');
 
-Document.AbstractIndex = require('./src/abstract-index');
+Document.Index = require('./src/document-index');
 
 module.exports = Document;
