@@ -156,8 +156,10 @@ Document.Prototype = function() {
   };
 
   this.onOperationApplied = function(op) {
-    // record the change for the transaction summary event later
-    this.transactionChanges.update(op);
+    if (this.isTransacting) {
+      // record the change for the transaction summary event later
+      this.transactionChanges.update(op);
+    }
     this.emit('operation', op);
   };
 

@@ -22,7 +22,7 @@ ContainerSelection.Prototype = function() {
   };
 
   this.toString = function() {
-    return "(" + JSON.stringify(this.range.start.path) + ":" + this.range.start.offset + ") -> (" +  JSON.stringify(this.range.end.path) + ":" + this.range.end.offset + ")";
+    return "(" + JSON.stringify(this.range.start.path) + ":" + this.range.start.offset + ") -> (" +  JSON.stringify(this.range.end.path) + ":" + this.range.end.offset + (this.reverse ? "; reverse" : "") + ")";
   };
 
 };
