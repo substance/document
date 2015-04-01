@@ -33,7 +33,21 @@ Index.Prototype = function() {
   },
 
   this.get = function(path) {
+    var res = this.index.get(path);
+
+    // HACK: unwrap objects on the index when method is called without a path
+    if (!path) return this.getAll();
+
     return this.index.get(path) || {};
+  };
+
+  // HACK: When there's no path supplied we need to flatten the index to show all objects that are on the index
+  this.getAll = function() {
+    var result = {};
+    Substance.each(this.index, function(values, key) {
+      Substance.extend(result, values);
+    });
+    return result;
   };
 
   // TODO: is it possible to get the affected node with the operation?
