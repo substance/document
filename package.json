@@ -19,8 +19,8 @@
   },
   "dependencies": {
     "underscore": "1.5.x",
-    "substance-util": "git+https://github.com/substance/util.git#lens",
-    "substance-data": "git+https://github.com/substance/data.git#lens"
+    "substance-util": "substance/util.git#97dabc022c28a01575c207ce986b5ffa36361bb6",
+    "substance-data": "substance/data.git#43e1be7594c4aeca706ce98bd87e284c69fd8836"
   },
   "devDependencies": {
     "mocha": "*",
